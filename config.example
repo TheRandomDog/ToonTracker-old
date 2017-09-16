@@ -1,0 +1,124 @@
+{
+    "_comment": "
+
+        Although this doesn't have the correct extension, this is a JSON file.
+
+        LEGEND:
+            botspam = The place where information messages go for a bot owner. Some modules use this.
+            command_prefix = The prefix before a command name ('tt~', for example)
+            load_modules = The modules to load on load.
+            rTTR = The server ID for /r/ToontownRewritten.
+            user_ranks = Overloaded ranks for certain users.
+            role_ranks = Overloaded ranks for certain roles.
+            token = The bot token Discord's API requires.
+            ua_header = The User-Agent Header for web requests. This should be used wherever a web request is made.
+
+        Every module has their own key too, where other configurations may be made.
+        LEGEND:
+            Invasion Module (invasion):
+                perma: Channel ID where invasion message is permanetly stored.
+            Status Module (status):
+                perma: Channel ID where status message is permanetly stored.
+                ttr_credentials: Credentials for logging into Toontown Rewritten to probe server status.
+                    username
+                    password
+            News Module (news):
+                announcements: Channel ID where new news is announced.
+            Release Module (release):
+                announcements: Channel ID where new release notes are announced.
+            Lobbies Module (lobbies):
+                interaction: Channel ID where user interaction is allowed.
+            Moderation Module (moderation):
+                announcements: Channel ID where moderation output for mods is given.
+                badlinks [NOT IMPLEMENETED]: Removes messages where these links are linked.
+                badwords: Removes messages that contain these bad words.
+                plural_exceptions: Ignores words that when made plural sound like a bad word.
+                exceptions: User and Channel IDs that are not scanned by the moderatoin filter.
+                on [NOT IMPLEMENETED]: Whether the bad word filter is on or not.
+            Reddit Module (reddit):
+                announcements: Channel ID where Reddit output for mods is given.
+                clientID: Client ID that Reddit's API requires.
+                clientSecret: Client Secret that Reddit's API requires.
+                subreddit: The subreddit to read from -- does not inlude '/r/'
+                ua: The user agent to submit to Reddit.
+                username: Reddit account username.
+                password: Reddit acconut password.
+
+    ",
+
+    "botspam": [
+        "CHANNEL_ID1", "CHANNEL_ID2"
+    ],
+    "command_prefix": "ttt~",
+    "invasion": {
+        "perma": "CHANNEL_ID"
+    },
+    "load_modules": [
+        "moderation",
+        "reddit",
+        "MODULE_3"
+    ],
+    "lobbies": {
+        "interaction": "CHANNEL_ID"
+    },
+    "moderation": {
+        "announcements": "CHANNEL_ID",
+        "badlinks": [
+            "meatspin",
+            "DOMAIN_NAME"
+        ],
+        "badwords": [
+            "ass",
+            "ffs",
+            "BAD_WORD3"
+        ],
+        "exceptions": [
+            "USER_ID",
+            "CHANNEL_ID1",
+            "CHANNEL_ID2"
+        ],
+        "on": true,
+        "plural_exceptions": [
+            "as",
+            "ff",
+            "PLURAL_EXCEPTION3"
+        ]
+    },
+    "news": {
+        "announcements": "CHANNEL_ID"
+    },
+    "rTTR": "SERVER_ID",
+    "reddit": {
+        "announcements": "CHANNEL_ID",
+        "clientID": "REDDIT_CLIENT_ID",
+        "clientSecret": "REDDIT_CLIENT_SECRET",
+        "password": "REDDIT_ACCOUNT_PASSWORD",
+        "subreddit": "SUBREDDIT",
+        "ua": "ToonTracker/test by /u/TheRandomDog, under tests by Unknown User",
+        "username": "REDDIT_ACCOUNT_USERNAME"
+    },
+    "release": {
+        "announcements": "CHANNEL_ID"
+    },
+    "role_ranks": {
+        "ROLE_ID1": 400,
+        "ROLE_ID2": 300
+    },
+    "status": {
+        "perma": "CHANNEL_ID",
+        "ttr_credentials": {
+            "password": "TTR_PASSWORD",
+            "username": "TTR_USERNAME"
+        }
+    },
+    "token": "DISCORD_API_BOT_TOKEN",
+    "twitterm": {
+        "announcements": "CHANNEL_ID"
+    },
+    "ua_header": {
+        "User-Agent": "ToonTracker-bot/test-rTTR (Unknown User; tommeyms@gmail.com for misuse)"
+    },
+    "user_ranks": {
+        "YOUR_USER_ID": 500
+    }
+}
