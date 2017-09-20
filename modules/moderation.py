@@ -1,4 +1,5 @@
 import discord
+import time
 import re
 from modules.module import Module
 from extra.commands import Command
@@ -132,18 +133,8 @@ class Moderation(Module):
         await self.client.send_message(botspam, "{} left.".format(member.display_name))
 
 
-    async def handleMsg(self, message):
-        if message.channel.id in self.exceptions or message.author.id in self.exceptions:
-            return
-
+    async def filterBadWords(self, message):
         text = message.content
-
-        #for link in self.links:
-        #    if link.lower() in text.lower():
-        #        await self.client.ban(message.author)
-        #        botspam = Config.getModuleSetting('moderation', 'announcements')
-        #        if botspam:
-        #            await self.client.send_message(botspam, "Banned {} for linking to `{}`".format(message.author.name, link))
 
         for word in text.split(' '):
             word = re.sub(r'\W+', '', word)
@@ -165,6 +156,12 @@ class Moderation(Module):
                     await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, '**' + message.content + '**'))
                     return
 
+    async def handleMsg(self, message):
+        if message.channel.id in self.exceptions or message.author.id in self.exceptions:
+            return
+
+        timeStart = time.time()
+        await self.filterBadWords(message)
 
 
 module = Moderation
