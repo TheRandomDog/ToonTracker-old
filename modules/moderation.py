@@ -1,6 +1,8 @@
 import discord
+import asyncio
 import time
 import re
+from clarifai.rest import ClarifaiApp, Image, Video
 from modules.module import Module
 from extra.commands import Command
 from utils import Config
@@ -119,6 +121,12 @@ class Moderation(Module):
         self.links = Config.getModuleSetting('moderation', 'badlinks')
         self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
         self.botspam = Config.getModuleSetting('moderation', 'announcements')
+        self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
+
+        gifKey = Config.getModuleSetting('moderation', 'clarifai_mod_key')
+        self.imageFilterApp = ClarifaiApp(api_key=gifKey) if gifKey else None
+        self.generalImageFilter = self.imageFilterApp.models.get('moderation')
+        self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
 
     async def on_member_ban(self, member):
         botspam = Config.getSetting('botspam')
@@ -131,7 +139,6 @@ class Moderation(Module):
     async def on_member_remove(self, member):
         botspam = Config.getSetting('botspam')
         await self.client.send_message(botspam, "{} left.".format(member.display_name))
-
 
     async def filterBadWords(self, message):
         text = message.content
@@ -156,12 +163,121 @@ class Moderation(Module):
                     await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, '**' + message.content + '**'))
                     return
 
+    async def filterBadImages(self, message):
+        # Refreshes embed info from the API.
+        message = await self.client.get_message(message.channel, message.id)
+
+        if not message.embeds and not message.attachments:
+            return
+
+        for embed in message.embeds:
+            if embed['type'] in ['image', 'gif', 'gifv']:
+                rating = self.runImageFilter(embed['thumbnail']['url'], gif=True if embed['type'] in ['gif', 'gifv'] or embed['url'].endswith('gif') else False)
+                await self.determineImageRatingAction(message, rating, embed['url'])
+
+        for attachment in message.attachments:
+            if any([attachment['filename'].endswith(extension) for extension in ('.jpg', '.png', '.gif', '.bmp')]):
+                rating = self.runImageFilter(attachment['url'], gif=True if attachment['filename'].endswith('.gif') or attachment['filename'].endswith('.gifv') else False)
+                await self.determineImageRatingAction(message, rating, attachment['url'])
+
+    def runImageFilter(self, url, gif=False):
+        # The image content is based on a scale from 0-2.
+        #
+        # 0  .2  .4  .6  .8   1   1.2  1.4  1.6  1.8  2
+        # APPROPRIATE                     INAPPROPRIATE
+        #
+        # Content landing in INAPPROPRIATE will be removed
+        # automatically, with an extremely high score resulting
+        # in a ban. Content in the middle may or may not be
+        # removed but will be sent to mods for manual review.
+        #
+        # Anything that's not strictly NSFW, such as possible
+        # drug references, gore, or suggestive material is
+        # scored at half of the API's certainty to allow
+        # a higher chance to pass through human approval.
+
+        rating = 0
+
+        image = Video(url=url) if gif else Image(url=url)
+        generalFilterResponse = self.generalImageFilter.predict([image])
+        nsfwFilterResponse = self.nsfwImageFilter.predict([image])
+
+        if gif:
+            ratings = []
+            i = 0
+            for frame in generalFilterResponse['outputs'][0]['data']['frames']:
+                nframe = nsfwFilterResponse['outputs'][0]['data']['frames'][i]
+                ratings.append(self.getRating(frame['data']['concepts'], nframe['data']['concepts']))
+                i += 1
+            return max(ratings)
+        else:
+            return self.getRating(generalFilterResponse['outputs'][0]['data']['concepts'], nsfwFilterResponse['outputs'][0]['data']['concepts'])
+
+        for concept in generalFilterResponse['outputs'][0]['data']['concepts']:
+            if concept['name'] == 'explicit':
+                rating += concept['value']
+            elif concept['name'] in ['suggestive', 'drug', 'gore']:
+                rating += concept['value'] / 2
+        for concept in nsfwFilterResponse['outputs'][0]['data']['concepts']:
+            if concept['name'] == 'nsfw':
+                rating += concept['value']
+
+        return rating
+
+    def getImageRating(self, generalConcepts, nsfwConcepts):
+        rating = 0
+        for concept in generalConcepts:
+            if concept['name'] == 'explicit':
+                rating += concept['value']
+            elif concept['name'] in ['suggestive', 'drug', 'gore']:
+                rating += concept['value'] / 2
+        for concept in nsfwConcepts:
+            if concept['name'] == 'nsfw':
+                rating += concept['value']
+
+        return rating
+
+    async def determineImageRatingAction(self, message, rating, url):
+        print(rating)
+        if rating > 1.5:
+            rating = round(rating, 2)
+            await self.client.ban(message.author)
+            await self.client.send_message(self.nsfwspam, "Banned and removed message with bad image from {} in {}. **[Rating: {}]**" \
+                "\n*If this was a mistake, please unban the user, apologize, and provide a Discord link back to the server.*\n{}".format(
+                    message.author.display_name, message.channel.mention, rating, url))
+            await self.client.send_message(self.botspam, "Banned and removed message with bad image from {} in {}. **[Rating: {}]**" \
+                "\nDue to its high rating, the image is located in {}.".format(
+                    message.author.display_name, message.channel.mention, rating, self.client.get_channel(self.nsfwspam)))
+        elif rating > 1:
+            rating = round(rating, 2)
+            await self.client.delete_message(message)
+            await self.client.kick(message.author)
+            await self.client.send_message(self.nsfwspam, "Kicked and removed message with bad image from {} in {}. **[Rating: {}]**" \
+                "\n*If this was a mistake, please apologize to the user and provide a Discord link back to the server.*\n{}".format(
+                    message.author.display_name, message.channel.mention, rating, url))
+            await self.client.send_message(self.botspam, "Kicked and removed message with bad image from {} in {}. **[Rating: {}]**" \
+                "\nDue to its high rating, the image is located in {}.".format(
+                    message.author.display_name, message.channel.mention, rating, self.client.get_channel(self.nsfwspam)))
+        elif rating > .5:
+            rating = round(rating, 2)
+            await self.client.send_message(self.botspam, "{} posted an image in {} that has been registered as possibly bad. " \
+                "**[Rating: {}]**\n*If the image has bad content in it, please act accordingly.*\n{}".format(
+                    message.author.mention, message.channel.mention, rating, url))
+
     async def handleMsg(self, message):
         if message.channel.id in self.exceptions or message.author.id in self.exceptions:
             return
 
         timeStart = time.time()
         await self.filterBadWords(message)
+
+        # This is for the bad image filter. Discord's servers usually needs a
+        # moment to process embedded / attached images before the API can use it.
+        if time.time() - timeStart < 1:
+            await asyncio.sleep(2)
+        else:
+            await asyncio.sleep(1)
+        await self.filterBadImages(message)
 
 
 module = Moderation
