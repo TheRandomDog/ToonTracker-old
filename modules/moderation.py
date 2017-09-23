@@ -152,19 +152,19 @@ class ModerationModule(Module):
                 await self.client.delete_message(message)
                 if self.botspam:
                     await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, message.content.replace(word, '**' + word + '**')))
-                    return
+                    return True
             for badword in self.words:
                 if ' ' in badword and (badword == text.lower() or badword + 's' == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
                     await self.client.delete_message(message)
                     if self.botspam:
                         await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, message.content.replace(badword, '**' + badword + '**')))
-                        return
+                        return True
             whole = text.replace(' ', '')
             if whole.lower() in self.words or (whole.lower() + 's' in self.words and whole.lower() not in self.pluralExceptions):
                 await self.client.delete_message(message)
                 if self.botspam:
                     await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, '**' + message.content + '**'))
-                    return
+                    return True
 
     async def filterBadImages(self, message):
         # Refreshes embed info from the API.
@@ -272,7 +272,10 @@ class ModerationModule(Module):
             return
 
         timeStart = time.time()
-        await self.filterBadWords(message)
+        messageRemoved = await self.filterBadWords(message)
+
+        if messageRemoved:
+            return
 
         # This is for the bad image filter. Discord's servers usually needs a
         # moment to process embedded / attached images before the API can use it.
