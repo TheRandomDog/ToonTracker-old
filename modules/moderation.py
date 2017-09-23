@@ -144,6 +144,9 @@ class Moderation(Module):
         text = message.content
 
         for word in text.split(' '):
+            if word.lower() == "he'll":
+                continue
+            
             word = re.sub(r'\W+', '', word)
             if word.lower() in self.words or (word.lower() + 's' in self.words and word.lower() not in self.pluralExceptions):
                 await self.client.delete_message(message)
