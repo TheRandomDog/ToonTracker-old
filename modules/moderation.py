@@ -210,11 +210,11 @@ class ModerationModule(Module):
             i = 0
             for frame in generalFilterResponse['outputs'][0]['data']['frames']:
                 nframe = nsfwFilterResponse['outputs'][0]['data']['frames'][i]
-                ratings.append(self.getRating(frame['data']['concepts'], nframe['data']['concepts']))
+                ratings.append(self.getImageRating(frame['data']['concepts'], nframe['data']['concepts']))
                 i += 1
             return max(ratings)
         else:
-            return self.getRating(generalFilterResponse['outputs'][0]['data']['concepts'], nsfwFilterResponse['outputs'][0]['data']['concepts'])
+            return self.getImageRating(generalFilterResponse['outputs'][0]['data']['concepts'], nsfwFilterResponse['outputs'][0]['data']['concepts'])
 
         for concept in generalFilterResponse['outputs'][0]['data']['concepts']:
             if concept['name'] == 'explicit':
