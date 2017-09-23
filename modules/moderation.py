@@ -168,7 +168,10 @@ class ModerationModule(Module):
 
     async def filterBadImages(self, message):
         # Refreshes embed info from the API.
-        message = await self.client.get_message(message.channel, message.id)
+        try:
+            message = await self.client.get_message(message.channel, message.id)
+        except discord.errors.NotFound:
+            print('Tried to rediscover message {} to filter bad images but message wasn\'t found.'.format(message.id))
 
         if not message.embeds and not message.attachments:
             return
@@ -272,7 +275,11 @@ class ModerationModule(Module):
             return
 
         timeStart = time.time()
-        messageRemoved = await self.filterBadWords(message)
+        try:
+            messageRemoved = await self.filterBadWords(message)
+        except discord.errors.NotFound:
+            print('Tried to remove message in bad word filter but message wasn\'t found.')
+            return
 
         if messageRemoved:
             return
