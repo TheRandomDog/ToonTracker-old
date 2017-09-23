@@ -7,7 +7,7 @@ from modules.module import Module
 from extra.commands import Command
 from utils import Config
 
-class Moderation(Module):
+class ModerationModule(Module):
     class LookupCMD(Command):
         NAME = 'lookup'
         RANK = 300
@@ -146,7 +146,7 @@ class Moderation(Module):
         for word in text.split(' '):
             if word.lower() == "he'll":
                 continue
-            
+
             word = re.sub(r'\W+', '', word)
             if word.lower() in self.words or (word.lower() + 's' in self.words and word.lower() not in self.pluralExceptions):
                 await self.client.delete_message(message)
@@ -283,4 +283,4 @@ class Moderation(Module):
         await self.filterBadImages(message)
 
 
-module = Moderation
+module = ModerationModule
