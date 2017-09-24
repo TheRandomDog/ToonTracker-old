@@ -1,4 +1,5 @@
 import sys
+import time
 import praw
 import threading
 from discord import Color
