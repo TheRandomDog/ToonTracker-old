@@ -253,7 +253,7 @@ class ModerationModule(Module):
                     message.author.display_name, message.channel.mention, rating, url))
             await self.client.send_message(self.botspam, "Banned and removed message with bad image from {} in {}. **[Rating: {}]**" \
                 "\nDue to its high rating, the image is located in {}.".format(
-                    message.author.display_name, message.channel.mention, rating, self.client.get_channel(self.nsfwspam)))
+                    message.author.display_name, message.channel.mention, rating, self.client.get_channel(self.nsfwspam).mention))
         elif rating > 1:
             rating = round(rating, 2)
             await self.client.delete_message(message)
@@ -263,12 +263,16 @@ class ModerationModule(Module):
                     message.author.display_name, message.channel.mention, rating, url))
             await self.client.send_message(self.botspam, "Kicked and removed message with bad image from {} in {}. **[Rating: {}]**" \
                 "\nDue to its high rating, the image is located in {}.".format(
-                    message.author.display_name, message.channel.mention, rating, self.client.get_channel(self.nsfwspam)))
+                    message.author.display_name, message.channel.mention, rating, self.client.get_channel(self.nsfwspam).mention))
         elif rating > .5:
             rating = round(rating, 2)
             await self.client.send_message(self.botspam, "{} posted an image in {} that has been registered as possibly bad. " \
                 "**[Rating: {}]**\n*If the image has bad content in it, please act accordingly.*\n{}".format(
                     message.author.mention, message.channel.mention, rating, url))
+        # For debug.
+        #else:
+        #    rating = round(rating, 2)
+        #    await self.client.send_message(self.botspam, "Image posted was fine. **[Rating: {}]**".format(rating))
 
     async def handleMsg(self, message):
         if message.channel.id in self.exceptions or message.author.id in self.exceptions:
@@ -276,12 +280,9 @@ class ModerationModule(Module):
 
         timeStart = time.time()
         try:
-            messageRemoved = await self.filterBadWords(message)
+            await self.filterBadWords(message)
         except discord.errors.NotFound:
             print('Tried to remove message in bad word filter but message wasn\'t found.')
-            return
-
-        if messageRemoved:
             return
 
         # This is for the bad image filter. Discord's servers usually needs a
