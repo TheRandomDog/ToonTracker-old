@@ -116,17 +116,24 @@ class ModerationModule(Module):
             self.RemovePluralExceptionCMD
         ]
 
-        self.words = Config.getModuleSetting('moderation', 'badwords')
-        self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
-        self.links = Config.getModuleSetting('moderation', 'badlinks')
-        self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
+        self.badWordFilterOn = Config.getModuleSetting('moderation', 'badwordfilter')
+        self.badImageFilterOn = Config.getModuleSetting('moderation', 'badimagefilter')
         self.botspam = Config.getModuleSetting('moderation', 'announcements')
-        self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
+        self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
 
-        gifKey = Config.getModuleSetting('moderation', 'clarifai_mod_key')
-        self.imageFilterApp = ClarifaiApp(api_key=gifKey) if gifKey else None
-        self.generalImageFilter = self.imageFilterApp.models.get('moderation')
-        self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
+        if self.badWordFilterOn:
+            self.words = Config.getModuleSetting('moderation', 'badwords')
+            self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
+            #self.links = Config.getModuleSetting('moderation', 'badlinks')
+
+        if self.badImageFilterOn:
+            gifKey = Config.getModuleSetting('moderation', 'clarifai_mod_key')
+            if not gifKey:
+                raise ValueError('Clarifai API Key could not be found ["clarifai_mod_key" in config.json]')
+            self.imageFilterApp = ClarifaiApp(api_key=gifKey)
+            self.generalImageFilter = self.imageFilterApp.models.get('moderation')
+            self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
+            self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
 
     async def on_member_ban(self, member):
         botspam = Config.getSetting('botspam')
@@ -280,9 +287,13 @@ class ModerationModule(Module):
 
         timeStart = time.time()
         try:
-            await self.filterBadWords(message)
+            if self.badWordFilterOn:
+                await self.filterBadWords(message)
         except discord.errors.NotFound:
             print('Tried to remove message in bad word filter but message wasn\'t found.')
+            return
+
+        if not self.badImageFilterOn:
             return
 
         # This is for the bad image filter. Discord's servers usually needs a

@@ -30,11 +30,14 @@
                 interaction: Channel ID where user interaction is allowed.
             Moderation Module (moderation):
                 announcements: Channel ID where moderation output for mods is given.
+                nsfw_location: Channel ID where nsfw moderation output for mods is given.
+                badwordfilter: [true/false]
+                badimagefilter: [true/false]
+                clarifai_mod_key: The API key for Clarifai to use image filter.
                 badlinks [NOT IMPLEMENETED]: Removes messages where these links are linked.
                 badwords: Removes messages that contain these bad words.
                 plural_exceptions: Ignores words that when made plural sound like a bad word.
                 exceptions: User and Channel IDs that are not scanned by the moderatoin filter.
-                on [NOT IMPLEMENETED]: Whether the bad word filter is on or not.
             Reddit Module (reddit):
                 announcements: Channel ID where Reddit output for mods is given.
                 clientID: Client ID that Reddit's API requires.
