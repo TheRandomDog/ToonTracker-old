@@ -4,7 +4,6 @@ import logging
 from __init__ import __version__
 from discord import Embed, Color
 
-
 # Create config file if it doesn't exist
 try:
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -16,6 +15,17 @@ except json.JSONDecodeError:
     f.write('{}')
 finally:
     f.close()
+
+
+# ASSERTIONS
+
+def assertType(varName, value, *types):
+    if not type(value) in types:
+        raise TypeError("'{}' expected {}, found {} instead".format(
+            varName, ", ".join([str(t) for t in types]), type(value))
+        )
+
+# CONFIG
 
 class Config:
     @classmethod
