@@ -233,10 +233,7 @@ class ToonTracker(discord.Client):
     @delegateEvent
     async def on_voice_state_update(self, before, after): pass
 
-    async def load_config(self, term='start', channel=None):
-        if not channel:
-            channel = botspam
-
+    async def load_config(self, term='start', channel=botspam):
         warnings = []
         errors = []
 
@@ -259,7 +256,16 @@ class ToonTracker(discord.Client):
             await self.logout()
             await self.close()
 
+        # LOADING MODULES
+
+        if self.toLoad == None:
+            w = '"load_modules" option not found in config'
+            warnings.append(w)
+            print(w)
+            continue
         for module in self.toLoad:
+            assertType('module', module, str)
+
             if not hasattr(this, module):
                 w = 'Could not find Pythonic module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
                 warnings.append(w)
