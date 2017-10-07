@@ -16,7 +16,7 @@ restarted = False
 
 def delegateEvent(func):
     async def inner(self, *args):
-        if not self.ttReady:
+        if not self.ready:
             pass
 
         for module in self.modules:
@@ -85,11 +85,11 @@ class ToonTracker(discord.Client):
         self.commands = [self.QuitCMD, self.ReloadCMD, self.EvalCMD, self.ExecCMD]
         self.commandPrefix = Config.getSetting('command_prefix', '!')
 
-        self.ttReady = False
+        self.ready = False
         self.readyToClose = False
         self.restart = False
 
-        self.lastGot = time.time()
+        self.prevUpdateTime = time.time()
 
     async def connect(self):
         try:
@@ -107,7 +107,7 @@ class ToonTracker(discord.Client):
         await super().close()
 
     async def on_message(self, message):
-        if not self.ttReady or message.author == self.rTTR.me:
+        if not self.ready or message.author == self.rTTR.me:
             return
 
         for command in self.commands:
@@ -151,7 +151,7 @@ class ToonTracker(discord.Client):
         return msgObj
 
     async def announceUpdates(self):
-        self.lastGot = time.time()
+        self.prevUpdateTime = time.time()
 
         for module in self.modules:
             for announcement in module.pendingAnnouncements:
@@ -184,9 +184,9 @@ class ToonTracker(discord.Client):
             loop.stop()
             loop.run_forever()
 
-            if time.time() - self.lastGot > 10:
+            if time.time() - self.prevUpdateTime > 10:
                 loop.create_task(self.announceUpdates())
-                self.lastGot = time.time()
+                self.prevUpdateTime = time.time()
 
     @delegateEvent
     async def on_channel_create(self, channel): pass
@@ -298,11 +298,11 @@ class ToonTracker(discord.Client):
         await self.send_message(channel, full)
 
     async def on_ready(self):
-        if self.ttReady:
+        if self.ready:
             return
 
         await self.load_config(term='start' if not restarted else 'restart')
-        self.ttReady = True
+        self.ready = True
 
 
 token = Config.getSetting('token')
