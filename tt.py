@@ -313,13 +313,13 @@ if not token:
 
 while True:
     try:
-        T = ToonTracker()
+        TT = ToonTracker()
     except Exception as e:
         print('ToonTracker failed to start.\n\n{}'.format(format_exc()))
         sys.exit()
 
     try:
-        loop.run_until_complete(T.login(token))
+        loop.run_until_complete(TT.login(token))
     except Exception as e:
         print('ToonTracker failed to login. {}'.format(e))
         sys.exit()
@@ -328,15 +328,15 @@ while True:
     if not botspam:
         print('No bot spam channel specified in the config. You may miss important messages.')
 
-    connLoop = loop.create_task(T.connect())
-    loop.run_until_complete(T.wait_until_ready())
+    connLoop = loop.create_task(TT.connect())
+    loop.run_until_complete(TT.wait_until_ready())
 
-    T.ttLoop()
+    TT.ttLoop()
 
-    for module in T.modules:
+    for module in TT.modules:
         module.stopTracking()
 
-    if T.restart:
-        del T
+    if TT.restart:
+        del TT
     else:
         break
