@@ -19,14 +19,13 @@ finally:
 
 # ASSERTIONS
 
-def assertType(varName, value, *types):
+def assertType(value, *types):
     if not type(value) in types:
-        raise TypeError("'{}' expected {}, found {} instead".format(
-            varName, ", ".join([str(t) for t in types]), type(value))
+        raise TypeError("Expected {} when passed value '{}', found {} instead".format(
+            ", ".join([str(t) for t in types]), value, type(value))
         )
 
-# varName is unused, it's just there for consistency with `assertType`
-def assertTypeOrOtherwise(varName, value, *types, otherwise):
+def assertTypeOrOtherwise(value, *types, otherwise):
     return value if type(value) in types else otherwise
 
 # CONFIG
