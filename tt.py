@@ -90,6 +90,7 @@ class ToonTracker(discord.Client):
         self.restart = False
 
         self.prevUpdateTime = time.time()
+        self.updateDelay = assertTypeOrOtherwise(Config.getSetting('update_delay'), int, float, otherwise=10)
 
     async def connect(self):
         try:
@@ -264,7 +265,7 @@ class ToonTracker(discord.Client):
             print(w)
             continue
         for module in self.toLoad:
-            assertType('module', module, str)
+            assertType(module, str)
 
             if not hasattr(this, module):
                 w = 'Could not find Pythonic module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
