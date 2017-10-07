@@ -25,6 +25,10 @@ def assertType(varName, value, *types):
             varName, ", ".join([str(t) for t in types]), type(value))
         )
 
+# varName is unused, it's just there for consistency with `assertType`
+def assertTypeOrOtherwise(varName, value, *types, otherwise):
+    return value if type(value) in types else otherwise
+
 # CONFIG
 
 class Config:
