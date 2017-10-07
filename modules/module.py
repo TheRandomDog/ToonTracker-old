@@ -68,10 +68,21 @@ class Module:
                 n = 'The module will restart momentarily.'
                 print('{} was restarted after encountering an exception.\n\n{}'.format(self.__class__.__name__, format_exc()))
 
+            info = '**An unprompted exception occured in _{}_.**\n{}\n'.format(self.__class__.__name__, n)
+            log = '```\n{}```'.format(format_exc())
+            if len(info + log) > 2000:
+                r = requests.post('https://hastebin.com/documents', data=format_exc())
+                try:
+                    json = r.json()
+                    key = json['key']
+                    log = 'https://hastebin.com/raw/' + key
+                except (KeyError, ValueError):
+                    log = '*Unable to post long log to Discord or Hastebin. The log can be found in the console.*'
+
             self.pendingAnnouncements.append(
                 (
                     Config.getSetting('botspam'), 
-                    '**An unprompted exception occured in _{}_.**\n{}\n```\n{}```'.format(self.__class__.__name__, n, format_exc()),
+                    info + log,
                     {'module': self}
                 )
             )
