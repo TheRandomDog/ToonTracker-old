@@ -83,7 +83,7 @@ class ToonTracker(discord.Client):
         self.modules = []
 
         self.commands = [self.QuitCMD, self.ReloadCMD, self.EvalCMD, self.ExecCMD]
-        self.commandPrefix = Config.getSetting('command_prefix')
+        self.commandPrefix = Config.getSetting('command_prefix', '!')
 
         self.ttReady = False
         self.readyToClose = False
