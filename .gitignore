@@ -1,5 +1,7 @@
 /__pycache__
 *.py[cod]
 
-config.json*
+config.json
 groups.json
+users.json
+/profiles/*.json

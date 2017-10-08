@@ -31,17 +31,30 @@ def assertTypeOrOtherwise(value, *types, otherwise):
 # CONFIG
 
 class Config:
+    @staticmethod
+    def openFile(mode):
+        file = open(os.path.join(__location__, 'config.json'), mode)
+        content = json.loads(file.read())
+        file.close()
+        if assertTypeOrOtherwise(content.get("profile", None), str, None):
+            file = open(os.path.join(__location__, '/profiles/' + content['profile']), mode)
+        else:
+            file = open(os.path.join(__location__, 'config.json'), mode)
+        return file
+
     @classmethod
     def getSetting(cls, setting, otherwise=None):
         try:
-            file = open(os.path.join(__location__, 'config.json'), 'r')
+            file = cls.openFile('r')
             content = json.loads(file.read())
             return content.get(setting, otherwise)
         except json.JSONDecodeError:
-            print('[!!!] Tried to read setting "{}", but config.json did not have valid JSON content.'.format(setting))
+            print('[!!!] Tried to read setting "{}", but {} did not have valid JSON content.'.format(
+                setting, os.path.basename(file.name))
+            )
             return otherwise
         finally:
-            f.close()
+            file.close()
 
     @classmethod
     def getModuleSetting(cls, module, setting, otherwise=None):
@@ -87,16 +100,18 @@ class Config:
     @classmethod
     def setSetting(cls, setting, value):
         try:
-            f = open(os.path.join(__location__, 'config.json'), 'r+')
-            content = json.loads(f.read())
+            file = cls.openFile('r+')
+            content = json.loads(file.read())
             content[setting] = value
-            f.seek(0, 0)
-            f.write(json.dumps(content, indent=4, sort_keys=True))
-            f.truncate()
+            file.seek(0, 0)
+            file.write(json.dumps(content, indent=4, sort_keys=True))
+            file.truncate()
         except json.JSONDecodeError:
-            print('[!!!] Tried to write value "{}" to setting "{}", but config.json did not have valid JSON content.'.format(value, setting))
+            print('[!!!] Tried to write value "{}" to setting "{}", but {} did not have valid JSON content.'.format(
+                value, setting, os.path.basename(file.name))
+            )
         finally:
-            f.close()
+            file.close()
 
     @classmethod
     def setModuleSetting(cls, module, setting, value):
