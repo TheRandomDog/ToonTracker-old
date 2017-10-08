@@ -36,8 +36,8 @@ class Config:
         file = open(os.path.join(__location__, 'config.json'), mode)
         content = json.loads(file.read())
         file.close()
-        if assertTypeOrOtherwise(content.get("profile", None), str, None):
-            file = open(os.path.join(__location__, '/profiles/' + content['profile']), mode)
+        if assertTypeOrOtherwise(content.get("profile", None), str, otherwise=None):
+            file = open(os.path.join(__location__, 'profiles', content['profile']), mode)
         else:
             file = open(os.path.join(__location__, 'config.json'), mode)
         return file
