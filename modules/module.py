@@ -1,6 +1,6 @@
 import sys
 import time
-import logging
+import requests
 import threading
 from inspect import isclass
 from functools import wraps
