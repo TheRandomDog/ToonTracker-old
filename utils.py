@@ -36,9 +36,11 @@ class Config:
         file = open(os.path.join(__location__, 'config.json'), mode)
         content = json.loads(file.read())
         file.close()
-        if assertTypeOrOtherwise(content.get("profile", None), str, otherwise=None):
+        try:
             file = open(os.path.join(__location__, 'profiles', content['profile']), mode)
-        else:
+        except (KeyError, FileNotFoundError) as e:
+            if isinstance(e, FileNotFoundError):
+                print('[!!!] Tried to open profile "{}", but the profile couldn\'t be found.'.format(content['profile']))
             file = open(os.path.join(__location__, 'config.json'), mode)
         return file
 
