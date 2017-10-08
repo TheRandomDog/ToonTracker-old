@@ -59,41 +59,8 @@ class Module:
                 self.__sleepAndTestForBreak(self.cooldownInterval)
 
         except Exception as e:
-            e = sys.exc_info()
+            self.handleError()
 
-            if self.restarts > 3:
-                n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
-                print('{} was disabled for encountering a high number of exceptions.\n\n{}'.format(self.__class__.__name__, format_exc()))
-            else:
-                n = 'The module will restart momentarily.'
-                print('{} was restarted after encountering an exception.\n\n{}'.format(self.__class__.__name__, format_exc()))
-
-            info = '**An unprompted exception occured in _{}_.**\n{}\n'.format(self.__class__.__name__, n)
-            log = '```\n{}```'.format(format_exc())
-            if len(info + log) > 2000:
-                r = requests.post('https://hastebin.com/documents', data=format_exc())
-                try:
-                    json = r.json()
-                    key = json['key']
-                    log = 'https://hastebin.com/raw/' + key
-                except (KeyError, ValueError):
-                    log = '*Unable to post long log to Discord or Hastebin. The log can be found in the console.*'
-
-            self.pendingAnnouncements.append(
-                (
-                    Config.getSetting('botspam'), 
-                    info + log,
-                    {'module': self}
-                )
-            )
-
-            if self.restarts > 3:
-                return
-
-            if self.RESTART_ON_EXCEPTION:
-                self.restarts += 1
-                time.sleep(5)
-                threading.Thread(target=self._loop, name='{}-Thread'.format(self.__class__.__name__)).start()
 
     def startTracking(self):
         if self.isTracking:
@@ -130,30 +97,7 @@ class Module:
             if response:
                 self.pendingAnnouncements.append((announcer.CHANNEL_ID or self.CHANNEL_ID, response, kwargs))
         except Exception as e:
-            if self.restarts > 3:
-                n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
-                print('{} was disabled for encountering a high number of exceptions.\n\n{}'.format(self.__class__.__name__, format_exc()))
-            else:
-                n = 'The module will restart momentarily.'
-                print('{} was restarted after encountering an exception.\n\n{}'.format(self.__class__.__name__, format_exc()))
-
-            self.pendingAnnouncements.append(
-                (
-                    Config.getSetting('botspam'), 
-                    '**An unprompted exception occured in _{}_.**\n{}\n```\n{}```'.format(self.__class__.__name__, n, format_exc()),
-                    {'module': self}
-                )
-            )
-
-            if self.restarts > 3:
-                return
-
-            if self.RESTART_ON_EXCEPTION:
-                r = self.restarts + 1
-                self.stopTracking()
-                time.sleep(5)
-                self.__init__(self.client)
-                self.restarts = r
+            self.handleError()
 
     def updatePermaMsg(self, pm, *args, **kwargs):
         try:
@@ -163,30 +107,47 @@ class Module:
             if response:
                 self.pendingUpdates.append((pm.CHANNEL_ID or self.CHANNEL_ID, pm.TITLE, response, kwargs))
         except Exception as e:
-            if self.restarts > 3:
-                n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
-                print('{} was disabled for encountering a high number of exceptions.\n\n{}'.format(self.__class__.__name__, format_exc()))
-            else:
-                n = 'The module will restart momentarily.'
-                print('{} was restarted after encountering an exception.\n\n{}'.format(self.__class__.__name__, format_exc()))
+            self.handleError()
 
-            self.pendingAnnouncements.append(
-                (
-                    Config.getSetting('botspam'), 
-                    '**An unprompted exception occured in _{}_.**\n{}\n```\n{}```'.format(self.__class__.__name__, n, format_exc()),
-                    {'module': self}
-                )
+    def handleError(self):
+        e = format_exc()
+
+        if self.restarts > 3:
+            n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
+            print('{} was disabled for encountering a high number of exceptions.\n\n{}'.format(self.__class__.__name__, e))
+        else:
+            n = 'The module will restart momentarily.'
+            print('{} was restarted after encountering an exception.\n\n{}'.format(self.__class__.__name__, e))
+
+        info = '**An unprompted exception occured in _{}_.**\n{}\n'.format(self.__class__.__name__, n)
+        log = '```\n{}```'.format(e)
+        if len(info + log) > 2000:
+            r = requests.post('https://hastebin.com/documents', data=e)
+            try:
+                json = r.json()
+                key = json['key']
+                log = 'https://hastebin.com/raw/' + key
+            except (KeyError, ValueError):
+                log = '*Unable to post long log to Discord or Hastebin. The log can be found in the console.*'
+
+        self.pendingAnnouncements.append(
+            (
+                Config.getSetting('botspam'), 
+                info + log,
+                {'module': self}
             )
+        )
 
-            if self.restarts > 3:
-                return
+        if self.restarts > 3:
+            return
 
-            if self.RESTART_ON_EXCEPTION:
-                r = self.restarts + 1
-                self.stopTracking()
-                time.sleep(5)
-                self.__init__(self.client)
-                self.restarts = r
+        if self.RESTART_ON_EXCEPTION:
+            r = self.restarts + 1
+            self.stopTracking()
+            time.sleep(5)
+            self.__init__(self.client)  # "Restarts" the module, cleans out pending messages, sets first loop, etc.
+            self.restarts = r
+            self.startTracking()
 
     def createDiscordEmbed(self, title, description=Embed.Empty, *, multipleFields=False, color=None, url=None, **kwargs):
         if multipleFields:
