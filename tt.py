@@ -123,33 +123,44 @@ class ToonTracker(discord.Client):
             if response:
                 await self.send_message(message.channel, response)
 
-    async def send_message(self, target, message, deleteIn=30, priorMessage=None, **kwargs):
+    async def send_message(self, target, message, deleteIn=0, priorMessage=None, **kwargs):
+        # Recurses for a list of messages.
         if type(message) == list:
             for msg in message:
                 await self.send_message(target, msg, deleteIn, priorMessage, **kwargs)
             return
 
+        # Recurses for a list of targets.
         if type(target) == list:
             for tgt in target:
                 await self.send_message(tgt, message, deleteIn, priorMessage, **kwargs)
             return
+        # Gets a channel object from a string (channel ID).
         elif type(target) == str:
             target = self.get_channel(target)
             if not target:
                 return
+        # No target? Rip.
         elif type(target) == None:
             return
 
+        # Deliver message
         if message.__class__ == discord.Embed:
             msgObj = await super().send_message(target, content=None, embed=message)
         else:
             msgObj = await super().send_message(target, message)
-            #if deleteIn:
-            #    self.loop.call_later(deleteIn, self.deleteMessage, deleteIn, msgObj)
-            #    if priorMessage:
-            #        self.loop.call_later(deleteIn, self.deleteMessage, deleteIn, priorMessage.originalObject)
+
+        # Delete message (and optional trigger message)
+        if deleteIn:
+            self.loop.create_task(self.delete_message(deleteIn, msgObj))
+            if priorMessage:
+                self.loop.create_task(self.delete_message(deleteIn, priorMessage))
 
         return msgObj
+
+    async def delete_message(self, delay, message):
+        await asyncio.sleep(delay)
+        await super().delete_message(message)
 
     async def announceUpdates(self):
         self.prevUpdateTime = time.time()
