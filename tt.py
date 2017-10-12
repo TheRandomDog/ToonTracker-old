@@ -118,7 +118,10 @@ class ToonTracker(discord.Client):
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
                 response = await command.execute(self, None, message, *message.content.split(' ')[1:])
                 if response:
-                    await self.send_message(message.channel, response)
+                    try:
+                        await self.send_message(message.channel, response)
+                    except Exception:
+                        await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
         for module in self.modules:
             response = await module._handleMsg(message)
