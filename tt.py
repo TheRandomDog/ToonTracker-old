@@ -1,14 +1,11 @@
 import discord
 import asyncio
-import sys
-import os
-from extra.commands import Command
-from utils import *
-from importlib import import_module, reload
-from modules import invasion, status, news, release, lobbies, reddit, moderation
-from traceback import format_exc
-import threading
 import time
+import sys
+from extra.commands import Command
+from importlib import import_module, reload
+from traceback import format_exc
+from utils import *
 
 this = sys.modules[__name__]
 loop = asyncio.get_event_loop()
@@ -294,12 +291,13 @@ class ToonTracker(discord.Client):
         for module in self.toLoad:
             assertType(module, str)
 
-            if not hasattr(this, module):
-                w = 'Could not find Pythonic module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
+            try:
+                modsmod = import_module('modules.' + module)
+            except ImportError:
+                w = 'Could not find Python module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
                 warnings.append(w)
                 print(w)
                 continue
-            modsmod = getattr(this, module)
             if not hasattr(modsmod, 'module'):
                 w = 'Could not locate module subclass for "{}"'.format(module)
                 warnings.append(w)
