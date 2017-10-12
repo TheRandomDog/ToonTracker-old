@@ -14,6 +14,7 @@ this = sys.modules[__name__]
 loop = asyncio.get_event_loop()
 restarted = False
 
+# Sends Discord events to modules.
 def delegateEvent(func):
     async def inner(self, *args):
         if not self.ready:
@@ -27,6 +28,7 @@ def delegateEvent(func):
     return inner
 
 class ToonTracker(discord.Client):
+    # Evaluate Pythonic code.
     class EvalCMD(Command):
         NAME = 'eval'
         RANK = 500
@@ -37,9 +39,9 @@ class ToonTracker(discord.Client):
                 result = eval(' '.join(args))
             except BaseException as e:
                 result = '```{}```'.format(format_exc())
-            #await client.send_message(message.channel, str(result) if result != None else 'Evaluated successfully.')
             return str(result) if result != None else 'Evaluated successfully.'
 
+    # Execute Pythonic code.
     class ExecCMD(Command):
         NAME = 'exec'
         RANK = 500
@@ -48,12 +50,11 @@ class ToonTracker(discord.Client):
         async def execute(client, module, message, *args):
             try:
                 exec(' '.join(args))
-                #await client.send_message(message.channel, 'Executed successfully.')
                 return 'Excecuted successfully.'
             except BaseException as e:
-                #await client.send_message(message.channel, '```{}```'.format(format_exc()))
                 return '```{}```'.format(format_exc())
 
+    # Logs out and closes client.
     class QuitCMD(Command):
         NAME = 'quit'
         RANK = 500
@@ -63,6 +64,7 @@ class ToonTracker(discord.Client):
             await client.logout()
             await client.close()
 
+    # Reloads config and modules.
     class ReloadCMD(Command):
         NAME = 'reload'
         RANK = 400
@@ -167,6 +169,9 @@ class ToonTracker(discord.Client):
 
         for module in self.modules:
             for announcement in module.pendingAnnouncements:
+                # announcement[0] = Target
+                # announcement[1] = Message
+                # announcement[2] = Keyword Arguments: (module)
                 try:
                     await self.send_message(announcement[0], announcement[1])
                 except Exception as e:
@@ -175,19 +180,24 @@ class ToonTracker(discord.Client):
                     await self.send_message(botspam, '**{}** tried to send an announcement to channel ID {}, but an exception was raised.\n```\n{}```'.format(
                         announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', announcement[0], format_exc()))
 
+            # A permanent message is only available as an embed.
             for update in module.pendingUpdates:
+                # update[0] = Target (only one target)
+                # update[1] = The embed's title, used to find and edit message.
+                # update[2] = Embed (Message)
+                # update[3] = Keyword Arguments: (module)
                 messageSent = False
                 channel = self.get_channel(update[0])
                 async for message in self.logs_from(channel, limit=10):
                     for embed in message.embeds:
-                        #print(embed.get('fields', [{}])[0].get('name', ''), update[1].fields[0].name)
-                        #print(embed, update[2])
+                        # Find the message that has a matching title / author to replace with the new message.
                         if embed.get('fields', [{}])[0].get('name', '') == update[1] or embed.get('author', {}).get('name', '') == update[1]:
                             await self.edit_message(message, embed=update[2])
                             messageSent = True
                 if not messageSent:
                     await self.send_message(channel, update[2])
 
+            # All pending messages sent, clear out the list.
             module.pendingAnnouncements = []
             module.pendingUpdates = []
 
