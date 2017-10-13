@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import requests
@@ -6,20 +7,20 @@ from inspect import isclass
 from functools import wraps
 from traceback import format_exception, format_exc
 from platform import *
-from utils import Config, getVersion
+from utils import Config, assertTypeOrOtherwise, getVersion
 from extra.toontown import TTR_ICON
 from discord import Color, Embed
 import types
 uaHeader = Config.getSetting('ua_header', getVersion())
 
 class Module:
-    RESTART_ON_EXCEPTION = True
-
     def __init__(self, client):
         self.client = client
 
+        moduleName = os.path.basename(sys.modules[self.__module__].__file__).replace('.py', '')
+        self.restartOnException = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'restart_on_exception'), bool, otherwise=True)
+        self.cooldownInterval = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'cooldown_interval'), int, otherwise=60)
         self.isFirstLoop = True
-        self.cooldownInterval = 60
         self.isTracking = False
 
         self.commands = []

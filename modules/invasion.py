@@ -83,8 +83,6 @@ class InvasionModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.cooldownInterval = 10
-
         self.light_greyRoute = self.ROUTES[0]
         self.route = self.light_greyRoute
         self.collectionSuccesses = 0
