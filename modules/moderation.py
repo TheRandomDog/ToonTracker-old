@@ -3,8 +3,8 @@ import asyncio
 import time
 import re
 from clarifai.rest import ClarifaiApp, Image, Video
-from modules.module import Module
 from extra.commands import Command
+from modules.module import Module
 from utils import Config
 
 class ModerationModule(Module):
@@ -19,15 +19,12 @@ class ModerationModule(Module):
                 user = discord.utils.get(message.server.members, display_name=name)
                 if user:
                     return '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(user.mention, user.created_at, user.joined_at)
-                    #await self.send_message(message.channel, '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(user.mention, user.created_at, user.joined_at))
                 else:
                     return 'No known user'
-                    #await self.send_message(message.channel, 'No known user')
-            else:
+           else:
                 for mention in message.mentions:
                     return '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(mention.mention, mention.created_at, mention.joined_at)
-                    #await self.send_message(message.channel, '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(mention.mention, mention.created_at, mention.joined_at))
-
+ 
     class AddBadWordCMD(Command):
         NAME = 'addbadword'
         RANK = 300
@@ -41,8 +38,6 @@ class ModerationModule(Module):
             badwords = Config.getModuleSetting('moderation', 'badwords')
             if word in badwords:
                 return '**{}** is already classified as a bad word'.format(word)
-                #await self.send_message(message.channel, '**{}** is already classified as a bad word.'.format(word))
-                #return
             badwords.append(word)
             Config.setModuleSetting('moderation', 'badwords', badwords)
             module.words = badwords
@@ -124,7 +119,6 @@ class ModerationModule(Module):
         if self.badWordFilterOn:
             self.words = Config.getModuleSetting('moderation', 'badwords')
             self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
-            #self.links = Config.getModuleSetting('moderation', 'badlinks')
 
         if self.badImageFilterOn:
             gifKey = Config.getModuleSetting('moderation', 'clarifai_mod_key')
