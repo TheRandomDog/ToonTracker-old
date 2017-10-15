@@ -430,7 +430,7 @@ class ModerationModule(Module):
                         await self.scheduledUnban(userID, punishment['endTime'])
 
     async def scheduledUnban(self, userID, endTime=None):
-        user = discord.utils.get(self.client.rTTR.members, id=userID)
+        user = await self.client.get_user_info(userID)
         if endTime:
             await asyncio.sleep(endTime - time.time())
         await self.client.unban(self.client.rTTR, user)
