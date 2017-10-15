@@ -246,7 +246,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            await punishUser(client, module, message, *args)
+            return await punishUser(client, module, message, *args)
 
     class WarnCMD(Command):
         NAME = 'warn'
@@ -254,7 +254,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            await punishUser(client, module, message, *args, punishment='Warning')
+            return await punishUser(client, module, message, *args, punishment='Warning')
 
     class KickCMD(Command):
         NAME = 'kick'
@@ -262,7 +262,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            await punishUser(client, module, message, *args, punishment='Kick')
+            return await punishUser(client, module, message, *args, punishment='Kick')
 
     class TmpBanCMD(Command):
         NAME = 'tb'
@@ -270,7 +270,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            await punishUser(client, module, message, *args, punishment='Temporary Ban')
+            return await punishUser(client, module, message, *args, punishment='Temporary Ban')
 
     class PermBanCMD(Command):
         NAME = 'ban'
@@ -278,7 +278,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            await punishUser(client, module, message, *args, punishment='Permanent Ban')
+            return await punishUser(client, module, message, *args, punishment='Permanent Ban')
 
     class EditPunishReasonCMD(Command):
         NAME = 'editReason'
