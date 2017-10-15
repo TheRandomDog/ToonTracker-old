@@ -198,7 +198,7 @@ class Users:
         return channelHistory
 
     @classmethod
-    def getUserPunishment(cls, userID):
+    def getUserPunishments(cls, userID):
         user = cls.getUserJSON(userID)
         return user['punishments']
 

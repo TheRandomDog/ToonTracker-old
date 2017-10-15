@@ -21,7 +21,7 @@ class ModerationModule(Module):
                     return '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(user.mention, user.created_at, user.joined_at)
                 else:
                     return 'No known user'
-           else:
+            else:
                 for mention in message.mentions:
                     return '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(mention.mention, mention.created_at, mention.joined_at)
  
@@ -117,7 +117,7 @@ class ModerationModule(Module):
         FULL = {
             's': 'seconds',
             'm': 'minutes',
-            'h' 'hours',
+            'h': 'hours',
             'd': 'days',
             'w': 'weeks',
             'M': 'months',
@@ -130,7 +130,7 @@ class ModerationModule(Module):
             if not message.mentions:
                 return CommandResponse(message.channel, '{} Please use a mention to refer to a user.', deleteIn=5, priorMessage=message)
             
-            punishmentScale = [None, 'Warning', 'Kick', 'Timed Ban', 'Permanent Ban']
+            punishmentScale = [None, 'Warning', 'Kick', 'Temporary Ban', 'Permanent Ban']
             highestPunishment = None
             highestPunishmentJSON = None
 
@@ -146,18 +146,20 @@ class ModerationModule(Module):
             except IndexError:
                 nextPunishment = punishmentScale[-1]
 
-            match = cls.TIMED_BAN_FORMAT.match(args[1])
+            match = cls.TIMED_BAN_FORMAT.match(args[1] if len(args) > 1 else '')
             if match:
+                nextPunishment = 'Temporary Ban'
                 length = cls.LENGTHS[match.group('char')] * int(match.group('num'))
                 lengthText = '{} {}'.format(match.group('num'), cls.FULL[match.group('char')])
                 if not 15 <= length <= 63113852:
                     return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.', deleteIn=5, priorMessage=message)
                 reason = ' '.join(args[2:])
-            elif nextPunishment == 'Timed Ban':
+            elif nextPunishment == 'Temporary Ban':
                 lengthText = '2 weeks'
                 length = 1209600  # 2 weeks
                 reason = ' '.join(args[1:])
             else:
+                lengthText = None
                 reason = ' '.join(args[1:])
 
             if not reason:
@@ -165,37 +167,37 @@ class ModerationModule(Module):
 
             if cls.MOD_LOG:
                 await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
-                    user.mention, message.author.mention, nextPunishment, reason))
+                    user.mention, message.author.mention, nextPunishment + (' ({})'.format(lengthText) if lengthText else ''), reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
             await client.delete_message(0, message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
             if nextPunishment == 'Warning':
-                await client.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
-                    'and has been marked down officially. Here\'s the reason:\n\n*{}*\n\nAs a refresher, we recommend re-reading' \
+                await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
+                    'and has been marked down officially. Here\'s the reason:\n```{}```\nAs a refresher, we recommend re-reading ' \
                     'the Discord server\'s rules so you\'re familiar with the way we run things there. Thank you!'.format(
                         user.mention, reason))
             elif nextPunishment == 'Kick':                                     
-                await client.kick(user)
-                await client.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten' \
-                    'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n\n*{}*\n\n' \
-                    'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run' \
+                #await client.kick(user)
+                await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
+                    'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n```{}```\n' \
+                    'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run ' \
                     'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
                         user.mention, reason))
-            elif nextPunishment == 'Timed Ban':
+            elif nextPunishment == 'Temporary Ban':
                 punishmentAdd['endTime'] = time.time() + length
-                await client.ban(user)
-                await client.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
+                #await client.ban(user)
+                await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
                     'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
-                    'the reason:\n\n*{}*\n\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
-                    'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long' \
+                    'the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
+                    'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long ' \
                     'as you stay Toony!'.format(user.mention, lengthText, reason))
             elif nextPunishment == 'Permanent Ban':
-                await client.ban(user)
-                await client.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
-                    'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n\n*{}*\n\nIf you feel this is illegitimate, ' \
-                    'please contact one of our mods. Thank you for chatting with us!')
+                #await client.ban(user)
+                await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
+                    'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n```{}```\nIf you feel this is illegitimate, ' \
+                    'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
             punishments.append(punishmentAdd)
 
             Users.setUserPunishments(user.id, punishments)
@@ -221,8 +223,8 @@ class ModerationModule(Module):
             await client.delete_message(0, message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
-            await client.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
-                'and has been marked down officially. Here\'s the reason:\n\n*{}*\n\nAs a refresher, we recommend re-reading' \
+            await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
+                'and has been marked down officially. Here\'s the reason:\n```{}```\nAs a refresher, we recommend re-reading ' \
                 'the Discord server\'s rules so you\'re familiar with the way we run things there. Thank you!'.format(user.mention, reason))
             punishments.append(punishmentAdd)
 
@@ -249,12 +251,12 @@ class ModerationModule(Module):
             await client.delete_message(0, message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
-                await client.kick(user)
-                await client.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten' \
-                    'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n\n*{}*\n\n' \
-                    'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run' \
-                    'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
-                        user.mention, reason))
+            await client.kick(user)
+            await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
+                'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n```{}```\n' \
+                'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run ' \
+                'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
+                    user.mention, reason))
             punishments.append(punishmentAdd)
 
             Users.setUserPunishments(user.id, punishments)
@@ -276,7 +278,7 @@ class ModerationModule(Module):
                 if not 15 <= length <= 63113852:
                     return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.', deleteIn=5, priorMessage=message)
                 reason = ' '.join(args[2:])
-            else nextPunishment == 'Timed Ban':
+            else:
                 lengthText = '2 weeks'
                 length = 1209600  # 2 weeks
                 reason = ' '.join(args[1:])
@@ -294,10 +296,10 @@ class ModerationModule(Module):
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
             punishmentAdd['endTime'] = time.time() + length
             await client.ban(user)
-            await client.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
+            await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
                 'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
-                'the reason:\n\n*{}*\n\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
-                'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long' \
+                'the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
+                'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long ' \
                 'as you stay Toony!'.format(user.mention, lengthText, reason))
             punishments.append(punishmentAdd)
 
@@ -324,10 +326,10 @@ class ModerationModule(Module):
             await client.delete_message(0, message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
-                await client.ban(user)
-                await client.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
-                    'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n\n*{}*\n\nIf you feel this is illegitimate, ' \
-                    'please contact one of our mods. Thank you for chatting with us!')
+            await client.ban(user)
+            await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
+                'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n```{}```\nIf you feel this is illegitimate, ' \
+                'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
             punishments.append(punishmentAdd)
 
             Users.setUserPunishments(user.id, punishments)
@@ -339,7 +341,12 @@ class ModerationModule(Module):
             self.AddBadWordCMD,
             self.RemoveBadWordCMD,
             self.AddPluralExceptionCMD,
-            self.RemovePluralExceptionCMD
+            self.RemovePluralExceptionCMD,
+            self.PunishCMD,
+            self.WarnCMD,
+            self.KickCMD,
+            self.TmpBanCMD,
+            self.PermBanCMD
         ]
 
         self.badWordFilterOn = Config.getModuleSetting('moderation', 'badwordfilter')
