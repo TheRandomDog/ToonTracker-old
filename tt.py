@@ -176,9 +176,16 @@ class ToonTracker(discord.Client):
                     await self.send_message(announcement[0], announcement[1])
                 except Exception as e:
                     print('{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncement: {}\n\n{}'.format(
-                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', announcement[0], announcement[1], format_exc()))
-                    await self.send_message(botspam, '**{}** tried to send an announcement to channel ID {}, but an exception was raised.\n```\n{}```'.format(
-                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', announcement[0], format_exc()))
+                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', 
+                        announcement[0],
+                        announcement[1],
+                        format_exc()
+                    ))
+                    await self.send_message(botspam, '**{}** tried to send an announcement to {}, but an exception was raised.\n```\n{}```'.format(
+                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module',
+                        discord.get_channel(announcement[0]).mention,
+                        format_exc()
+                    ))
 
             # A permanent message is only available as an embed.
             for update in module.pendingUpdates:
