@@ -46,12 +46,12 @@ class StatusModule(Module):
             headers.update(uaHeader)
 
             #self.logger.debug('POSTing to {} ({})'.format(url, {'data': payload, 'headers': headers}))
-            r = requests.post(url, data=payload, headers=headers)
-            jsonData = None
             try:
+                r = requests.post(url, data=payload, headers=headers)
+                jsonData = None
                 jsonData = r.json()
                 success = jsonData['success']
-            except JSONDecodeError:
+            except (JSONDecodeError, requests.ConnectionError):
                 success = 'false'
 
             #self.logger.debug('jsonData == {}'.format(jsonData))
@@ -109,10 +109,10 @@ class StatusModule(Module):
     def checkStatus(self):
         url = 'https://www.toontownrewritten.com/api/status'
         #self.logger.debug('Checking status from toontownrewritten.com...')
-        r = requests.get(url, headers=uaHeader)
         try:
+            r = requests.get(url, headers=uaHeader)
             jsonData = r.json()
-        except JSONDecodeError:
+        except (JSONDecodeError, requests.ConnectionError):
             jsonData = {'open': True}
         #self.logger.debug('response: {}'.format(jsonData))
         open = jsonData['open']

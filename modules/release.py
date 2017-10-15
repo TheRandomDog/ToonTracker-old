@@ -22,10 +22,10 @@ class ReleaseModule(Module):
         self.latestReleaseID = None
 
     def collectData(self):
-        rn = requests.get(self.ROUTE, headers=uaHeader)
         try:
+            rn = requests.get(self.ROUTE, headers=uaHeader)
             jsonData = rn.json()
-        except ValueError:
+        except (ValueError, requests.ConnectionError):
             return {}
 
         self.releaseData = jsonData

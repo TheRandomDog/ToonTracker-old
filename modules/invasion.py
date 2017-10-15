@@ -170,7 +170,7 @@ class InvasionModule(Module):
                 self.testingRoute = True
                 self.lastKnownWorkingRoute = self.route
                 self.switchRoutes(self.defaultRoute)
-        except ValueError:
+        except (ValueError, requests.ConnectionError):
             if self.testingRoute:
                 self.testingRoute = False
                 self.switchRoutes(self.lastKnownWorkingRoute)
