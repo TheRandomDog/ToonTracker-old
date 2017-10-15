@@ -83,8 +83,8 @@ class InvasionModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.light_greyRoute = self.ROUTES[0]
-        self.route = self.light_greyRoute
+        self.defaultRoute = self.ROUTES[0]
+        self.route = self.defaultRoute
         self.collectionSuccesses = 0
         self.collectionFailures = 0
         self.testingRoute = False
@@ -166,10 +166,10 @@ class InvasionModule(Module):
             self.lastUpdated = self.getLastUpdated(json)
 
             self.addCollectionSuccess()
-            if self.collectionSuccesses % 10 == 0 and self.route != self.light_greyRoute:
+            if self.collectionSuccesses % 10 == 0 and self.route != self.defaultRoute:
                 self.testingRoute = True
                 self.lastKnownWorkingRoute = self.route
-                self.switchRoutes(self.light_greyRoute)
+                self.switchRoutes(self.defaultRoute)
         except ValueError:
             if self.testingRoute:
                 self.testingRoute = False
