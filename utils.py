@@ -144,13 +144,11 @@ class Users:
         return file
 
     @classmethod
-    def getUserJSON(cls, userID):
+    def getUsers(cls):
         try:
             file = cls.openFile('r')
             content = json.loads(file.read())
-            if not content.get(userID, None):
-                cls.createUser(userID)
-            return content.get(userID, None)
+            return content
         except json.JSONDecodeError:
             print('[!!!] Tried to read user id "{}", but {} did not have valid JSON content.'.format(
                 userID, os.path.basename(file.name))
@@ -158,6 +156,13 @@ class Users:
             return otherwise
         finally:
             file.close()
+
+    @classmethod
+    def getUserJSON(cls, userID):
+        content = cls.getUsers()
+        if not content.get(userID, None):
+            cls.createUser(userID)
+        return content.get(userID, None)
 
     @classmethod
     def getUserXP(cls, userID):

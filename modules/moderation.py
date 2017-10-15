@@ -3,9 +3,30 @@ import asyncio
 import time
 import re
 from clarifai.rest import ClarifaiApp, Image, Video
-from extra.commands import Command
+from extra.commands import Command, CommandResponse
 from modules.module import Module
 from utils import Config, Users
+
+TIMED_BAN_FORMAT = re.compile(r'(?P<num>[0-9]+)(?P<char>[smhdwMy])')
+LENGTHS = {
+    's': 1,
+    'm': 60,
+    'h': 3600,
+    'd': 86400,
+    'w': 604800,
+    'M': 2629743,
+    'y': 31556926
+}
+FULL = {
+    's': 'seconds',
+    'm': 'minutes',
+    'h': 'hours',
+    'd': 'days',
+    'w': 'weeks',
+    'M': 'months',
+    'y': 'years'
+}
+MOD_LOG = Config.getModuleSetting('moderation', 'mod_log', None)
 
 class ModerationModule(Module):
     class LookupCMD(Command):
@@ -104,31 +125,11 @@ class ModerationModule(Module):
     class PunishCMD(Command):
         NAME = 'punish'
         RANK = 300
-        TIMED_BAN_FORMAT = re.compile(r'(?P<num>[0-9]+)(?P<char>[smhdwMy])')
-        LENGTHS = {
-            's': 1,
-            'm': 60,
-            'h': 3600,
-            'd': 86400,
-            'w': 604800,
-            'M': 2629743,
-            'y': 31556926
-        }
-        FULL = {
-            's': 'seconds',
-            'm': 'minutes',
-            'h': 'hours',
-            'd': 'days',
-            'w': 'weeks',
-            'M': 'months',
-            'y': 'years'
-        }
-        MOD_LOG = Config.getModuleSetting('moderation', 'mod_log', None)
 
         @classmethod
         async def execute(cls, client, module, message, *args):
             if not message.mentions:
-                return CommandResponse(message.channel, '{} Please use a mention to refer to a user.', deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
             
             punishmentScale = [None, 'Warning', 'Kick', 'Temporary Ban', 'Permanent Ban']
             highestPunishment = None
@@ -146,13 +147,13 @@ class ModerationModule(Module):
             except IndexError:
                 nextPunishment = punishmentScale[-1]
 
-            match = cls.TIMED_BAN_FORMAT.match(args[1] if len(args) > 1 else '')
+            match = TIMED_BAN_FORMAT.match(args[1] if len(args) > 1 else '')
             if match:
                 nextPunishment = 'Temporary Ban'
-                length = cls.LENGTHS[match.group('char')] * int(match.group('num'))
-                lengthText = '{} {}'.format(match.group('num'), cls.FULL[match.group('char')])
+                length = LENGTHS[match.group('char')] * int(match.group('num'))
+                lengthText = '{} {}'.format(match.group('num'), FULL[match.group('char')])
                 if not 15 <= length <= 63113852:
-                    return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.', deleteIn=5, priorMessage=message)
+                    return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.'.format(message.author.mention), deleteIn=5, priorMessage=message)
                 reason = ' '.join(args[2:])
             elif nextPunishment == 'Temporary Ban':
                 lengthText = '24 hours'
@@ -165,8 +166,8 @@ class ModerationModule(Module):
             if not reason:
                 reason = 'Just cause.'
 
-            if cls.MOD_LOG:
-                await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+            if MOD_LOG:
+                await client.send_message(MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
                     user.mention, message.author.mention, nextPunishment + (' ({})'.format(lengthText) if lengthText else ''), reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
@@ -179,7 +180,7 @@ class ModerationModule(Module):
                     'the Discord server\'s rules so you\'re familiar with the way we run things there. Thank you!'.format(
                         user.mention, reason))
             elif nextPunishment == 'Kick':                                     
-                #await client.kick(user)
+                await client.kick(user)
                 await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
                     'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n```{}```\n' \
                     'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run ' \
@@ -187,22 +188,26 @@ class ModerationModule(Module):
                         user.mention, reason))
             elif nextPunishment == 'Temporary Ban':
                 punishmentAdd['endTime'] = time.time() + length
-                #await client.ban(user)
+                await client.ban(user)
                 await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
                     'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
                     'the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
                     'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long ' \
                     'as you stay Toony!'.format(user.mention, lengthText, reason))
             elif nextPunishment == 'Permanent Ban':
-                #await client.ban(user)
+                await client.ban(user)
                 await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
                     'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n```{}```\nIf you feel this is illegitimate, ' \
                     'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
             punishments.append(punishmentAdd)
 
             Users.setUserPunishments(user.id, punishments)
+            await module.scheduleUnbans()
 
     class WarnCMD(Command):
+        NAME = 'warn'
+        RANK = 300
+
         @classmethod
         async def execute(cls, client, module, message, *args):
             if not message.mentions:
@@ -215,8 +220,8 @@ class ModerationModule(Module):
             if not reason:
                 reason = 'Just cause.'
 
-            if cls.MOD_LOG:
-                await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+            if MOD_LOG:
+                await client.send_message(MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
@@ -231,6 +236,9 @@ class ModerationModule(Module):
             Users.setUserPunishments(user.id, punishments)
 
     class KickCMD(Command):
+        NAME = 'kick'
+        RANK = 300
+
         @classmethod
         async def execute(cls, client, module, message, *args):
             if not message.mentions:
@@ -243,8 +251,8 @@ class ModerationModule(Module):
             if not reason:
                 reason = 'Just cause.'
 
-            if cls.MOD_LOG:
-                await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+            if MOD_LOG:
+                await client.send_message(MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
@@ -262,32 +270,35 @@ class ModerationModule(Module):
             Users.setUserPunishments(user.id, punishments)
 
     class TmpBanCMD(Command):
+        NAME = 'tb'
+        RANK = 300
+
         @classmethod
         async def execute(cls, client, module, message, *args):
             if not message.mentions:
-                return CommandResponse(message.channel, '{} Please use a mention to refer to a user.', deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
             user = message.mentions[0]
             punishments = Users.getUserPunishments(user.id)
             nextPunishment = 'Temporary Ban'
 
-            match = cls.TIMED_BAN_FORMAT.match(args[1])
+            match = TIMED_BAN_FORMAT.match(args[1] if len(args) > 1 else '')
             if match:
-                length = cls.LENGTHS[match.group('char')] * int(match.group('num'))
-                lengthText = '{} {}'.format(match.group('num'), cls.FULL[match.group('char')])
+                length = LENGTHS[match.group('char')] * int(match.group('num'))
+                lengthText = '{} {}'.format(match.group('num'), FULL[match.group('char')])
                 if not 15 <= length <= 63113852:
-                    return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.', deleteIn=5, priorMessage=message)
+                    return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.'.format(message.author.mention), deleteIn=5, priorMessage=message)
                 reason = ' '.join(args[2:])
             else:
-                lengthText = '2 weeks'
-                length = 1209600  # 2 weeks
+                lengthText = '24 hours'
+                length = 86400  # 1 day
                 reason = ' '.join(args[1:])
 
             if not reason:
                 reason = 'Just cause.'
 
-            if cls.MOD_LOG:
-                await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+            if MOD_LOG:
+                await client.send_message(MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
@@ -304,8 +315,12 @@ class ModerationModule(Module):
             punishments.append(punishmentAdd)
 
             Users.setUserPunishments(user.id, punishments)
+            await module.scheduleUnbans()
 
     class PermBanCMD(Command):
+        NAME = 'ban'
+        RANK = 300
+
         @classmethod
         async def execute(cls, client, module, message, *args):
             if not message.mentions:
@@ -318,8 +333,8 @@ class ModerationModule(Module):
             if not reason:
                 reason = 'Just cause.'
 
-            if cls.MOD_LOG:
-                await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+            if MOD_LOG:
+                await client.send_message(MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
@@ -354,6 +369,9 @@ class ModerationModule(Module):
         self.botspam = Config.getModuleSetting('moderation', 'announcements')
         self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
 
+        self.scheduledUnbans = []
+        self.scheduleUnbans()
+
         if self.badWordFilterOn:
             self.words = Config.getModuleSetting('moderation', 'badwords')
             self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
@@ -378,6 +396,22 @@ class ModerationModule(Module):
     async def on_member_remove(self, member):
         botspam = Config.getSetting('botspam')
         await self.client.send_message(botspam, "{} left.".format(member.display_name))
+
+    async def scheduleUnbans(self):
+        for userID, user in Users.getUsers().items():
+            for punishment in user['punishments']:
+                if punishment['type'] == 'Temporary Ban':
+                    if userID not in self.scheduledUnbans and punishment['endTime'] > time.time():
+                        self.scheduledUnbans.append(userID)
+                        await self.scheduledUnban(userID, punishment['endTime'])
+
+    async def scheduledUnban(self, userID, endTime=None):
+        user = discord.utils.get(self.client.rTTR.members, id=userID)
+        if endTime:
+            await asyncio.sleep(endTime - time.time())
+        await self.client.unban(self.client.rTTR, user)
+        await self.client.send_message(user, 'Your temporary ban has ended.')
+        self.scheduledUnbans.remove(userID)
 
     async def filterBadWords(self, message):
         text = message.content
