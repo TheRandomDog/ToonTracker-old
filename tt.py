@@ -114,16 +114,25 @@ class ToonTracker(discord.Client):
             if message.content.startswith(self.commandPrefix + command.NAME) and \
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
                 response = await command.execute(self, None, message, *message.content.split(' ')[1:])
-                if response:
-                    try:
+                try:
+                    if type(response) == CommandResponse:
+                        await self.send_command_response(response)
+                    else:
                         await self.send_message(message.channel, response)
-                    except Exception:
-                        await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
+                except Exception:
+                    await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
         for module in self.modules:
-            response = await module._handleMsg(message)
-            if response:
-                await self.send_message(message.channel, response)
+            try:
+                if type(response) == CommandResponse:
+                    await self.send_command_response(response)
+                else:
+                    await self.send_message(message.channel, response)
+            except Exception:
+                await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
+
+    async def send_command_response(self, response):
+        await self.send_message(response.target, response.message, response.deleteIn, response.priorMessage, **response.kwargs)
 
     async def send_message(self, target, message, deleteIn=0, priorMessage=None, **kwargs):
         # Recurses for a list of messages.
