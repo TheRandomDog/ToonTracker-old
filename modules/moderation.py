@@ -164,21 +164,21 @@ class ModerationModule(Module):
                 reason = 'Just cause.'
 
             if cls.MOD_LOG:
-                await self.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+                await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
-                await self.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
-            await self.delete_message(0, message)
+                await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
+            await client.delete_message(0, message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
             if nextPunishment == 'Warning':
-                await self.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
+                await client.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
                     'and has been marked down officially. Here\'s the reason:\n\n*{}*\n\nAs a refresher, we recommend re-reading' \
                     'the Discord server\'s rules so you\'re familiar with the way we run things there. Thank you!'.format(
                         user.mention, reason))
             elif nextPunishment == 'Kick':                                     
                 await client.kick(user)
-                await self.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten' \
+                await client.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten' \
                     'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n\n*{}*\n\n' \
                     'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run' \
                     'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
@@ -186,14 +186,14 @@ class ModerationModule(Module):
             elif nextPunishment == 'Timed Ban':
                 punishmentAdd['endTime'] = time.time() + length
                 await client.ban(user)
-                await self.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
+                await client.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
                     'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
                     'the reason:\n\n*{}*\n\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
                     'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long' \
                     'as you stay Toony!'.format(user.mention, lengthText, reason))
             elif nextPunishment == 'Permanent Ban':
                 await client.ban(user)
-                await self.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
+                await client.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
                     'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n\n*{}*\n\nIf you feel this is illegitimate, ' \
                     'please contact one of our mods. Thank you for chatting with us!')
             punishments.append(punishmentAdd)
@@ -242,10 +242,10 @@ class ModerationModule(Module):
                 reason = 'Just cause.'
 
             if cls.MOD_LOG:
-                await self.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+                await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
-                await self.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
+                await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
             await client.delete_message(0, message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
@@ -285,10 +285,10 @@ class ModerationModule(Module):
                 reason = 'Just cause.'
 
             if cls.MOD_LOG:
-                await self.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+                await client.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
-                await self.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
+                await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
             await client.delete_message(0, message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
