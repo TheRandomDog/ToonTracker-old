@@ -5,12 +5,9 @@ import requests
 import threading
 from inspect import isclass
 from functools import wraps
-from traceback import format_exception, format_exc
-from platform import *
-from utils import Config, assertTypeOrOtherwise, getVersion
-from extra.toontown import TTR_ICON
 from discord import Color, Embed
-import types
+from traceback import format_exception, format_exc
+from utils import Config, assertTypeOrOtherwise, getVersion
 uaHeader = Config.getSetting('ua_header', getVersion())
 
 class Module:
@@ -66,7 +63,6 @@ class Module:
 
         except Exception as e:
             self.handleError()
-
 
     def startTracking(self):
         if self.isTracking:
@@ -151,7 +147,7 @@ class Module:
         if self.restarts > self.restartLimit:
             return
 
-        if self.RESTART_ON_EXCEPTION:
+        if self.restartOnException:
             r = self.restarts + 1
             self.stopTracking()
             time.sleep(5)
@@ -162,16 +158,12 @@ class Module:
     def createDiscordEmbed(self, title, description=Embed.Empty, *, multipleFields=False, color=None, url=None, **kwargs):
         if multipleFields:
             embed = Embed(color=color if color else Color.green(), **kwargs)
-            # If we have multiple inline fields, the thumbnail might push them off.
-            # Therefore, we'll use the author space to include the icon url.
-            embed.set_author(name=title)#, icon_url=TTR_ICON)
+            embed.set_author(name=title)
         elif url:
             embed = Embed(title=title, description=description, url=url, color=color if color else Color.default(), **kwargs)
-            #embed.set_thumbnail(url=TTR_ICON)
         else:
             embed = Embed(color=color if color else Color.green(), **kwargs)
             embed.add_field(name=title, value=description)
-            #embed.set_thumbnail(url=TTR_ICON)
 
         return embed
 
