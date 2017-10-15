@@ -135,6 +135,151 @@ class Config:
         roleRanks[role] = rank
         cls.setSetting('role_ranks', userRanks)
 
+# USERS
+
+class Users:
+    @staticmethod
+    def openFile(mode):
+        file = open(os.path.join(__location__, 'users.json'), mode)
+        return file
+
+    @classmethod
+    def getUserJSON(cls, userID):
+        try:
+            file = cls.openFile('r')
+            content = json.loads(file.read())
+            if not content.get(userID, None):
+                cls.createUser(userID)
+            return content.get(userID, None)
+        except json.JSONDecodeError:
+            print('[!!!] Tried to read user id "{}", but {} did not have valid JSON content.'.format(
+                userID, os.path.basename(file.name))
+            )
+            return otherwise
+        finally:
+            file.close()
+
+    @classmethod
+    def getUserXP(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['xp']
+
+    @classmethod
+    def getUserLevel(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['level']
+
+    @classmethod
+    def getUserTimeOnline(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['timeOnline']
+
+    @classmethod
+    def getUserTimeOfline(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['timeOffline']
+
+    @classmethod
+    def getUserTimeDND(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['timeDND']
+
+    @classmethod
+    def getUserTimeIdle(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['timeIdle']
+
+    @classmethod
+    def getUserChannelHistory(cls, userID, channelID=None):
+        user = cls.getUserJSON(userID)
+        channelHistory = user['channel_history']
+        if channelID:
+            return channelHistory.get(channelID, {'messages': 0, 'attachments': 0})
+        return channelHistory
+
+    @classmethod
+    def getUserPunishment(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['punishments']
+
+    @classmethod
+    def createUser(cls, userID, **kwargs):
+        data = {
+            'xp': kwargs.get('xp', 0),
+            'level': kwargs.get('level', 0),
+            'time_Online': kwargs.get('time_online', 0),
+            'time_Offline': kwargs.get('time_offline', 0),
+            'time_DND': kwargs.get('time_DND', 0),
+            'time_Idle': kwargs.get('time_idle', 0),
+            'channel_history': kwargs.get('channel_history', {}),
+            'punishments': kwargs.get('punishments', [])
+        }
+        cls.setUserJSON(userID, data)
+
+    @classmethod
+    def setUserJSON(cls, userID, value):
+        try:
+            file = cls.openFile('r+')
+            content = json.loads(file.read())
+            content[userID] = value
+            file.seek(0, 0)
+            file.write(json.dumps(content, indent=4, sort_keys=True))
+            file.truncate()
+        except json.JSONDecodeError:
+            print('[!!!] Tried to write value "{}" to user "{}", but {} did not have valid JSON content.'.format(
+                value, userID, os.path.basename(file.name))
+            )
+        finally:
+            file.close()
+
+    @classmethod
+    def setUserXP(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['xp'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserLevel(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['level'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserTimeOnline(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['time_online'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserTimeOffline(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['time_offline'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserTimeDND(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['time_DND'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserTimeIdle(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['time_idle'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserChannelHistory(cls, userID, channelID, **kwargs):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['channel_history'][channelID] = kwargs
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserPunishments(cls, userID, punishments):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['punishments'] = punishments
+        cls.setUserJSON(userID, userJSON)
+
 def getTimeFromSeconds(seconds, oneUnitLimit=False):
     if int(seconds <= 60):
         if int(seconds == 60):
