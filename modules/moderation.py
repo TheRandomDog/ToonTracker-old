@@ -370,7 +370,7 @@ class ModerationModule(Module):
         self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
 
         self.scheduledUnbans = []
-        self.scheduleUnbans()
+        asyncio.get_event_loop().create_task(self.scheduleUnbans())
 
         if self.badWordFilterOn:
             self.words = Config.getModuleSetting('moderation', 'badwords')
