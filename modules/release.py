@@ -44,7 +44,6 @@ class ReleaseModule(Module):
 
     def getReleaseInfo(self, noteId):
         try:
-            #self.logger.debug('Getting detailed release info for ID {}'.format(noteId))
             url = self.ROUTE + '/' + str(noteId)
             rn = requests.get(url, headers=uaHeader)
             try:
@@ -59,7 +58,6 @@ class ReleaseModule(Module):
                 'date': jsonData['date'],
                 'body': jsonData['body']
             }
-            #self.logger.debug(str(result))
             return result
         except socket.error:
             return None
@@ -87,7 +85,6 @@ class NewReleaseAnnouncement(Announcer):
             else:
                 color = Color.light_grey()
 
-            #print(repr('\n'.join(s[1:]).replace('•', '.')))
             e = Embed(color=color).add_field(name=type, value='\n'.join(s[1:]))
             content.append(e)
 

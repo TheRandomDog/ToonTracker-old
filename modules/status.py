@@ -45,7 +45,6 @@ class StatusModule(Module):
             headers = {'content-type': 'application/x-www-form-urlencoded'}
             headers.update(uaHeader)
 
-            #self.logger.debug('POSTing to {} ({})'.format(url, {'data': payload, 'headers': headers}))
             try:
                 r = requests.post(url, data=payload, headers=headers)
                 jsonData = None
@@ -54,12 +53,8 @@ class StatusModule(Module):
             except (JSONDecodeError, requests.ConnectionError):
                 success = 'false'
 
-            #self.logger.debug('jsonData == {}'.format(jsonData))
             if success == 'true':
                 if not self.account:
-                    if self.account != None:
-                        pass
-                        #self.announce(AccountStatusAnnouncement, self, True, deleteIn=0)
                     self.account = True
                 self.gameserverAddress = jsonData['gameserver']
                 break
@@ -76,9 +71,6 @@ class StatusModule(Module):
                     self.account = False
                     break
             elif success == 'false':
-                if self.account:
-                    pass
-                    #self.announce(AccountStatusAnnouncement, self, False, deleteIn=0)
                 self.account = False
                 break
 
@@ -90,31 +82,22 @@ class StatusModule(Module):
                 address, port = address.split(':')[0], int(address.split(':')[1])
             except (IndexError, ValueError):
                 port = 7198
-            #self.logger.debug('Attempting to connect to {}:{}'.format(address, port))
             s.connect((address, port))
             if not self.game:
-                if self.game != None:
-                    pass
-                    #self.announce(GameStatusAnnouncement, self, True, deleteIn=0)
                 self.game = True
         except socket.error as e:
             if ('[Errno 10060]' in str(e) or '[Errno 10061]' in str(e)):
-                if self.game:
-                    pass
-                    #self.announce(GameStatusAnnouncement, self, False, deleteIn=0)
                 self.game = False
         finally:
             s.close()
 
     def checkStatus(self):
         url = 'https://www.toontownrewritten.com/api/status'
-        #self.logger.debug('Checking status from toontownrewritten.com...')
         try:
             r = requests.get(url, headers=uaHeader)
             jsonData = r.json()
         except (JSONDecodeError, requests.ConnectionError):
             jsonData = {'open': True}
-        #self.logger.debug('response: {}'.format(jsonData))
         open = jsonData['open']
         try:
             banner = jsonData['banner']
@@ -123,12 +106,8 @@ class StatusModule(Module):
         if self.open == None:
             self.open = open
         elif open != self.open:
-            #self.announce(LoginGateAnnouncement, self, True if open else False, deleteIn=0)
             self.open = open
         if banner != self.banner:
-            if banner and not self.banner == False:
-                pass
-                #self.announce(BannerAnnouncement, self, banner, deleteIn=0)
             self.banner = banner
 
     def loopIteration(self):
