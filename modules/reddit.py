@@ -24,20 +24,11 @@ class RedditModule(Module):
         self.subredditName = Config.getModuleSetting('reddit', 'subreddit')
         self.rTTR = reddit.subreddit(self.subredditName)
 
-        self.postRestarts = 0
-        self.commentRestarts = 0
-
-        self.readyToStop = False
-
-        self.postStream = threading.Thread(target=self.streamPosts, name='PostStream-Thread').start()
-        self.commentStream = threading.Thread(target=self.streamComments, name='CommentStream-Thread').start()
+        self.postStream = None
+        self.commentStream = None
         self.liveStream = None
-
-        self.live = Config.getModuleSetting('reddit', 'live')
-        if self.live:
-            NewUpdateAnnouncement.CHANNEL_ID = self.live['announcements']
-            if self.live['id']:
-                self.liveStream = threading.Thread(target=self.streamLive, name='LiveStream-Thread').start()
+        self.live = None
+        self.readyToStop = False
 
     def streamPosts(self):
         try:
@@ -51,30 +42,7 @@ class RedditModule(Module):
                 elif newPosts:
                     self.announce(NewPostAnnouncement, submission)
         except Exception as e:
-            if self.postRestarts > 3:
-                n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
-                print('{} was disabled for encountering a high number of exceptions.\n\n{}'.format(self.__class__.__name__, format_exc()))
-            else:
-                n = 'The module will restart momentarily.'
-                print('{} was restarted after encountering an exception.\n\n{}'.format(self.__class__.__name__, format_exc()))
-
-            self.pendingAnnouncements.append(
-                (
-                    Config.getSetting('botspam'), 
-                    '**An unprompted exception occured in _{}_.**\n{}\n```\n{}```'.format(self.__class__.__name__, n, format_exc()),
-                    {'module': self}
-                )
-            )
-
-            if self.postRestarts > 3:
-                self.readyToStop = True
-                return
-
-            if self.RESTART_ON_EXCEPTION:
-                self.postRestarts += 1
-                time.sleep(5)
-                self.postStream = threading.Thread(target=self.streamPosts, name='PostStream-Thread').start()
-
+            self.handleError()
 
     def streamComments(self):
         try:
@@ -88,40 +56,32 @@ class RedditModule(Module):
                 elif newComments:
                     self.announce(NewCommentAnnouncement, comment)
         except Exception as e:
-            if self.commentRestarts > 3:
-                n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
-                print('{} was disabled for encountering a high number of exceptions.\n\n{}'.format(self.__class__.__name__, format_exc()))
-            else:
-                n = 'The module will restart momentarily.'
-                print('{} was restarted after encountering an exception.\n\n{}'.format(self.__class__.__name__, format_exc()))
-
-            self.pendingAnnouncements.append(
-                (
-                    Config.getSetting('botspam'), 
-                    '**An unprompted exception occured in _{}_.**\n{}\n```\n{}```'.format(self.__class__.__name__, n, format_exc()),
-                    {'module': self}
-                )
-            )
-
-            if self.commentRestarts > 3:
-                self.readyToStop = True
-                return
-
-            if self.RESTART_ON_EXCEPTION:
-                self.commentRestarts += 1
-                time.sleep(5)
-                self.commentStream = threading.Thread(target=self.streamPosts, name='CommentStream-Thread').start()
+            self.handleError()
 
     def streamLive(self):
-        newUpdate = False
-        for update in praw.models.util.stream_generator(self.reddit.live(self.live['id']).updates, pause_after=0):
-            if self.client.readyToClose or self.readyToStop:
-                break
-            elif update is None:
-                newUpdate = True
-                continue
-            elif newUpdate:
-                self.announce(NewUpdateAnnouncement, update)
+        try:
+            newUpdate = False
+            for update in praw.models.util.stream_generator(self.reddit.live(self.live['id']).updates, pause_after=0):
+                if self.client.readyToClose or self.readyToStop:
+                    break
+                elif update is None:
+                    newUpdate = True
+                    continue
+                elif newUpdate:
+                    self.announce(NewUpdateAnnouncement, update)
+        except Exception as e:
+            self.handleError()
+
+    def startTracking(self):
+        super().startTracking()
+        self.postStream = threading.Thread(target=self.streamPosts, name='PostStream-Thread').start()
+        self.commentStream = threading.Thread(target=self.streamComments, name='CommentStream-Thread').start()
+
+        self.live = Config.getModuleSetting('reddit', 'live')
+        if self.live:
+            NewUpdateAnnouncement.CHANNEL_ID = self.live['announcements']
+            if self.live['id']:
+                self.liveStream = threading.Thread(target=self.streamLive, name='LiveStream-Thread').start()
 
     def stopTracking(self):
         super().stopTracking()
