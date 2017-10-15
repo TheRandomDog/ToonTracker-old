@@ -91,9 +91,12 @@ class RedditModule(Module):
 class NewPostAnnouncement(Announcer):
     def announce(module, submission):
         if submission.is_self:
-            desc = submission.selftext.split('\n')
-            if len(desc) > 1:
-                desc = desc[0]
+            descList = submission.selftext.split('\n')
+            if len(descList) > 1:
+                desc = descList[0]
+                while not desc:
+                    descList.pop(0)
+                    desc = descList[0]
                 i = -1
                 while desc[i] in ['.', '?', '!', ':', ';']:
                     i -= 1
@@ -134,9 +137,12 @@ class NewPostAnnouncement(Announcer):
 
 class NewCommentAnnouncement(Announcer):
     def announce(module, comment):
-        desc = comment.body.split('\n')
-        if len(desc) > 1:
-            desc = desc[0]
+        descList = comment.body.split('\n')
+        if len(descList) > 1:
+            desc = descList[0]
+            while not desc:
+                descList.pop(0)
+                desc = descList[0]
             i = -1
             while desc[i] in ['.', '?', '!', ':', ';']:
                 i -= 1
