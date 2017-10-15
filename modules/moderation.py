@@ -155,8 +155,8 @@ class ModerationModule(Module):
                     return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.', deleteIn=5, priorMessage=message)
                 reason = ' '.join(args[2:])
             elif nextPunishment == 'Temporary Ban':
-                lengthText = '2 weeks'
-                length = 1209600  # 2 weeks
+                lengthText = '24 hours'
+                length = 86400  # 1 day
                 reason = ' '.join(args[1:])
             else:
                 lengthText = None
