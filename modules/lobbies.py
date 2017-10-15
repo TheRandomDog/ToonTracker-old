@@ -1,5 +1,6 @@
 import discord
 import time
+from extra.commands import Command
 from modules.module import Module
 from utils import Config
 
@@ -16,51 +17,35 @@ class Lobby:
         self.customName = ""
 
 class LobbyManagement(Module):
-    def __init__(self, client):
-        Module.__init__(self, client)
-        self.activeLobbies = []
+    class LobbyCMD(Command):
+        NAME = 'lobby'
 
-        self.channelID = Config.getModuleSetting("lobbies", "interaction")
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if message.channel.id != module.channelID or message.channel.name.startswith('Lobby'):
+                return
 
-    async def on_voice_state_update(self, before, after):
-        if after.voice.voice_channel and after.voice.voice_channel.name.startswith('Lobby'):
-            for lobby in self.activeLobbies:
-                if lobby.voiceChannel.name == after.voice.voice_channel.name:
-                    lobby.visited = True
-                    if lobby.openLobby:
-                        await self.client.add_roles(after, lobby.role)
-        if before.voice.voice_channel and before.voice.voice_channel.name.startswith('Lobby'):
-            for lobby in self.activeLobbies:
-                if lobby.voiceChannel and lobby.voiceChannel.name == before.voice.voice_channel.name and lobby.openLobby:
-                    await self.client.remove_roles(after, lobby.role)
-            await self.bumpInactiveLobbies()
+            text = message.content
 
-    async def handleMsg(self, message):
-        if message.channel.id != self.channelID or message.channel.name.startswith('Lobby'):
-            return
-
-        text = message.content
-        if text.startswith('!lobby'):
             inLobby = False
             for role in message.author.roles:
                 if role.name.startswith('Lobby'):
                     inLobby = role
 
                     l = None
-                    for l1 in self.activeLobbies:
+                    for l1 in module.activeLobbies:
                         if l1.role == role:
                             l = l1
                             break
                     if l and l.visited and message.author.voice.voice_channel != l.voiceChannel:
-                        await self.client.remove_roles(message.author, role)
-                        await self.bumpInactiveLobbies()
+                        await client.remove_roles(message.author, role)
+                        await module.bumpInactiveLobbies()
                         inLobby = False
-
 
             if not inLobby:
                 busyMembers = []
                 addedMembers = []
-                numbers = sorted([lobby.number for lobby in self.activeLobbies])
+                numbers = sorted([lobby.number for lobby in module.activeLobbies])
                 newLobbyNumber = 1
                 while newLobbyNumber in numbers:
                     newLobbyNumber += 1
@@ -69,7 +54,7 @@ class LobbyManagement(Module):
 
                 lobby = Lobby()
                 lobby.number = newLobbyNumber
-                self.activeLobbies.append(lobby)
+                module.activeLobbies.append(lobby)
 
                 # I forgot regex existed when making the following code block.
                 # Please forgive.
@@ -92,11 +77,11 @@ class LobbyManagement(Module):
                 cn = ' '.join(cns)
                 if cns and not ca:
                     if len(cn) > 10:
-                        self.activeLobbies.remove(lobby)
+                        module.activeLobbies.remove(lobby)
                         return '{} Your custom lobby name must be 10 characters or less.'.format(message.author.mention)
                     for l in cn:
                         if l.lower() not in 'abcdefghijklmnopqrstuvwxyz1234567890 -':
-                            self.activeLobbies.remove(lobby)
+                            module.activeLobbies.remove(lobby)
                             return '{} Your custom lobby name must be alphanumeric.'.format(message.author.mention)
                     lobby.customName = cn
 
@@ -105,49 +90,49 @@ class LobbyManagement(Module):
                     try:
                         lobby.limit = int(splitText[splitText.index('open') + 1])
                         if lobby.limit > 99:
-                            self.activeLobbies.remove(lobby)
+                            module.activeLobbies.remove(lobby)
                             return '{} Your lobby cannot have a limit more than 99 -- if you like, you can choose not to have a limit by not specifying a number.'.format(message.author.mention)
                         elif lobby.limit < 0:
-                            self.activeLobbies.remove(lobby)
+                            module.activeLobbies.remove(lobby)
                             return '{} Your lobby cannot have a negative limit.'.format(message.author.mention)
                     except:
                         lobby.limit = 0
 
                 lobbyName = 'Lobby {}'.format(newLobbyNumber) + (' [{}]'.format(lobby.customName) if lobby.customName else '')
 
-                lobby.role = await self.client.create_role(
-                    self.client.rTTR,
+                lobby.role = await client.create_role(
+                    client.rTTR,
                     name=lobbyName
                 )
                 lobby.role.name = lobbyName  # value ensurance, doesn't send anything
                 
-                lobby.textChannel = await self.client.create_channel(
-                    self.client.rTTR,
+                lobby.textChannel = await client.create_channel(
+                    client.rTTR,
                     lobbyName.lower().replace(' ', '-').replace('[', '').replace(']', ''),
-                    (self.client.rTTR.default_role, discord.PermissionOverwrite(read_messages=False)),
+                    (client.rTTR.default_role, discord.PermissionOverwrite(read_messages=False)),
                     (lobby.role, discord.PermissionOverwrite(read_messages=True)),
                 )
                 #lobby.textChannel = discord.utils.get(self.client.get_all_channels(), id=tc.id)
                 if lobby.openLobby:
-                    lobby.voiceChannel = await self.client.create_channel(
-                        self.client.rTTR,
+                    lobby.voiceChannel = await client.create_channel(
+                        client.rTTR,
                         lobbyName,
                         type=discord.ChannelType.voice,
                     )
                     #lobby.vcID = vc.id# = discord.utils.get(self.client.get_all_channels(), id=vc.id)
-                    await self.client.edit_channel(lobby.voiceChannel, user_limit=lobby.limit)
+                    await client.edit_channel(lobby.voiceChannel, user_limit=lobby.limit)
                 else:
-                    lobby.voiceChannel = await self.client.create_channel(
-                        self.client.rTTR,
+                    lobby.voiceChannel = await client.create_channel(
+                        client.rTTR,
                         lobbyName,
-                        (self.client.rTTR.default_role, discord.PermissionOverwrite(connect=False)),
+                        (client.rTTR.default_role, discord.PermissionOverwrite(connect=False)),
                         (lobby.role, discord.PermissionOverwrite(connect=True)),
                         type=discord.ChannelType.voice
                     )
                     #lobby.vcID = vc.id#l = discord.utils.get(self.client.get_all_channels(), id=vc.id)
 
                 for member in message.mentions + [message.author]:
-                    if member.id == self.client.rTTR.me.id:
+                    if member.id == client.rTTR.me.id:
                         busyMembers.append(member)
 
                     for role in member.roles:
@@ -156,16 +141,16 @@ class LobbyManagement(Module):
                                 busyMembers.append(member)
                                 break
                             else:
-                                await self.client.remove_roles(member, role)
+                                await client.remove_roles(member, role)
                                 break
 
                     if member not in busyMembers:
                         if member != message.author:
                             addedMembers.append(member)
-                        await self.client.add_roles(member, lobby.role)
+                        await client.add_roles(member, lobby.role)
                         if member.voice.voice_channel:
                             entered = ''
-                            await self.client.move_member(member, lobby.voiceChannel)
+                            await client.move_member(member, lobby.voiceChannel)
 
                 #self.activeLobbies.append(lobby)
 
@@ -173,7 +158,7 @@ class LobbyManagement(Module):
                 others = ' with **{}** other people{}'.format(len(addedMembers), busy) if len(addedMembers) or len(busyMembers) else ''
                 return '{} **{}** created{}!{}'.format(message.author.mention, lobby.role.name, others, entered)
             elif message.mentions:
-                for l in self.activeLobbies:
+                for l in module.activeLobbies:
                     if l.role.name == inLobby.name:
                         lobby = l
                         break
@@ -187,20 +172,41 @@ class LobbyManagement(Module):
                                 busyMembers.append(member)
                                 break
                             else:
-                                await self.client.remove_roles(member, role)
+                                await client.remove_roles(member, role)
                                 break
 
                     if member not in busyMembers:
                         addedMembers.append(member)
-                        await self.client.add_roles(member, lobby.role)
+                        await client.add_roles(member, lobby.role)
                         if member.voice.voice_channel:
-                            await self.client.move_member(member, lobby.voiceChannel)
+                            await client.move_member(member, lobby.voiceChannel)
 
                 busy = ' (**{}** busy)'.format(len(busyMembers)) if len(busyMembers) else ''
                 others = '**{}** other people{} '.format(len(addedMembers), busy) if len(addedMembers) else ''
                 return '{} {}added to **{}**.'.format(message.author.mention, others, lobby.role.name)
             else:
                 return '{} You are in **{}**.'.format(message.author.mention, inLobby.name)
+
+
+    def __init__(self, client):
+        Module.__init__(self, client)
+        self.activeLobbies = []
+
+        self.commands = [self.LobbyCMD]
+        self.channelID = Config.getModuleSetting("lobbies", "interaction")
+
+    async def on_voice_state_update(self, before, after):
+        if after.voice.voice_channel and after.voice.voice_channel.name.startswith('Lobby'):
+            for lobby in self.activeLobbies:
+                if lobby.voiceChannel.name == after.voice.voice_channel.name:
+                    lobby.visited = True
+                    if lobby.openLobby:
+                        await self.client.add_roles(after, lobby.role)
+        if before.voice.voice_channel and before.voice.voice_channel.name.startswith('Lobby'):
+            for lobby in self.activeLobbies:
+                if lobby.voiceChannel and lobby.voiceChannel.name == before.voice.voice_channel.name and lobby.openLobby:
+                    await self.client.remove_roles(after, lobby.role)
+            await self.bumpInactiveLobbies()
 
     async def restoreSession(self):
         await self.bumpInactiveLobbies(fromRestore=True)
