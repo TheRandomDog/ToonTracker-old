@@ -2,7 +2,7 @@ import discord
 import asyncio
 import time
 import sys
-from extra.commands import Command
+from extra.commands import Command, CommandResponse
 from importlib import import_module, reload
 from traceback import format_exc
 from utils import *
