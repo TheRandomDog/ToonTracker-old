@@ -171,7 +171,7 @@ class ModerationModule(Module):
                     user.mention, message.author.mention, nextPunishment + (' ({})'.format(lengthText) if lengthText else ''), reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
-            await client.delete_message(0, message)
+            await client.delete_message(message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
             if nextPunishment == 'Warning':
@@ -237,7 +237,7 @@ class ModerationModule(Module):
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
-            await client.delete_message(0, message)
+            await client.delete_message(message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
             await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
@@ -268,7 +268,7 @@ class ModerationModule(Module):
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
-            await client.delete_message(0, message)
+            await client.delete_message(message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
             try:
@@ -318,7 +318,7 @@ class ModerationModule(Module):
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
-            await client.delete_message(0, message)
+            await client.delete_message(message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
             punishmentAdd['endTime'] = time.time() + length
@@ -358,7 +358,7 @@ class ModerationModule(Module):
                     user.mention, message.author.mention, nextPunishment, reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
-            await client.delete_message(0, message)
+            await client.delete_message(message)
 
             punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
             try:

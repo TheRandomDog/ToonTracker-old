@@ -165,13 +165,13 @@ class ToonTracker(discord.Client):
 
         # Delete message (and optional trigger message)
         if deleteIn:
-            self.loop.create_task(self.delete_message(deleteIn, msgObj))
+            self.loop.create_task(self.delete_message(msgObj, deleteIn))
             if priorMessage:
-                self.loop.create_task(self.delete_message(deleteIn, priorMessage))
+                self.loop.create_task(self.delete_message(priorMessage, deleteIn))
 
         return msgObj
 
-    async def delete_message(self, delay, message):
+    async def delete_message(self, message, delay=0):
         await asyncio.sleep(delay)
         await super().delete_message(message)
 
