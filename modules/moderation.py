@@ -331,7 +331,7 @@ class ModerationModule(Module):
 
             if MOD_LOG:
                 await client.send_message(MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
-                    user.mention, message.author.mention, nextPunishment, reason))
+                    user.mention, message.author.mention, nextPunishment + (' ({})'.format(lengthText) if lengthText else ''), reason))
             else:
                 await client.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
             await client.delete_message(message)
