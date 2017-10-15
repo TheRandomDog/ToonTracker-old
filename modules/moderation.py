@@ -298,15 +298,18 @@ class ModerationModule(Module):
                 for punishment in user['punishments']:
                     if punishment['editID'] == args[0]:
                         if punishment['modLogID']:
-                            modLogMessage = client.get_message(client.get_channel(MOD_LOG), punishment['modLogID'])
+                            modLogMessage = await client.get_message(client.get_channel(MOD_LOG), punishment['modLogID'])
                             if modLogMessage:
                                 editedMessage = modLogMessage.content.replace(NO_REASON, args[1:])
                                 await client.edit_message(modLogMessage, editedMessage)
                         if punishment['noticeID']:
-                            notice = client.get_message(client.get_user_info(userID), punishment['noticeID'])
+                            notice = await client.get_message(client.get_user_info(userID), punishment['noticeID'])
                             if notice:
                                 editedMessage = re.sub(r'```.*```', '```{}```'.format(args[1:]), notice.content)
                                 await client.edit_message(notice, editedMessage)
+
+                        return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+
 
 
     def __init__(self, client):
