@@ -172,22 +172,22 @@ class Users:
     @classmethod
     def getUserTimeOnline(cls, userID):
         user = cls.getUserJSON(userID)
-        return user['timeOnline']
+        return user['time_online']
 
     @classmethod
     def getUserTimeOffline(cls, userID):
         user = cls.getUserJSON(userID)
-        return user['timeOffline']
+        return user['time_offline']
 
     @classmethod
     def getUserTimeDND(cls, userID):
         user = cls.getUserJSON(userID)
-        return user['timeDND']
+        return user['time_DND']
 
     @classmethod
     def getUserTimeIdle(cls, userID):
         user = cls.getUserJSON(userID)
-        return user['timeIdle']
+        return user['time_idle']
 
     @classmethod
     def getUserChannelHistory(cls, userID, channelID=None):
@@ -207,10 +207,10 @@ class Users:
         data = {
             'xp': kwargs.get('xp', 0),
             'level': kwargs.get('level', 0),
-            'time_Online': kwargs.get('time_online', 0),
-            'time_Offline': kwargs.get('time_offline', 0),
+            'time_online': kwargs.get('time_online', 0),
+            'time_offline': kwargs.get('time_offline', 0),
             'time_DND': kwargs.get('time_DND', 0),
-            'time_Idle': kwargs.get('time_idle', 0),
+            'time_idle': kwargs.get('time_idle', 0),
             'channel_history': kwargs.get('channel_history', {}),
             'punishments': kwargs.get('punishments', [])
         }
