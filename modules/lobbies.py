@@ -195,17 +195,17 @@ class LobbyManagement(Module):
         self.commands = [self.LobbyCMD]
         self.channelID = Config.getModuleSetting("lobbies", "interaction")
 
-    async def on_voice_state_update(self, before, after):
-        if after.voice.voice_channel and after.voice.voice_channel.name.startswith('Lobby'):
+    async def on_voice_state_update(self, member, before, after):
+        if after.channel and after.channel.name.startswith('Lobby'):
             for lobby in self.activeLobbies:
-                if lobby.voiceChannel.name == after.voice.voice_channel.name:
+                if lobby.voiceChannel.name == after.channel.name:
                     lobby.visited = True
                     if lobby.openLobby:
-                        await self.client.add_roles(after, lobby.role)
-        if before.voice.voice_channel and before.voice.voice_channel.name.startswith('Lobby'):
+                        await member.add_roles(lobby.role)
+        if before.channel and before.channel.name.startswith('Lobby'):
             for lobby in self.activeLobbies:
-                if lobby.voiceChannel and lobby.voiceChannel.name == before.voice.voice_channel.name and lobby.openLobby:
-                    await self.client.remove_roles(after, lobby.role)
+                if lobby.voiceChannel and lobby.voiceChannel.name == before.channel.name and lobby.openLobby:
+                    await member.remove_roles(lobby.role)
             await self.bumpInactiveLobbies()
 
     async def restoreSession(self):

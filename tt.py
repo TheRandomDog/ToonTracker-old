@@ -149,7 +149,7 @@ class ToonTracker(discord.Client):
                 await self.send_message(tgt, message, deleteIn, priorMessage, **kwargs)
             return
         # Gets a channel object from a string (channel ID).
-        elif type(target) == str:
+        elif type(target) == int:
             target = self.get_channel(target)
             if not target:
                 return
@@ -159,9 +159,9 @@ class ToonTracker(discord.Client):
 
         # Deliver message
         if message.__class__ == discord.Embed:
-            msgObj = await super().send_message(target, content=None, embed=message)
+            msgObj = await target.send(content=None, embed=message)
         else:
-            msgObj = await super().send_message(target, message)
+            msgObj = await target.send(message)
 
         # Delete message (and optional trigger message)
         if deleteIn:
@@ -173,7 +173,7 @@ class ToonTracker(discord.Client):
 
     async def delete_message(self, message, delay=0):
         await asyncio.sleep(delay)
-        await super().delete_message(message)
+        await message.delete()
 
     async def announceUpdates(self):
         self.prevUpdateTime = time.time()
@@ -235,7 +235,7 @@ class ToonTracker(discord.Client):
     @delegateEvent
     async def on_channel_update(self, before, after): pass
     @delegateEvent
-    async def on_member_ban(self, member): pass
+    async def on_member_ban(self, guild, user): pass
     @delegateEvent
     async def on_member_join(self, member): pass
     @delegateEvent
@@ -253,25 +253,25 @@ class ToonTracker(discord.Client):
     @delegateEvent
     async def on_reaction_remove(self, reaction, user): pass
     @delegateEvent
-    async def on_server_available(self, server): pass
+    async def on_guild_available(self, guild): pass
     @delegateEvent
-    async def on_server_emojis_update(self, before, after): pass
+    async def on_guild_emojis_update(self, guild, before, after): pass
     @delegateEvent
-    async def on_server_join(self, server): pass
+    async def on_guild_join(self, guild): pass
     @delegateEvent
-    async def on_server_remove(self, server): pass
+    async def on_guild_remove(self, guild): pass
     @delegateEvent
-    async def on_server_role_create(self, role): pass
+    async def on_guild_role_create(self, role): pass
     @delegateEvent
-    async def on_server_role_delete(self, role): pass
+    async def on_guild_role_delete(self, role): pass
     @delegateEvent
-    async def on_server_unavailable(self, server): pass
+    async def on_guild_unavailable(self, guild): pass
     @delegateEvent
-    async def on_server_role_update(self, before, after): pass
+    async def on_guild_role_update(self, before, after): pass
     @delegateEvent
-    async def on_server_update(self, before, after): pass
+    async def on_guild_update(self, before, after): pass
     @delegateEvent
-    async def on_voice_state_update(self, before, after): pass
+    async def on_voice_state_update(self, member, before, after): pass
 
     async def load_config(self, term='start', channel=None):
         if not channel:
@@ -282,12 +282,12 @@ class ToonTracker(discord.Client):
 
         rTTR = Config.getSetting('rTTR')
         if not rTTR:
-            e = 'No server ID was designated as rTTR in config.'
+            e = 'No guild ID was designated as rTTR in config.'
             errors.append(e)
             print('[!!!] ' + e)
-        self.rTTR = self.get_server(rTTR)
+        self.rTTR = self.get_guild(rTTR)
         if not self.rTTR:
-            e = 'No known server was designated as rTTR in config.'
+            e = 'No known guild was designated as rTTR in config.'
             errors.append(e)
             print('[!!!] ' + e)
 

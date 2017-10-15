@@ -117,7 +117,7 @@ async def punishUser(client, module, message, *args, punishment=None):
         except Exception as e:
             await client.send_message(message.author, 'Could not send kick notification to the user.')
             print('Could not send kick notification message to {}'.format(user.id))
-        await client.kick(user)
+        await user.kick()
     elif nextPunishment == 'Temporary Ban':
         punishmentAdd['endTime'] = time.time() + length
         try:
@@ -130,7 +130,7 @@ async def punishUser(client, module, message, *args, punishment=None):
         except Exception as e:
             await client.send_message(message.author, 'Could not send temporary ban notification to the user.')
             print('Could not send temporary ban notification message to {}'.format(user.id))
-        await client.ban(user)
+        await user.ban()
     elif nextPunishment == 'Permanent Ban':
         try:
             notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
@@ -140,7 +140,7 @@ async def punishUser(client, module, message, *args, punishment=None):
         except Exception as e:
             await client.send_message(message.author, 'Could not send permanent ban notification to the user.')
             print('Could not send permanent ban notification message to {}'.format(user.id))
-        await client.ban(user)
+        await user.ban()
     punishments.append(punishmentAdd)
 
     Users.setUserPunishments(user.id, punishments)
@@ -155,7 +155,7 @@ class ModerationModule(Module):
         async def execute(client, module, message, *args):
             if not message.mentions:
                 name = ' '.join(args)
-                user = discord.utils.get(message.server.members, display_name=name)
+                user = discord.utils.get(message.guild.members, display_name=name)
                 if user:
                     return '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(user.mention, user.created_at, user.joined_at)
                 else:
@@ -301,12 +301,12 @@ class ModerationModule(Module):
                             modLogMessage = await client.get_message(client.get_channel(MOD_LOG), punishment['modLogID'])
                             if modLogMessage:
                                 editedMessage = modLogMessage.content.replace(NO_REASON, args[1:])
-                                await client.edit_message(modLogMessage, editedMessage)
+                                await modLogMessage.edit(editedMessage)
                         if punishment['noticeID']:
                             notice = await client.get_message(client.get_user_info(userID), punishment['noticeID'])
                             if notice:
                                 editedMessage = re.sub(r'```.*```', '```{}```'.format(args[1:]), notice.content)
-                                await client.edit_message(notice, editedMessage)
+                                await notice.edit(editedMessage)
 
                         return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
@@ -373,7 +373,7 @@ class ModerationModule(Module):
         user = await self.client.get_user_info(userID)
         if endTime:
             await asyncio.sleep(endTime - time.time())
-        await self.client.unban(self.client.rTTR, user)
+        await self.client.rTTR.unban(user)
         self.scheduledUnbans.remove(userID)
 
     async def filterBadWords(self, message):

@@ -67,7 +67,7 @@ class Config:
 
     @classmethod
     def getUserRanks(cls):
-        userRanks = cls.getSetting('user_ranks')
+        userRanks = {int(userID): rank for userID, rank in cls.getSetting('user_ranks').items()}
         return userRanks or {}
 
     @classmethod
@@ -147,7 +147,7 @@ class Users:
     def getUsers(cls):
         try:
             file = cls.openFile('r')
-            content = json.loads(file.read())
+            content = {int(userID): data for userID, data in json.loads(file.read()).items()}
             return content
         except json.JSONDecodeError:
             print('[!!!] Tried to read user id "{}", but {} did not have valid JSON content.'.format(
@@ -224,10 +224,11 @@ class Users:
 
     @classmethod
     def setUserJSON(cls, userID, value):
+        userID = str(userID)
         try:
             file = cls.openFile('r+')
             content = json.loads(file.read())
-            content[userID] = value
+            content[str(userID)] = value
             file.seek(0, 0)
             file.write(json.dumps(content, indent=4, sort_keys=True))
             file.truncate()
