@@ -434,7 +434,6 @@ class ModerationModule(Module):
         if endTime:
             await asyncio.sleep(endTime - time.time())
         await self.client.unban(self.client.rTTR, user)
-        await self.client.send_message(user, 'Your temporary ban has ended.')
         self.scheduledUnbans.remove(userID)
 
     async def filterBadWords(self, message):
