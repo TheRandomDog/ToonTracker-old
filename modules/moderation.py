@@ -5,7 +5,7 @@ import re
 from clarifai.rest import ClarifaiApp, Image, Video
 from extra.commands import Command
 from modules.module import Module
-from utils import Config
+from utils import Config, Users
 
 class ModerationModule(Module):
     class LookupCMD(Command):
@@ -100,6 +100,105 @@ class ModerationModule(Module):
             module.pluralExceptions = exc
             
             return '**{}** was removed from the plural exception list.'.format(word)
+
+    class PunishCMD(Command):
+        NAME = 'punish'
+        RANK = 300
+        TIMED_BAN_FORMAT = re.compile(r'(?P<num>[0-9]+)(?P<char>[smhdwMy])')
+        LENGTHS = {
+            's': 1,
+            'm': 60,
+            'h': 3600,
+            'd': 86400,
+            'w': 604800,
+            'M': 2629743,
+            'y': 31556926
+        }
+        FULL = {
+            's': 'seconds',
+            'm': 'minutes',
+            'h' 'hours',
+            'd': 'days',
+            'w': 'weeks',
+            'M': 'months',
+            'y': 'years'
+        }
+        MOD_LOG = Config.getModuleSetting('moderation', 'mod_log', None)
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            if not message.mentions:
+                return CommandResponse(message.channel, '{} Please use a mention to refer to a user.', deleteIn=5, priorMessage=message)
+            
+            punishmentScale = [None, 'Warning', 'Kick', 'Timed Ban', 'Permanent Ban']
+            highestPunishment = None
+            highestPunishmentJSON = None
+
+            user = message.mentions[0]
+            punishments = Users.getUserPunishments(user.id)
+            for punishment in punishments:
+                if punishmentScale.index(punishment['type']) > punishmentScale.index(highestPunishment):
+                    highestPunishment = punishment['type']
+                    highestPunishmentJSON = punishment
+
+            try:
+                nextPunishment = punishmentScale[punishmentScale.index(highestPunishment) + 1]
+            except IndexError:
+                nextPunishment = punishmentScale[-1]
+
+            match = cls.TIMED_BAN_FORMAT.match(args[1])
+            if match:
+                length = cls.LENGTHS[match.group('char')] * int(match.group('num'))
+                lengthText = '{} {}'.format(match.group('num'), cls.FULL[match.group('char')])
+                if not 15 <= length <= 63113852:
+                    return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.', deleteIn=5, priorMessage=message)
+                reason = ' '.join(args[2:])
+            elif nextPunishment == 'Timed Ban':
+                lengthText = '2 weeks'
+                length = 1209600  # 2 weeks
+                reason = ' '.join(args[1:])
+            else:
+                reason = ' '.join(args[1:])
+
+            if not reason:
+                reason = 'Just cause.'
+
+            if cls.MOD_LOG:
+                await self.send_message(cls.MOD_LOG, "User: {}\nMod: {}\nPunishment: {}\nReason: {}".format(
+                    user.mention, message.author.mention, nextPunishment, reason))
+            else:
+                await self.send_message(message.author, "The {} was successful.".format(nextPunishment.lower()))
+            await self.delete_message(0, message)
+
+            punishmentAdd = {'type': nextPunishment, 'mod': message.author.id, 'reason': reason}
+            if nextPunishment == 'Warning':
+                await self.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
+                    'and has been marked down officially. Here\'s the reason:\n\n*{}*\n\nAs a refresher, we recommend re-reading' \
+                    'the Discord server\'s rules so you\'re familiar with the way we run things there. Thank you!'.format(
+                        user.mention, reason))
+            elif nextPunishment == 'Kick':                                     
+                await client.kick(user)
+                await self.send_message('Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten' \
+                    'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n\n*{}*\n\n' \
+                    'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run' \
+                    'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
+                        user.mention, reason))
+            elif nextPunishment == 'Timed Ban':
+                punishmentAdd['endTime'] = time.time() + length
+                await client.ban(user)
+                await self.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
+                    'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
+                    'the reason:\n\n*{}*\n\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
+                    'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long' \
+                    'as you stay Toony!'.format(user.mention, lengthText, reason))
+            elif nextPunishment == 'Permanent Ban':
+                await client.ban(user)
+                await self.send_message('Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
+                    'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n\n*{}*\n\nIf you feel this is illegitimate, ' \
+                    'please contact one of our mods. Thank you for chatting with us!')
+            punishments.append(punishmentAdd)
+
+            Users.setUserPunishments(user.id, punishments)
 
     def __init__(self, client):
         Module.__init__(self, client)
