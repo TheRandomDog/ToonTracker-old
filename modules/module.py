@@ -21,6 +21,9 @@ class Module:
         self.restartOnException = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'restart_on_exception'), bool, otherwise=True)
         self.cooldownInterval = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'cooldown_interval'), int, otherwise=60)
         self.restartLimit = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'restart_limit'), int, otherwise=3)
+        self.restartLimitResetInterval = assertTypeOrOtherwise(
+            Config.getModuleSetting(moduleName, 'restart_limit_reset_interval'), int, otherwise=1800  # 30 minutes
+        )  
         self.isFirstLoop = True
         self.isTracking = False
 
@@ -32,6 +35,7 @@ class Module:
         self.pendingUpdates = []
 
         self.restarts = 0
+        self.restartTime = 0
 
     # --------------------------------------------- TRACKING ---------------------------------------------
 
@@ -113,6 +117,10 @@ class Module:
 
     def handleError(self):
         e = format_exc()
+
+        if self.restartLimitResetInterval and self.restartTime + self.restartLimitResetInterval < time.time():
+            self.restarts = 0
+        self.restartTime = time.time()
 
         if self.restarts > 3:
             n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
