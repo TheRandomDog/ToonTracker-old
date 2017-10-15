@@ -5,7 +5,7 @@ import threading
 from discord import Color
 from modules.module import Module, Announcer
 from traceback import format_exception, format_exc
-from utils import Config
+from utils import Config, assertType
 
 class RedditModule(Module):
     CHANNEL_ID = Config.getModuleSetting('reddit', 'announcements')
@@ -14,14 +14,14 @@ class RedditModule(Module):
         Module.__init__(self, client)
 
         reddit = self.reddit = praw.Reddit(
-            client_id=Config.getModuleSetting('reddit', 'clientID'),
-            client_secret=Config.getModuleSetting('reddit', 'clientSecret'),
-            user_agent=Config.getModuleSetting('reddit', 'ua'),
-            username=Config.getModuleSetting('reddit', 'username'),
-            password=Config.getModuleSetting('reddit', 'password')
+            client_id=assertType(Config.getModuleSetting('reddit', 'clientID'), str),
+            client_secret=assertType(Config.getModuleSetting('reddit', 'clientSecret'), str),
+            user_agent=assertType(Config.getModuleSetting('reddit', 'ua'), str),
+            username=assertType(Config.getModuleSetting('reddit', 'username'), str),
+            password=assertType(Config.getModuleSetting('reddit', 'password'), str)
         )
 
-        self.subredditName = Config.getModuleSetting('reddit', 'subreddit')
+        self.subredditName = assertType(Config.getModuleSetting('reddit', 'subreddit'), str)
         self.rTTR = reddit.subreddit(self.subredditName)
 
         self.postStream = None
