@@ -136,6 +136,10 @@ class ModerationModule(Module):
             highestPunishmentJSON = None
 
             user = message.mentions[0]
+            if user.bot:
+                return CommandResponse(message.channel, '{} You cannot punish a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
+                    deleteIn=5, priorMessage=message)
+
             punishments = Users.getUserPunishments(user.id)
             for punishment in punishments:
                 if punishmentScale.index(punishment['type']) > punishmentScale.index(highestPunishment):
@@ -226,6 +230,10 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} Please use a mention to refer to a user.', deleteIn=5, priorMessage=message)
 
             user = message.mentions[0]
+            if user.bot:
+                return CommandResponse(message.channel, '{} You cannot warn a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
+                    deleteIn=5, priorMessage=message)
+
             punishments = Users.getUserPunishments(user.id)
             nextPunishment = 'Warning'
             reason = ' '.join(args[1:])
@@ -257,6 +265,10 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} Please use a mention to refer to a user.', deleteIn=5, priorMessage=message)
 
             user = message.mentions[0]
+            if user.bot:
+                return CommandResponse(message.channel, '{} You cannot kick a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
+                    deleteIn=5, priorMessage=message)
+
             punishments = Users.getUserPunishments(user.id)
             nextPunishment = 'Kick'
             reason = ' '.join(args[1:])
@@ -295,6 +307,10 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
             user = message.mentions[0]
+            if user.bot:
+                return CommandResponse(message.channel, '{} You cannot ban a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
+                    deleteIn=5, priorMessage=message)
+
             punishments = Users.getUserPunishments(user.id)
             nextPunishment = 'Temporary Ban'
 
@@ -347,6 +363,10 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} Please use a mention to refer to a user.', deleteIn=5, priorMessage=message)
 
             user = message.mentions[0]
+            if user.bot:
+                return CommandResponse(message.channel, '{} You cannot ban a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
+                    deleteIn=5, priorMessage=message)
+
             punishments = Users.getUserPunishments(user.id)
             nextPunishment = 'Permanent Ban'
             reason = ' '.join(args[1:])
