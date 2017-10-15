@@ -20,6 +20,7 @@ class Module:
         moduleName = os.path.basename(sys.modules[self.__module__].__file__).replace('.py', '')
         self.restartOnException = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'restart_on_exception'), bool, otherwise=True)
         self.cooldownInterval = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'cooldown_interval'), int, otherwise=60)
+        self.restartLimit = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'restart_limit'), int, otherwise=3)
         self.isFirstLoop = True
         self.isTracking = False
 
@@ -139,7 +140,7 @@ class Module:
             )
         )
 
-        if self.restarts > 3:
+        if self.restarts > self.restartLimit:
             return
 
         if self.RESTART_ON_EXCEPTION:
