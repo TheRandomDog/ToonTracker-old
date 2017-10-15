@@ -162,6 +162,7 @@ class Users:
         content = cls.getUsers()
         if not content.get(userID, None):
             cls.createUser(userID)
+            content = cls.getUsers()
         return content.get(userID, None)
 
     @classmethod
