@@ -175,7 +175,7 @@ class Users:
         return user['timeOnline']
 
     @classmethod
-    def getUserTimeOfline(cls, userID):
+    def getUserTimeOffline(cls, userID):
         user = cls.getUserJSON(userID)
         return user['timeOffline']
 
