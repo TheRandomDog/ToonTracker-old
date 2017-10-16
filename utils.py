@@ -86,7 +86,7 @@ class Config:
 
     @classmethod
     def getRoleRanks(cls):
-        roleRanks = cls.getSetting('role_ranks')
+        roleRanks = {int(roleID): rank for roleID, rank in cls.getSetting('role_ranks').items()}
         return roleRanks or {}
 
     @classmethod
