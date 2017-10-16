@@ -194,7 +194,7 @@ class ToonTracker(discord.Client):
                     ))
                     await self.send_message(botspam, '**{}** tried to send an announcement to {}, but an exception was raised.\n```\n{}```'.format(
                         announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module',
-                        discord.get_channel(announcement[0]).mention,
+                        self.get_channel(announcement[0]).mention,
                         format_exc()
                     ))
 
@@ -206,11 +206,11 @@ class ToonTracker(discord.Client):
                 # update[3] = Keyword Arguments: (module)
                 messageSent = False
                 channel = self.get_channel(update[0])
-                async for message in self.logs_from(channel, limit=10):
+                async for message in channel.history(limit=10):
                     for embed in message.embeds:
                         # Find the message that has a matching title / author to replace with the new message.
-                        if embed.get('fields', [{}])[0].get('name', '') == update[1] or embed.get('author', {}).get('name', '') == update[1]:
-                            await self.edit_message(message, embed=update[2])
+                        if embed.fields[0].name == update[1] or embed.author.name == update[1]:
+                            await message.edit(embed=update[2])
                             messageSent = True
                 if not messageSent:
                     await self.send_message(channel, update[2])
