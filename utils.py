@@ -205,6 +205,8 @@ class Users:
                     ),
                     inline=False
                 )
+        if len(user['punishments']):
+            embed.set_footer(text="You can use a punishment's edit ID to ~editReason or ~removePunishment")
         return embed
 
     @classmethod
