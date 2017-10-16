@@ -167,7 +167,7 @@ class ModerationModule(Module):
                     return Users.getUserEmbed(mention)
  
     class AddBadWordCMD(Command):
-        NAME = 'addbadword'
+        NAME = 'addBadWord'
         RANK = 300
 
         @staticmethod
@@ -186,7 +186,7 @@ class ModerationModule(Module):
             return '**{}** was added as a bad word.'.format(word)
 
     class RemoveBadWordCMD(Command):
-        NAME = 'removebadword'
+        NAME = 'removeBadWord'
         RANK = 300
 
         @staticmethod
@@ -205,7 +205,7 @@ class ModerationModule(Module):
             return '**{}** was removed from the bad word list.'.format(word)
 
     class AddPluralExceptionCMD(Command):
-        NAME = 'addpluralexception'
+        NAME = 'addPluralException'
         RANK = 300
 
         @staticmethod
@@ -224,7 +224,7 @@ class ModerationModule(Module):
             return '**{}** was added as a plural exception.'.format(word)
 
     class RemovePluralExceptionCMD(Command):
-        NAME = 'removepluralexception'
+        NAME = 'RemovePluralException'
         RANK = 300
 
         @staticmethod
@@ -423,19 +423,19 @@ class ModerationModule(Module):
                 continue
 
             word = re.sub(r'\W+', '', word)
-            if word.lower() in self.words or (word.lower() + 's' in self.words and word.lower() not in self.pluralExceptions):
+            if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
                 await self.client.delete_message(message)
                 if self.botspam:
                     await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, message.content.replace(word, '**' + word + '**')))
                     return True
             for badword in self.words:
-                if ' ' in badword and (badword == text.lower() or badword + 's' == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
+                if ' ' in badword and (badword == text.lower() or badword.rstrip('s').rstrip('e') == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
                     await self.client.delete_message(message)
                     if self.botspam:
                         await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, message.content.replace(badword, '**' + badword + '**')))
                         return True
             whole = text.replace(' ', '')
-            if whole.lower() in self.words or (whole.lower() + 's' in self.words and whole.lower() not in self.pluralExceptions):
+            if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
                 await self.client.delete_message(message)
                 if self.botspam:
                     await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, '**' + message.content + '**'))
