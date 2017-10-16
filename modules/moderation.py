@@ -293,6 +293,7 @@ class ModerationModule(Module):
 
             if not args[1:]:
                 return CommandResponse(message.channel, '{} A reason must be given.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+            newReason = ' '.join(args[1:])
 
             for userID, userData in Users.getUsers().items():
                 for punishment in userData['punishments']:
@@ -300,13 +301,13 @@ class ModerationModule(Module):
                         if punishment['modLogID']:
                             modLogMessage = await client.get_channel(MOD_LOG).get_message(punishment['modLogID'])
                             if modLogMessage:
-                                editedMessage = modLogMessage.content.replace(NO_REASON, args[1:])
+                                editedMessage = modLogMessage.content.replace(NO_REASON, newReason)
                                 await modLogMessage.edit(editedMessage)
                         if punishment['noticeID']:
                             user = await client.get_user_info(userID)
                             notice = await user.dmchannel.get_message(punishment['noticeID'])
                             if notice:
-                                editedMessage = re.sub(r'```.*```', '```{}```'.format(args[1:]), notice.content)
+                                editedMessage = re.sub(r'```.*```', '```{}```'.format(newReason), notice.content)
                                 await notice.edit(editedMessage)
 
                         return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
