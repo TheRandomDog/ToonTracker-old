@@ -1,9 +1,13 @@
 {
     "_comment": "
-
         Although this doesn't have the correct extension, this is a JSON file.
+        This comment is not JSON though! Remove this comment if you're turning this example into a JSON file.
+
+        You can also use this file to point at a profile in /profiles, by using the profile name ("main.json", "test.json", etc.)
+        Profiles are essentially config files to allow multiple configurations to be stored and hotswapped.
 
         LEGEND:
+            profile = Points at a profile in /profiles that will be used for configuration instead of config.json.
             botspam = The place where information messages go for a bot owner. Some modules use this.
             command_prefix = The prefix before a command name ('tt~', for example)
             load_modules = The modules to load on load.
@@ -49,6 +53,7 @@
 
     ",
 
+    "profile": "profile.example",
     "botspam": [
         "CHANNEL_ID1", "CHANNEL_ID2"
     ],

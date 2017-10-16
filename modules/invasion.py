@@ -9,7 +9,8 @@ from modules.module import *
 from math import ceil, floor
 from extra.toontown import *
 from discord import Embed, Color
-from utils import getTimeFromSeconds, getAttributeFromMatch
+from utils import Config, getTimeFromSeconds, getAttributeFromMatch
+uaHeader = Config.getSetting('ua_header', getVersion())
 
 invasionCache = []
 
@@ -72,7 +73,6 @@ class Invasion:
     remaining = property(getRemaining)
 
 
-
 class InvasionModule(Module):
     CHANNEL_ID = Config.getModuleSetting('invasion', 'perma')
 
@@ -83,10 +83,8 @@ class InvasionModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.cooldownInterval = 10
-
-        self.light_greyRoute = self.ROUTES[0]
-        self.route = self.light_greyRoute
+        self.defaultRoute = self.ROUTES[0]
+        self.route = self.defaultRoute
         self.collectionSuccesses = 0
         self.collectionFailures = 0
         self.testingRoute = False
@@ -168,11 +166,11 @@ class InvasionModule(Module):
             self.lastUpdated = self.getLastUpdated(json)
 
             self.addCollectionSuccess()
-            if self.collectionSuccesses % 10 == 0 and self.route != self.light_greyRoute:
+            if self.collectionSuccesses % 10 == 0 and self.route != self.defaultRoute:
                 self.testingRoute = True
                 self.lastKnownWorkingRoute = self.route
-                self.switchRoutes(self.light_greyRoute)
-        except ValueError:
+                self.switchRoutes(self.defaultRoute)
+        except (ValueError, requests.ConnectionError):
             if self.testingRoute:
                 self.testingRoute = False
                 self.switchRoutes(self.lastKnownWorkingRoute)
@@ -206,24 +204,15 @@ class InvasionModule(Module):
                 # Accounts for an invasion that immediately started in the same district after one just ended.
                 for i in self.invasions:
                     if inv.district == i.district:
-                        #self.announce(InvasionEndingAnnouncement, self, i)
                         self.invasions.remove(i)
                 self.invasions.append(inv)
-                #self.announce(InvasionStartingAnnouncement, self, inv)
 
         districts = [di['district'] for di in data]
         for inv in self.invasions:
             if inv.district not in districts:
-                #self.announce(InvasionEndingAnnouncement, self, inv)
                 self.invasions.remove(inv)
 
         self.updatePermaMsg(InvPermaMsg)
-
-    # Returns the first match of any invasion that matches the attributes passed through the method.
-    def getInv(self, **kwargs):
-        return
-        #invs = self.getInvs(**kwargs)
-        #return invs[0] if invs else None
 
     # Returns all invasions that match the attributes passed through the method.
     def getInvs(self, **kwargs):
@@ -240,37 +229,17 @@ class InvasionModule(Module):
         return matchingInvs
 
 
-
-
 # ----------------------------------------- Message Handlers -----------------------------------------
 
 class InvPermaMsg(PermaMsg):
     TITLE = 'Invasions'
 
-    def update(module):#, message):
-        """r = module.getRequestInfo(message.content.lower())
-        if not r:
-            return
-        requestType = r[1]
-        if requestType == None:
-            return
-        msgs = []
-
-        subRequestType = r[2]
-        st = r[3]
-        dis = r[4]
-
-        if requestType != module.ALL:
-            title = '{} Invasions'.format(st.name) if requestType in [module.COG, module.DEP] else 'Matching Invasions'
-        else:
-            title = 'Invasions'"""
-
+    def update(module):
         title = 'Invasions'
 
         if module.isFirstLoop:
             msg = module.createDiscordEmbed(title=title, description='Collecting the latest information...', color=Color.light_grey())
             return msg
-            #msg = 'Hang on a second {}, I\'m still collecting the latest information.'.format(message.author.mention)
 
         megainvs = []
         invs = []
@@ -283,9 +252,6 @@ class InvPermaMsg(PermaMsg):
         invs = sorted(invs, key=lambda k: -k.etr)
 
         invs = megainvs + invs
-
-        #except TypeError:
-        #    invs = sorted(invs, key=lambda k: (k.defeated))
 
         if time.time() >= (module.lastUpdated + 300):
             desc = 'We\'re experiencing some technical difficulties.\nInvasion tracking will be made reavailable as soon as possible.'
@@ -316,16 +282,10 @@ class InvPermaMsg(PermaMsg):
                 msg.add_field(name="Time Remaining", value='\n'.join(etrs))
             else:
                 msg.add_field(name="Progress", value='\n'.join(progress))
-            #if time.time() >= (module.lastUpdated + 300):
-            #    msg.set_footer(text='We\'re having technical difficulties -- invasions may not appear correctly.'.format(
-            #        getTimeFromSeconds(int(time.time() - module.lastUpdated), oneUnitLimit=True)))
         else:
             desc = 'No invasions to report.\nThe last invasion seen was __{} ago__.'.format(
                 getTimeFromSeconds(int(time.time()) - module.droughtStart))
             msg = module.createDiscordEmbed(title=title, description=desc, color=Color.light_grey())
         return msg
-
-
-
 
 module = InvasionModule

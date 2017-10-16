@@ -1,22 +1,20 @@
 import discord
 import asyncio
-import sys
-import os
-from extra.commands import Command
-from utils import *
-from importlib import import_module, reload
-from modules import invasion, status, news, release, lobbies, reddit, moderation
-from traceback import format_exc
-import threading
 import time
+import sys
+from extra.commands import Command, CommandResponse
+from importlib import import_module, reload
+from traceback import format_exc
+from utils import *
 
 this = sys.modules[__name__]
 loop = asyncio.get_event_loop()
 restarted = False
 
+# Sends Discord events to modules.
 def delegateEvent(func):
     async def inner(self, *args):
-        if not self.ttReady:
+        if not self.ready:
             pass
 
         for module in self.modules:
@@ -27,6 +25,7 @@ def delegateEvent(func):
     return inner
 
 class ToonTracker(discord.Client):
+    # Evaluate Pythonic code.
     class EvalCMD(Command):
         NAME = 'eval'
         RANK = 500
@@ -37,9 +36,9 @@ class ToonTracker(discord.Client):
                 result = eval(' '.join(args))
             except BaseException as e:
                 result = '```{}```'.format(format_exc())
-            #await client.send_message(message.channel, str(result) if result != None else 'Evaluated successfully.')
             return str(result) if result != None else 'Evaluated successfully.'
 
+    # Execute Pythonic code.
     class ExecCMD(Command):
         NAME = 'exec'
         RANK = 500
@@ -48,12 +47,11 @@ class ToonTracker(discord.Client):
         async def execute(client, module, message, *args):
             try:
                 exec(' '.join(args))
-                #await client.send_message(message.channel, 'Executed successfully.')
                 return 'Excecuted successfully.'
             except BaseException as e:
-                #await client.send_message(message.channel, '```{}```'.format(format_exc()))
                 return '```{}```'.format(format_exc())
 
+    # Logs out and closes client.
     class QuitCMD(Command):
         NAME = 'quit'
         RANK = 500
@@ -63,6 +61,7 @@ class ToonTracker(discord.Client):
             await client.logout()
             await client.close()
 
+    # Reloads config and modules.
     class ReloadCMD(Command):
         NAME = 'reload'
         RANK = 400
@@ -83,13 +82,14 @@ class ToonTracker(discord.Client):
         self.modules = []
 
         self.commands = [self.QuitCMD, self.ReloadCMD, self.EvalCMD, self.ExecCMD]
-        self.commandPrefix = Config.getSetting('command_prefix')
+        self.commandPrefix = Config.getSetting('command_prefix', '!')
 
-        self.ttReady = False
+        self.ready = False
         self.readyToClose = False
         self.restart = False
 
-        self.lastGot = time.time()
+        self.prevUpdateTime = time.time()
+        self.updateDelay = assertTypeOrOtherwise(Config.getSetting('update_delay'), int, float, otherwise=10)
 
     async def connect(self):
         try:
@@ -107,75 +107,115 @@ class ToonTracker(discord.Client):
         await super().close()
 
     async def on_message(self, message):
-        if not self.ttReady or message.author == self.rTTR.me:
+        if not self.ready or message.author == self.rTTR.me:
             return
 
         for command in self.commands:
             if message.content.startswith(self.commandPrefix + command.NAME) and \
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
-                response = await command.execute(self, None, message, *message.content.split(' ')[1:])
-                if response:
-                    await self.send_message(message.channel, response)
+                try:
+                    response = await command.execute(self, None, message, *message.content.split(' ')[1:])
+                    if type(response) == CommandResponse:
+                        await self.send_command_response(response)
+                    elif response:
+                        await self.send_message(message.channel, response)
+                except Exception:
+                    await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
         for module in self.modules:
-            response = await module._handleMsg(message)
-            if response:
-                await self.send_message(message.channel, response)
+            try:
+                response = await module._handleMsg(message)
+                if type(response) == CommandResponse:
+                    await self.send_command_response(response)
+                elif response:
+                    print(response)
+                    await self.send_message(message.channel, response)
+            except Exception:
+                await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
-    async def send_message(self, target, message, deleteIn=30, priorMessage=None, **kwargs):
+    async def send_command_response(self, response):
+        await self.send_message(response.target, response.message, response.deleteIn, response.priorMessage, **response.kwargs)
+
+    async def send_message(self, target, message, deleteIn=0, priorMessage=None, **kwargs):
+        # Recurses for a list of messages.
         if type(message) == list:
             for msg in message:
                 await self.send_message(target, msg, deleteIn, priorMessage, **kwargs)
             return
 
+        # Recurses for a list of targets.
         if type(target) == list:
             for tgt in target:
                 await self.send_message(tgt, message, deleteIn, priorMessage, **kwargs)
             return
-        elif type(target) == str:
+        # Gets a channel object from a string (channel ID).
+        elif type(target) == int:
             target = self.get_channel(target)
             if not target:
                 return
+        # No target? Rip.
         elif type(target) == None:
             return
 
+        # Deliver message
         if message.__class__ == discord.Embed:
-            msgObj = await super().send_message(target, content=None, embed=message)
+            msgObj = await target.send(content=None, embed=message)
         else:
-            msgObj = await super().send_message(target, message)
-            #if deleteIn:
-            #    self.loop.call_later(deleteIn, self.deleteMessage, deleteIn, msgObj)
-            #    if priorMessage:
-            #        self.loop.call_later(deleteIn, self.deleteMessage, deleteIn, priorMessage.originalObject)
+            msgObj = await target.send(message)
+
+        # Delete message (and optional trigger message)
+        if deleteIn:
+            self.loop.create_task(self.delete_message(msgObj, deleteIn))
+            if priorMessage:
+                self.loop.create_task(self.delete_message(priorMessage, deleteIn))
 
         return msgObj
 
+    async def delete_message(self, message, delay=0):
+        await asyncio.sleep(delay)
+        await message.delete()
+
     async def announceUpdates(self):
-        self.lastGot = time.time()
+        self.prevUpdateTime = time.time()
 
         for module in self.modules:
             for announcement in module.pendingAnnouncements:
+                # announcement[0] = Target
+                # announcement[1] = Message
+                # announcement[2] = Keyword Arguments: (module)
                 try:
                     await self.send_message(announcement[0], announcement[1])
                 except Exception as e:
                     print('{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncement: {}\n\n{}'.format(
-                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', announcement[0], announcement[1], format_exc()))
-                    await self.send_message(botspam, '**{}** tried to send an announcement to channel ID {}, but an exception was raised.\n```\n{}```'.format(
-                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', announcement[0], format_exc()))
+                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', 
+                        announcement[0],
+                        announcement[1],
+                        format_exc()
+                    ))
+                    await self.send_message(botspam, '**{}** tried to send an announcement to {}, but an exception was raised.\n```\n{}```'.format(
+                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module',
+                        self.get_channel(announcement[0]).mention,
+                        format_exc()
+                    ))
 
+            # A permanent message is only available as an embed.
             for update in module.pendingUpdates:
+                # update[0] = Target (only one target)
+                # update[1] = The embed's title, used to find and edit message.
+                # update[2] = Embed (Message)
+                # update[3] = Keyword Arguments: (module)
                 messageSent = False
                 channel = self.get_channel(update[0])
-                async for message in self.logs_from(channel, limit=10):
+                async for message in channel.history(limit=10):
                     for embed in message.embeds:
-                        #print(embed.get('fields', [{}])[0].get('name', ''), update[1].fields[0].name)
-                        #print(embed, update[2])
-                        if embed.get('fields', [{}])[0].get('name', '') == update[1] or embed.get('author', {}).get('name', '') == update[1]:
-                            await self.edit_message(message, embed=update[2])
+                        # Find the message that has a matching title / author to replace with the new message.
+                        if embed.fields[0].name == update[1] or embed.author.name == update[1]:
+                            await message.edit(embed=update[2])
                             messageSent = True
                 if not messageSent:
                     await self.send_message(channel, update[2])
 
+            # All pending messages sent, clear out the list.
             module.pendingAnnouncements = []
             module.pendingUpdates = []
 
@@ -184,9 +224,9 @@ class ToonTracker(discord.Client):
             loop.stop()
             loop.run_forever()
 
-            if time.time() - self.lastGot > 10:
+            if time.time() - self.prevUpdateTime > 10:
                 loop.create_task(self.announceUpdates())
-                self.lastGot = time.time()
+                self.prevUpdateTime = time.time()
 
     @delegateEvent
     async def on_channel_create(self, channel): pass
@@ -195,7 +235,7 @@ class ToonTracker(discord.Client):
     @delegateEvent
     async def on_channel_update(self, before, after): pass
     @delegateEvent
-    async def on_member_ban(self, member): pass
+    async def on_member_ban(self, guild, user): pass
     @delegateEvent
     async def on_member_join(self, member): pass
     @delegateEvent
@@ -213,41 +253,41 @@ class ToonTracker(discord.Client):
     @delegateEvent
     async def on_reaction_remove(self, reaction, user): pass
     @delegateEvent
-    async def on_server_available(self, server): pass
+    async def on_guild_available(self, guild): pass
     @delegateEvent
-    async def on_server_emojis_update(self, before, after): pass
+    async def on_guild_emojis_update(self, guild, before, after): pass
     @delegateEvent
-    async def on_server_join(self, server): pass
+    async def on_guild_join(self, guild): pass
     @delegateEvent
-    async def on_server_remove(self, server): pass
+    async def on_guild_remove(self, guild): pass
     @delegateEvent
-    async def on_server_role_create(self, role): pass
+    async def on_guild_role_create(self, role): pass
     @delegateEvent
-    async def on_server_role_delete(self, role): pass
+    async def on_guild_role_delete(self, role): pass
     @delegateEvent
-    async def on_server_unavailable(self, server): pass
+    async def on_guild_unavailable(self, guild): pass
     @delegateEvent
-    async def on_server_role_update(self, before, after): pass
+    async def on_guild_role_update(self, before, after): pass
     @delegateEvent
-    async def on_server_update(self, before, after): pass
+    async def on_guild_update(self, before, after): pass
     @delegateEvent
-    async def on_voice_state_update(self, before, after): pass
+    async def on_voice_state_update(self, member, before, after): pass
 
     async def load_config(self, term='start', channel=None):
         if not channel:
-            channel = botspam
+            channel = Config.getSetting('botspam')
 
         warnings = []
         errors = []
 
         rTTR = Config.getSetting('rTTR')
         if not rTTR:
-            e = 'No server ID was designated as rTTR in config.'
+            e = 'No guild ID was designated as rTTR in config.'
             errors.append(e)
             print('[!!!] ' + e)
-        self.rTTR = self.get_server(rTTR)
+        self.rTTR = self.get_guild(rTTR)
         if not self.rTTR:
-            e = 'No known server was designated as rTTR in config.'
+            e = 'No known guild was designated as rTTR in config.'
             errors.append(e)
             print('[!!!] ' + e)
 
@@ -259,13 +299,23 @@ class ToonTracker(discord.Client):
             await self.logout()
             await self.close()
 
+        # LOADING MODULES
+
+        if self.toLoad == None:
+            w = '"load_modules" option not found in config'
+            warnings.append(w)
+            print(w)
+            self.toLoad = []
         for module in self.toLoad:
-            if not hasattr(this, module):
-                w = 'Could not find Pythonic module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
+            assertType(module, str)
+
+            try:
+                modsmod = import_module('modules.' + module)
+            except ImportError:
+                w = 'Could not find Python module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
                 warnings.append(w)
                 print(w)
                 continue
-            modsmod = getattr(this, module)
             if not hasattr(modsmod, 'module'):
                 w = 'Could not locate module subclass for "{}"'.format(module)
                 warnings.append(w)
@@ -292,11 +342,11 @@ class ToonTracker(discord.Client):
         await self.send_message(channel, full)
 
     async def on_ready(self):
-        if self.ttReady:
+        if self.ready:
             return
 
         await self.load_config(term='start' if not restarted else 'restart')
-        self.ttReady = True
+        self.ready = True
 
 
 token = Config.getSetting('token')
@@ -306,13 +356,13 @@ if not token:
 
 while True:
     try:
-        T = ToonTracker()
+        TT = ToonTracker()
     except Exception as e:
         print('ToonTracker failed to start.\n\n{}'.format(format_exc()))
         sys.exit()
 
     try:
-        loop.run_until_complete(T.login(token))
+        loop.run_until_complete(TT.login(token))
     except Exception as e:
         print('ToonTracker failed to login. {}'.format(e))
         sys.exit()
@@ -321,15 +371,15 @@ while True:
     if not botspam:
         print('No bot spam channel specified in the config. You may miss important messages.')
 
-    connLoop = loop.create_task(T.connect())
-    loop.run_until_complete(T.wait_until_ready())
+    connLoop = loop.create_task(TT.connect())
+    loop.run_until_complete(TT.wait_until_ready())
 
-    T.ttLoop()
+    TT.ttLoop()
 
-    for module in T.modules:
+    for module in TT.modules:
         module.stopTracking()
 
-    if T.restart:
-        del T
+    if TT.restart:
+        del TT
     else:
         break

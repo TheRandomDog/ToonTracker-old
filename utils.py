@@ -2,8 +2,8 @@ import os
 import json
 import logging
 from __init__ import __version__
-from discord import Embed, Color
-
+from discord import Embed, Color, Member
+from datetime import datetime
 
 # Create config file if it doesn't exist
 try:
@@ -17,18 +17,48 @@ except json.JSONDecodeError:
 finally:
     f.close()
 
+
+# ASSERTIONS
+
+def assertType(value, *types):
+    if not type(value) in types:
+        raise TypeError("Expected {} when passed value '{}', found {} instead".format(
+            ", ".join([str(t) for t in types]), value, type(value))
+        )
+    return value
+
+def assertTypeOrOtherwise(value, *types, otherwise):
+    return value if type(value) in types else otherwise
+
+# CONFIG
+
 class Config:
+    @staticmethod
+    def openFile(mode):
+        file = open(os.path.join(__location__, 'config.json'), mode)
+        content = json.loads(file.read())
+        file.close()
+        try:
+            file = open(os.path.join(__location__, 'profiles', content['profile']), mode)
+        except (KeyError, FileNotFoundError) as e:
+            if isinstance(e, FileNotFoundError):
+                print('[!!!] Tried to open profile "{}", but the profile couldn\'t be found.'.format(content['profile']))
+            file = open(os.path.join(__location__, 'config.json'), mode)
+        return file
+
     @classmethod
     def getSetting(cls, setting, otherwise=None):
         try:
-            file = open(os.path.join(__location__, 'config.json'), 'r')
+            file = cls.openFile('r')
             content = json.loads(file.read())
             return content.get(setting, otherwise)
         except json.JSONDecodeError:
-            print('[!!!] Tried to read setting "{}", but config.json did not have valid JSON content.'.format(setting))
+            print('[!!!] Tried to read setting "{}", but {} did not have valid JSON content.'.format(
+                setting, os.path.basename(file.name))
+            )
             return otherwise
         finally:
-            f.close()
+            file.close()
 
     @classmethod
     def getModuleSetting(cls, module, setting, otherwise=None):
@@ -39,7 +69,7 @@ class Config:
 
     @classmethod
     def getUserRanks(cls):
-        userRanks = cls.getSetting('user_ranks')
+        userRanks = {int(userID): rank for userID, rank in cls.getSetting('user_ranks').items()}
         return userRanks or {}
 
     @classmethod
@@ -74,16 +104,18 @@ class Config:
     @classmethod
     def setSetting(cls, setting, value):
         try:
-            f = open(os.path.join(__location__, 'config.json'), 'r+')
-            content = json.loads(f.read())
+            file = cls.openFile('r+')
+            content = json.loads(file.read())
             content[setting] = value
-            f.seek(0, 0)
-            f.write(json.dumps(content, indent=4, sort_keys=True))
-            f.truncate()
+            file.seek(0, 0)
+            file.write(json.dumps(content, indent=4, sort_keys=True))
+            file.truncate()
         except json.JSONDecodeError:
-            print('[!!!] Tried to write value "{}" to setting "{}", but config.json did not have valid JSON content.'.format(value, setting))
+            print('[!!!] Tried to write value "{}" to setting "{}", but {} did not have valid JSON content.'.format(
+                value, setting, os.path.basename(file.name))
+            )
         finally:
-            f.close()
+            file.close()
 
     @classmethod
     def setModuleSetting(cls, module, setting, value):
@@ -104,6 +136,200 @@ class Config:
         roleRanks = cls.getRoleRanks()
         roleRanks[role] = rank
         cls.setSetting('role_ranks', userRanks)
+
+# USERS
+
+class Users:
+    NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
+
+    @staticmethod
+    def openFile(mode):
+        file = open(os.path.join(__location__, 'users.json'), mode)
+        return file
+
+    @classmethod
+    def getUsers(cls):
+        try:
+            file = cls.openFile('r')
+            content = {int(userID): data for userID, data in json.loads(file.read()).items()}
+            return content
+        except json.JSONDecodeError:
+            print('[!!!] Tried to read user id "{}", but {} did not have valid JSON content.'.format(
+                userID, os.path.basename(file.name))
+            )
+            return otherwise
+        finally:
+            file.close()
+
+    @classmethod
+    def getUserJSON(cls, userID):
+        content = cls.getUsers()
+        if not content.get(userID, None):
+            cls.createUser(userID)
+            content = cls.getUsers()
+        return content.get(userID, None)
+
+    @classmethod
+    def getUserEmbed(cls, member):
+        content = cls.getUsers()
+        if not content.get(member.id, None):
+            cls.createUser(member.id)
+            content = cls.getUsers()
+        user = content[member.id]
+
+        embed = Embed(title='User Details', color=member.top_role.color if isinstance(member, Member) else Color.default())
+        embed.set_author(name=str(member), icon_url=member.avatar_url)
+        embed.add_field(name='Account Creation Date', value=str(member.created_at.date()), inline=True)
+        embed.add_field(name='Join Date', value=str(member.joined_at.date()), inline=True)
+        embed.add_field(name='Level | XP', value='{} | {}'.format(user['level'], user['xp']), inline=True)
+        for punishment in user['punishments']:
+            if punishment.get('length', None):
+                embed.add_field(
+                    name='Temporary Ban ({})'.format(punishment['length']),
+                    value='**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                        punishment['mod'],
+                        str(datetime.fromtimestamp(punishment['created']).date()),
+                        punishment['reason'].replace(cls.NO_REASON, '*No reason was ever specified.*'),
+                        punishment['editID']
+                    ),
+                    inline=False
+                )
+            else:
+                embed.add_field(
+                    name=punishment['type'],
+                    value='**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                        punishment['mod'],
+                        str(datetime.fromtimestamp(punishment['created']).date()),
+                        punishment['reason'].replace(cls.NO_REASON, '*No reason was ever specified.*'),
+                        punishment['editID']
+                    ),
+                    inline=False
+                )
+        if len(user['punishments']):
+            embed.set_footer(text="You can use a punishment's edit ID to ~editReason or ~removePunishment")
+        return embed
+
+    @classmethod
+    def getUserXP(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['xp']
+
+    @classmethod
+    def getUserLevel(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['level']
+
+    @classmethod
+    def getUserTimeOnline(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['time_online']
+
+    @classmethod
+    def getUserTimeOffline(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['time_offline']
+
+    @classmethod
+    def getUserTimeDND(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['time_DND']
+
+    @classmethod
+    def getUserTimeIdle(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['time_idle']
+
+    @classmethod
+    def getUserChannelHistory(cls, userID, channelID=None):
+        user = cls.getUserJSON(userID)
+        channelHistory = user['channel_history']
+        if channelID:
+            return channelHistory.get(channelID, {'messages': 0, 'attachments': 0})
+        return channelHistory
+
+    @classmethod
+    def getUserPunishments(cls, userID):
+        user = cls.getUserJSON(userID)
+        return user['punishments']
+
+    @classmethod
+    def createUser(cls, userID, **kwargs):
+        data = {
+            'xp': kwargs.get('xp', 0),
+            'level': kwargs.get('level', 0),
+            'time_online': kwargs.get('time_online', 0),
+            'time_offline': kwargs.get('time_offline', 0),
+            'time_DND': kwargs.get('time_DND', 0),
+            'time_idle': kwargs.get('time_idle', 0),
+            'channel_history': kwargs.get('channel_history', {}),
+            'punishments': kwargs.get('punishments', [])
+        }
+        cls.setUserJSON(userID, data)
+
+    @classmethod
+    def setUserJSON(cls, userID, value):
+        userID = str(userID)
+        try:
+            file = cls.openFile('r+')
+            content = json.loads(file.read())
+            content[str(userID)] = value
+            file.seek(0, 0)
+            file.write(json.dumps(content, indent=4, sort_keys=True))
+            file.truncate()
+        except json.JSONDecodeError:
+            print('[!!!] Tried to write value "{}" to user "{}", but {} did not have valid JSON content.'.format(
+                value, userID, os.path.basename(file.name))
+            )
+        finally:
+            file.close()
+
+    @classmethod
+    def setUserXP(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['xp'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserLevel(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['level'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserTimeOnline(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['time_online'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserTimeOffline(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['time_offline'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserTimeDND(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['time_DND'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserTimeIdle(cls, userID, value):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['time_idle'] = value
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserChannelHistory(cls, userID, channelID, **kwargs):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['channel_history'][channelID] = kwargs
+        cls.setUserJSON(userID, userJSON)
+
+    @classmethod
+    def setUserPunishments(cls, userID, punishments):
+        userJSON = cls.getUserJSON(userID)
+        userJSON['punishments'] = punishments
+        cls.setUserJSON(userID, userJSON)
 
 def getTimeFromSeconds(seconds, oneUnitLimit=False):
     if int(seconds <= 60):
