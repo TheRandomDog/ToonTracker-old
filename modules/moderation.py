@@ -302,9 +302,11 @@ class ModerationModule(Module):
                             modLogMessage = await client.get_channel(MOD_LOG).get_message(punishment['modLogID'])
                             if modLogMessage:
                                 mod = modLogMessage.mentions[0]
+                                editedMessage = modLogMessage.content
                                 if mod.id != message.author.id:
-                                    editedMessage = editedMessage.replace('**Mod:** <@{}>'.format(mod.id), '**Mod:** <@{}> (edited by <@{}>)'.format(mod.id, message.author.id))
-                                editedMessage = re.sub(r'\*No reason yet\. Please add one with `.+` as soon as possible\.\*', newReason, modLogMessage.content)
+                                    print(editedMessage)
+                                    editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(mod.id), '**Mod:** <@!{}> (edited by <@!{}>)'.format(mod.id, message.author.id))
+                                editedMessage = re.sub(r'\*No reason yet\. Please add one with `.+` as soon as possible\.\*', newReason, editedMessage)
                                 await modLogMessage.edit(content=editedMessage)
                         if punishment['noticeID']:
                             user = await client.get_user_info(userID)
