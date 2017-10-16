@@ -24,6 +24,7 @@ def assertType(value, *types):
         raise TypeError("Expected {} when passed value '{}', found {} instead".format(
             ", ".join([str(t) for t in types]), value, type(value))
         )
+    return value
 
 def assertTypeOrOtherwise(value, *types, otherwise):
     return value if type(value) in types else otherwise
