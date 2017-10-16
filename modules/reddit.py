@@ -168,7 +168,6 @@ class NewCommentAnnouncement(Announcer):
             embed.set_author(name=comment.author)
 
         embed.set_footer(text='/r/{} - New Comment'.format(module.subredditName))
-        #embed.add_field(name='Actions', value='')
 
         return embed
 
