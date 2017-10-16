@@ -301,13 +301,16 @@ class ModerationModule(Module):
                         if punishment['modLogID']:
                             modLogMessage = await client.get_channel(MOD_LOG).get_message(punishment['modLogID'])
                             if modLogMessage:
-                                editedMessage = modLogMessage.content.replace(NO_REASON, newReason)
+                                mod = modLogMessage.mentions[0]
+                                if mod.id != message.author.id:
+                                    editedMessage = editedMessage.replace('**Mod:** <@{}>'.format(mod.id), '**Mod:** <@{}> (edited by <@{}>)'.format(mod.id, message.author.id))
+                                editedMessage = re.sub(r'\*No reason yet\. Please add one with `.+` as soon as possible\.\*', newReason, modLogMessage.content)
                                 await modLogMessage.edit(content=editedMessage)
                         if punishment['noticeID']:
                             user = await client.get_user_info(userID)
                             notice = await user.dm_channel.get_message(punishment['noticeID'])
                             if notice:
-                                editedMessage = re.sub(r'```.*```', '```{}```'.format(newReason), notice.content)
+                                editedMessage = notice.content.replace(NO_REASON, newReason)
                                 await notice.edit(content=editedMessage)
 
                         return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
