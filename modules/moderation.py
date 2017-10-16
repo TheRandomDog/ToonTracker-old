@@ -224,7 +224,7 @@ class ModerationModule(Module):
             return '**{}** was added as a plural exception.'.format(word)
 
     class RemovePluralExceptionCMD(Command):
-        NAME = 'RemovePluralException'
+        NAME = 'removePluralException'
         RANK = 300
 
         @staticmethod
