@@ -302,13 +302,13 @@ class ModerationModule(Module):
                             modLogMessage = await client.get_channel(MOD_LOG).get_message(punishment['modLogID'])
                             if modLogMessage:
                                 editedMessage = modLogMessage.content.replace(NO_REASON, newReason)
-                                await modLogMessage.edit(editedMessage)
+                                await modLogMessage.edit(content=editedMessage)
                         if punishment['noticeID']:
                             user = await client.get_user_info(userID)
-                            notice = await user.dmchannel.get_message(punishment['noticeID'])
+                            notice = await user.dm_channel.get_message(punishment['noticeID'])
                             if notice:
                                 editedMessage = re.sub(r'```.*```', '```{}```'.format(newReason), notice.content)
-                                await notice.edit(editedMessage)
+                                await notice.edit(content=editedMessage)
 
                         return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
             return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
