@@ -2,7 +2,8 @@ import os
 import json
 import logging
 from __init__ import __version__
-from discord import Embed, Color
+from discord import Embed, Color, Member
+from datetime import datetime
 
 # Create config file if it doesn't exist
 try:
@@ -139,6 +140,8 @@ class Config:
 # USERS
 
 class Users:
+    NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
+
     @staticmethod
     def openFile(mode):
         file = open(os.path.join(__location__, 'users.json'), mode)
@@ -165,6 +168,44 @@ class Users:
             cls.createUser(userID)
             content = cls.getUsers()
         return content.get(userID, None)
+
+    @classmethod
+    def getUserEmbed(cls, member):
+        content = cls.getUsers()
+        if not content.get(member.id, None):
+            cls.createUser(member.id)
+            content = cls.getUsers()
+        user = content[member.id]
+
+        embed = Embed(title='User Details', color=member.top_role.color if isinstance(member, Member) else Color.default())
+        embed.set_author(name=str(member), icon_url=member.avatar_url)
+        embed.add_field(name='Account Creation Date', value=str(member.created_at.date()), inline=True)
+        embed.add_field(name='Join Date', value=str(member.joined_at.date()), inline=True)
+        embed.add_field(name='Level | XP', value='{} | {}'.format(user['level'], user['xp']), inline=True)
+        for punishment in user['punishments']:
+            if punishment.get('length', None):
+                embed.add_field(
+                    name='Temporary Ban ({})'.format(punishment['length']),
+                    value='**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                        punishment['mod'],
+                        str(datetime.fromtimestamp(punishment['created']).date()),
+                        punishment['reason'].replace(cls.NO_REASON, '*No reason was ever specified.*'),
+                        punishment['editID']
+                    ),
+                    inline=False
+                )
+            else:
+                embed.add_field(
+                    name=punishment['type'],
+                    value='**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                        punishment['mod'],
+                        str(datetime.fromtimestamp(punishment['created']).date()),
+                        punishment['reason'].replace(cls.NO_REASON, '*No reason was ever specified.*'),
+                        punishment['editID']
+                    ),
+                    inline=False
+                )
+        return embed
 
     @classmethod
     def getUserXP(cls, userID):

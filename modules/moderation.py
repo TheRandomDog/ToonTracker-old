@@ -94,6 +94,7 @@ async def punishUser(client, module, message, *args, punishment=None):
         'reason': reason,
         'modLogID': modLog.id if modLog else None,
         'editID': message.id,
+        'created': time.time(),
         'noticeID': None
     }
     if nextPunishment == 'Warning':
@@ -120,6 +121,7 @@ async def punishUser(client, module, message, *args, punishment=None):
         await user.kick()
     elif nextPunishment == 'Temporary Ban':
         punishmentAdd['endTime'] = time.time() + length
+        punishmentAdd['length'] = lengthText
         try:
             notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
                 'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
@@ -157,12 +159,12 @@ class ModerationModule(Module):
                 name = ' '.join(args)
                 user = discord.utils.get(message.guild.members, display_name=name)
                 if user:
-                    return '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(user.mention, user.created_at, user.joined_at)
+                    return Users.getUserEmbed(user)
                 else:
                     return 'No known user'
             else:
                 for mention in message.mentions:
-                    return '{}\nAccount Creation Date: {}\nServer Join Date: {}'.format(mention.mention, mention.created_at, mention.joined_at)
+                    return Users.getUserEmbed(mention)
  
     class AddBadWordCMD(Command):
         NAME = 'addbadword'
@@ -296,29 +298,56 @@ class ModerationModule(Module):
             newReason = ' '.join(args[1:])
 
             for userID, userData in Users.getUsers().items():
+                somethingChanged = False
+                i = 0
                 for punishment in userData['punishments']:
                     if punishment['editID'] == int(args[0]):
+                        somethingChanged = True
                         if punishment['modLogID']:
                             modLogMessage = await client.get_channel(MOD_LOG).get_message(punishment['modLogID'])
                             if modLogMessage:
                                 mod = modLogMessage.mentions[0]
                                 editedMessage = modLogMessage.content
                                 if mod.id != message.author.id:
-                                    print(editedMessage)
                                     editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(mod.id), '**Mod:** <@!{}> (edited by <@!{}>)'.format(mod.id, message.author.id))
                                 editedMessage = re.sub(r'\*No reason yet\. Please add one with `.+` as soon as possible\.\*', newReason, editedMessage)
                                 await modLogMessage.edit(content=editedMessage)
                         if punishment['noticeID']:
                             user = await client.get_user_info(userID)
+                            if not user.dm_channel:
+                                await user.create_dm()
                             notice = await user.dm_channel.get_message(punishment['noticeID'])
                             if notice:
                                 editedMessage = notice.content.replace(NO_REASON, newReason)
                                 await notice.edit(content=editedMessage)
-
-                        return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+                        punishment['reason'] = newReason
+                        userData['punishments'][i] = punishment
+                    i += 1
+                if somethingChanged:
+                    Users.setUserPunishments(userID, userData['punishments'])
+                    return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
             return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
+    class RemovePunishmentCMD(Command):
+        NAME = 'removePunishment'
+        RANK = 300
 
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            try:
+                int(args[0])
+            except ValueError as e:
+                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+
+            for userID, userData in Users.getUsers().items():
+                somethingChanged = False
+                newPunishments = userData['punishments']
+                for punishment in userData['punishments']:
+                    if punishment['editID'] == int(args[0]):
+                        newPunishments.remove(punishment)
+                        Users.setUserPunishments(userID, newPunishments)
+                        return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+            return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
     def __init__(self, client):
         Module.__init__(self, client)
@@ -333,7 +362,8 @@ class ModerationModule(Module):
             self.KickCMD,
             self.TmpBanCMD,
             self.PermBanCMD,
-            self.EditPunishReasonCMD
+            self.EditPunishReasonCMD,
+            self.RemovePunishmentCMD
         ]
 
         self.badWordFilterOn = Config.getModuleSetting('moderation', 'badwordfilter')
@@ -363,7 +393,8 @@ class ModerationModule(Module):
 
     async def on_member_join(self, member):
         botspam = Config.getSetting('botspam')
-        await self.client.send_message(botspam, "{} joined.\nAccount Creation Date: {}\nJoin Date (Today): {}".format(member.mention, member.created_at, member.joined_at))
+        for channel in botspam:
+            await self.client.get_channel(channel).send(content='{} joined.'.format(member.mention), embed=Users.getUserEmbed(member))
 
     async def on_member_remove(self, member):
         botspam = Config.getSetting('botspam')
