@@ -102,7 +102,7 @@ class NewPostAnnouncement(Announcer):
                     i -= 1
                 desc = desc[:(i + 1) or None] + '...'
             else:
-                desc = desc[0]
+                desc = descList[0]
         else:
             desc = 'Links to `{}`. [View the post instead.]({})'.format(submission.domain, "https://www.reddit.com" + submission.permalink)
 
@@ -148,7 +148,7 @@ class NewCommentAnnouncement(Announcer):
                 i -= 1
             desc = desc[:(i + 1) or None] + '...'
         else:
-            desc = desc[0]
+            desc = descList[0]
 
         color = Color.default()
         authorIcon = None
