@@ -80,7 +80,7 @@ async def punishUser(client, module, message, *args, punishment=None):
     modLog = None
     if MOD_LOG:
         modLog = await client.send_message(MOD_LOG, "**User:** {}\n**Mod:** {}\n**Punishment:** {}\n**Reason:** {}".format(
-            user.mention,
+            str(user),
             message.author.mention,
             nextPunishment + (' ({})'.format(lengthText) if lengthText else ''),
             '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'.format(client.commandPrefix, message.id) if reason == NO_REASON else reason
