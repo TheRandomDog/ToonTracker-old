@@ -387,7 +387,7 @@ class ModerationModule(Module):
             self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
             self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
 
-    async def on_member_ban(self, member):
+    async def on_member_ban(self, guild, member):
         botspam = Config.getSetting('botspam')
         await self.client.send_message(botspam, "{} was banned.".format(member.display_name))
 
