@@ -9,7 +9,7 @@ from modules.module import *
 from math import ceil, floor
 from extra.toontown import *
 from discord import Embed, Color
-from utils import Config, getTimeFromSeconds, getAttributeFromMatch
+from utils import Config, getTimeFromSeconds, getAttributeFromMatch, assertTypeOrOtherwise
 uaHeader = Config.getSetting('ua_header', getVersion())
 
 invasionCache = []
@@ -166,7 +166,7 @@ class InvasionModule(Module):
             self.lastUpdated = self.getLastUpdated(json)
 
             self.addCollectionSuccess()
-            if self.collectionSuccesses % 10 == 0 and self.route != self.defaultRoute:
+            if self.collectionSuccesses % 150 == 0 and self.route != self.defaultRoute:
                 self.testingRoute = True
                 self.lastKnownWorkingRoute = self.route
                 self.switchRoutes(self.defaultRoute)
@@ -176,7 +176,7 @@ class InvasionModule(Module):
                 self.switchRoutes(self.lastKnownWorkingRoute)
             else:
                 self.addCollectionFailure()
-                if self.collectionFailures % 10 == 0:
+                if self.collectionFailures % 5 == 0:
                     self.switchRoutes()
             return None
 
@@ -249,11 +249,11 @@ class InvPermaMsg(PermaMsg):
             else:
                 invs.append(inv)
         megainvs = sorted(megainvs, key=lambda k: -k.startTime)
-        invs = sorted(invs, key=lambda k: -k.etr)
+        invs = sorted(invs, key=lambda k: (-k.etr if k.etr != -1 else (k.defeated/k.total)))
 
         invs = megainvs + invs
 
-        if time.time() >= (module.lastUpdated + 300):
+        if time.time() >= (assertTypeOrOtherwise(module.lastUpdated, int, otherwise=0) + 300):
             desc = 'We\'re experiencing some technical difficulties.\nInvasion tracking will be made reavailable as soon as possible.'
             msg = module.createDiscordEmbed(title=title, description=desc, color=Color.light_grey())
             msg.set_footer(text='We apologize for the inconvenience.')
