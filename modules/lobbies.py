@@ -49,7 +49,7 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
         name='lobby-{}-owner'.format(lobbyID),
         reason=auditLogReason
     )
-    await message.author.add_roles(lobby.role)
+    await message.author.add_roles(lobby.role, reason=auditLogReason)
 
     categoryName = 'Lobby [{}]'.format(name)
     discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
@@ -100,6 +100,46 @@ class LobbyManagement(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             return await createLobby(client, module, message, *args, voiceChannelOnly=True)
+
+    class LobbyInviteCMD(Command):
+        NAME = 'inviteToLobby'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if message.channel.id != module.channelID:
+                return
+
+            residingLobby = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
+            ownsLobby = 'owner' in residingLobby.name if residingLobby else False
+
+            if not residingLobby:
+                return '{} You\'re not in a lobby yourself -- create a lobby before you invite users.'.format(message.author.mention)
+            elif not message.mentions:
+                return '{} I need a mention of the user you want to invite to your lobby.'.format(message.author.mention)
+
+            failedMessages = []
+            for user in message.mentions:
+                try:
+                    await user.send("Hey there, {}! {} has invited you to join their private lobby on the Toontown Rewritten Discord. " \
+                        "\n\nTo accept, {}copy & paste `~acceptLobbyInvite {}`. If you're not interested, you can ignore this message.".format(
+                            user.mention,
+                            message.author.mention,
+                            'first leave your current lobby with `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* and then ' \
+                            if discord.utils.find(lambda r: 'lobby-' in r.name, user.roles) else '',
+                            residingLobby.id
+                        )
+                    )
+                except discord.HTTPException as e:
+                    failedMessages.append(user.mention)
+            if failedMessages:
+                return '{} Could not send out messages to {} {} *({})*... the channel is still open for them if they use `~acceptLobbyInvite {}`'.format(
+                    message.author.mention,
+                    len(failedMessages),
+                    'person' if len(failedMessages) == 1 else 'people',
+                    ', '.join(failedMessages),
+                    residingLobby.id
+                )
+            return '{} Invite{} sent!'.format('s' if len(message.mentions) > 1 else '')
 
 
     class LobbyCMD(Command):
@@ -255,7 +295,8 @@ class LobbyManagement(Module):
         self.commands = [
             self.CreateLobbyCMD,
             self.CreateTextLobbyCMD,
-            self.CreateVoiceLobbyCMD
+            self.CreateVoiceLobbyCMD,
+            self.LobbyInviteCMD
         ]
         self.channelID = Config.getModuleSetting("lobbies", "interaction")
 
