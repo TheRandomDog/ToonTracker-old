@@ -16,6 +16,7 @@ class Lobby:
         self.ownerRole = None
         self.created = time.time()
         self.customName = ""
+        self.invited = []
 
 
 async def createLobby(client, module, message, *args, textChannelOnly=False, voiceChannelOnly=False):
@@ -118,8 +119,19 @@ class LobbyManagement(Module):
                 return '{} I need a mention of the user you want to invite to your lobby.'.format(message.author.mention)
 
             failedMessages = []
+            failedBot = []
+            failedPendingInvite = []
             for user in message.mentions:
+                if user.bot:
+                    failedBot.append(user.mention)
+                    continue
+
+                if user.id in residingLobby.invited:
+                    failedPendingInvite.append(user.mention)
+                    continue
+
                 try:
+                    residingLobby.invited.append(user.id)
                     await user.send("Hey there, {}! {} has invited you to join their private lobby on the Toontown Rewritten Discord. " \
                         "\n\nTo accept, {}copy & paste `~acceptLobbyInvite {}`. If you're not interested, you can ignore this message.".format(
                             user.mention,
@@ -132,14 +144,30 @@ class LobbyManagement(Module):
                 except discord.HTTPException as e:
                     failedMessages.append(user.mention)
             if failedMessages:
-                return '{} Could not send out messages to {} {} *({})*... the channel is still open for them if they use `~acceptLobbyInvite {}`'.format(
+                return '{} Could not send out messages to {} {} *({})*... the channel is still open for them if they use `~acceptLobbyInvite {}`. {}But otherwise, invites sent!'.format(
                     message.author.mention,
-                    len(failedMessages),
-                    'person' if len(failedMessages) == 1 else 'people',
-                    ', '.join(failedMessages),
-                    residingLobby.id
+                    len(failedMessages + failedBot),
+                    'person' if len(failedMessages + failedBot) == 1 else 'people',
+                    ', '.join(failedMessages) + (' and [uninvitable] bots' if failedBot else ''),
+                    residingLobby.id,
+                    'Also, you\'ve already sent an invite that\'s pending to {} of the mentioned users. '.format(len(failedPendingInvite)) if failedPendingInvite else ''
                 )
-            return '{} Invite{} sent!'.format(message.author.mention, 's' if len(message.mentions) > 1 else '')
+            elif len(failedBot) == len(message.mentions):
+                return '{} Could not invite any mentioned users, because all mentioned users were bots.'.format(message.author.mention)
+            elif failedBot:
+                return '{} Could not invite some users because they were bots. {}But otherwise, invites sent!'.format(
+                    message.author.mention,
+                    'Also, you\'ve already sent an invite that\'s pending to {} of the mentioned users. '.format(len(failedPendingInvite)) if failedPendingInvite else ''
+                )
+            elif len(failedPendingInvite) == len(message.mentions):
+                return '{} You\'ve already sent pending invites to the mentioned users.'.format(message.author.mention)
+            elif failedPendingInvite:
+                return '{} You\'ve already sent an invite that\'s pending to {} of the mentioned users. But otherwise, invites sent!'.format(
+                    message.author.mention,
+                    len(failedPendingInvite)
+                )
+            else:
+                return '{} Invite{} sent!'.format(message.author.mention, 's' if len(message.mentions) > 1 else '')
 
 
     class LobbyCMD(Command):
