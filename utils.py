@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 from __init__ import __version__
@@ -330,6 +331,41 @@ class Users:
         userJSON = cls.getUserJSON(userID)
         userJSON['punishments'] = punishments
         cls.setUserJSON(userID, userJSON)
+
+SHORT_TIME = re.compile(r'(?P<num>[0-9]+)(?P<char>[smhdwMy])')
+LENGTHS = {
+    's': 1,
+    'm': 60,
+    'h': 3600,
+    'd': 86400,
+    'w': 604800,
+    'M': 2629743,
+    'y': 31556926
+}
+FULL = {
+    's': 'seconds',
+    'm': 'minutes',
+    'h': 'hours',
+    'd': 'days',
+    'w': 'weeks',
+    'M': 'months',
+    'y': 'years'
+}
+def getShortTimeLength(time):
+    match = SHORT_TIME.match(time)
+    if not match:
+        raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')
+    return LENGTHS[match.group('char')] * int(match.group('num'))
+def getShortTimeUnit(time):
+    match = SHORT_TIME.match(time)
+    if not match:
+        raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')
+    return FULL[match.group('char')]
+def getLongTime(time):
+    match = SHORT_TIME.match(time)
+    if not match:
+        raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')
+    return '{} {}'.format(match.group('num'), FULL[match.group('char')])
 
 def getTimeFromSeconds(seconds, oneUnitLimit=False):
     if int(seconds <= 60):

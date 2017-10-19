@@ -5,27 +5,8 @@ import re
 from clarifai.rest import ClarifaiApp, Image, Video
 from extra.commands import Command, CommandResponse
 from modules.module import Module
-from utils import Config, Users
+from utils import Config, Users, getShortTimeLength, getLongTime
 
-TIMED_BAN_FORMAT = re.compile(r'(?P<num>[0-9]+)(?P<char>[smhdwMy])')
-LENGTHS = {
-    's': 1,
-    'm': 60,
-    'h': 3600,
-    'd': 86400,
-    'w': 604800,
-    'M': 2629743,
-    'y': 31556926
-}
-FULL = {
-    's': 'seconds',
-    'm': 'minutes',
-    'h': 'hours',
-    'd': 'days',
-    'w': 'weeks',
-    'M': 'months',
-    'y': 'years'
-}
 MOD_LOG = Config.getModuleSetting('moderation', 'mod_log', None)
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
 NO_REASON_MOD = 'No reason yet.'
@@ -58,21 +39,21 @@ async def punishUser(client, module, message, *args, punishment=None):
         punishments = Users.getUserPunishments(user.id)
         nextPunishment = punishment
 
-    match = TIMED_BAN_FORMAT.match(args[1] if len(args) > 1 else '')
-    if match:
+    try:
+        length = getShortTimeLength(args[1] if len(args) > 1 else '')
+        lengthText = getLongTime(args[1] if len(args) > 1 else '')
         nextPunishment = 'Temporary Ban'
-        length = LENGTHS[match.group('char')] * int(match.group('num'))
-        lengthText = '{} {}'.format(match.group('num'), FULL[match.group('char')])
         if not 15 <= length <= 63113852:
             return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.'.format(message.author.mention), deleteIn=5, priorMessage=message)
         reason = ' '.join(args[2:])
-    elif nextPunishment == 'Temporary Ban':
-        lengthText = '24 hours'
-        length = 86400  # 1 day
-        reason = ' '.join(args[1:])
-    else:
-        lengthText = None
-        reason = ' '.join(args[1:])
+    except ValueError:
+        if nextPunishment == 'Temporary Ban':
+            lengthText = '24 hours'
+            length = 86400
+            reason = ' '.join(args[1:])
+        else:
+            lengthText = None
+            reason = ' '.join(args[1:])
 
     if not reason:
         reason = NO_REASON
