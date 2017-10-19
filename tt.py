@@ -128,7 +128,6 @@ class ToonTracker(discord.Client):
                 if type(response) == CommandResponse:
                     await self.send_command_response(response)
                 elif response:
-                    print(response)
                     await self.send_message(message.channel, response)
             except Exception:
                 await self.send_message(message.channel, '```\n{}```'.format(format_exc()))

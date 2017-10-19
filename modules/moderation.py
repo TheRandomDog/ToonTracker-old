@@ -166,15 +166,23 @@ class ModerationModule(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             if not message.mentions:
-                name = ' '.join(args)
-                user = discord.utils.get(message.guild.members, display_name=name)
-                if user:
-                    return Users.getUserEmbed(user)
+                if not message.raw_mentions:
+                    try:
+                        user = await client.get_user_info(int(args[0]))
+                    except (ValueError, IndexError, discord.NotFound):
+                        name = ' '.join(args)
+                        user = discord.utils.get(message.guild.members, display_name=name)
+                        user = discord.utils.get(message.guild.members, name=name) if not user else user
+                        if not user:
+                            return 'No known user'
                 else:
-                    return 'No known user'
+                    try:
+                        user = await client.get_user_info(message.raw_mentions[0])
+                    except discord.NotFound:
+                        return 'No known user'
             else:
-                for mention in message.mentions:
-                    return Users.getUserEmbed(mention)
+                user = message.mentions[0]
+            return Users.getUserEmbed(user)
  
     class AddBadWordCMD(Command):
         NAME = 'addBadWord'
