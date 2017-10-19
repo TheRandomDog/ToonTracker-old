@@ -139,7 +139,7 @@ class LobbyManagement(Module):
                     ', '.join(failedMessages),
                     residingLobby.id
                 )
-            return '{} Invite{} sent!'.format('s' if len(message.mentions) > 1 else '')
+            return '{} Invite{} sent!'.format(message.author.mention, 's' if len(message.mentions) > 1 else '')
 
 
     class LobbyCMD(Command):
