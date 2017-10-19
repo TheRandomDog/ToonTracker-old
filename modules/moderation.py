@@ -13,9 +13,21 @@ NO_REASON_MOD = 'No reason yet.'
 
 async def punishUser(client, module, message, *args, punishment=None):
     if not message.mentions:
-        return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+        if not message.raw_mentions:
+            try:
+                user = await client.get_user_info(int(args[0]))
+            except (ValueError, IndexError):
+                return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+            except discord.NotFound:
+                return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, args[0]), deleteIn=5, priorMessage=message)
+        else:
+            try:
+                user = await client.get_user_info(message.raw_mentions[0])
+            except discord.NotFound:
+                return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)   
+    else:
+        user = message.mentions[0]
     
-    user = message.mentions[0]
     if user.bot:
         return CommandResponse(message.channel, '{} You cannot punish a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
             deleteIn=5, priorMessage=message)
@@ -38,6 +50,12 @@ async def punishUser(client, module, message, *args, punishment=None):
     else:
         punishments = Users.getUserPunishments(user.id)
         nextPunishment = punishment
+
+    if nextPunishment == 'Kick' and not message.mentions:
+        if not client.rTTR.get_member(user.id):
+            nextPunishment = 'Warning'
+            await client.send_message(message.author, 'The punishment (a kick) was downgraded to a warning because the user ' \
+                'is not currently on the server and kicking would have had no effect.')
 
     try:
         length = getShortTimeLength(args[1] if len(args) > 1 else '')
@@ -86,7 +104,7 @@ async def punishUser(client, module, message, *args, punishment=None):
                     user.mention, reason))
             punishmentAdd['noticeID'] = notice.id
         except Exception as e:
-            await client.send_message(message.author, 'Could not send warning notification to the user.')
+            await client.send_message(message.author, 'Could not send warning notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send warning notification message to {}'.format(user.id))
     elif nextPunishment == 'Kick':                                     
         try:
@@ -97,9 +115,12 @@ async def punishUser(client, module, message, *args, punishment=None):
                     user.mention, reason))
             punishmentAdd['noticeID'] = notice.id
         except Exception as e:
-            await client.send_message(message.author, 'Could not send kick notification to the user.')
+            await client.send_message(message.author, 'Could not send kick notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send kick notification message to {}'.format(user.id))
-        await user.kick()
+        try:
+            await client.rTTR.kick(user, reason='On behalf of ' + str(message.author))
+        except discord.HTTPException:
+            await client.send_message(message.author, 'Could not kick the user. If the user was not on the server, this is expected.')
     elif nextPunishment == 'Temporary Ban':
         punishmentAdd['endTime'] = time.time() + length
         punishmentAdd['length'] = lengthText
@@ -111,9 +132,13 @@ async def punishUser(client, module, message, *args, punishment=None):
                 'as you stay Toony!'.format(user.mention, lengthText, reason))
             punishmentAdd['noticeID'] = notice.id
         except Exception as e:
-            await client.send_message(message.author, 'Could not send temporary ban notification to the user.')
+            await client.send_message(message.author, 'Could not send temporary ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send temporary ban notification message to {}'.format(user.id))
-        await user.ban()
+        try:
+            await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
+        except discord.HTTPException:
+            await client.send_message(message.author, 'Could not ban the user. This is probably bad. ' \
+            'You should use Discord\'s built-in moderation tools to enforce the ban.')
     elif nextPunishment == 'Permanent Ban':
         try:
             notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
@@ -121,9 +146,13 @@ async def punishUser(client, module, message, *args, punishment=None):
                 'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
             punishmentAdd['noticeID'] = notice.id
         except Exception as e:
-            await client.send_message(message.author, 'Could not send permanent ban notification to the user.')
+            await client.send_message(message.author, 'Could not send permanent ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send permanent ban notification message to {}'.format(user.id))
-        await user.ban()
+        try:
+            await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
+        except discord.HTTPException:
+            await client.send_message(message.author, 'Could not ban the user. This is probably bad. ' \
+            'You should use Discord\'s built-in moderation tools to enforce the ban.')
     punishments.append(punishmentAdd)
 
     Users.setUserPunishments(user.id, punishments)
@@ -393,7 +422,7 @@ class ModerationModule(Module):
         user = await self.client.get_user_info(userID)
         if endTime:
             await asyncio.sleep(endTime - time.time())
-        await self.client.rTTR.unban(user)
+        await self.client.rTTR.unban(user, reason='The user\'s temporary ban expired.')
         self.scheduledUnbans.remove(userID)
 
     async def filterBadWords(self, message):
