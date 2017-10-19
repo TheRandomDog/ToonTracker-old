@@ -17,9 +17,10 @@ class ReactModule(Module):
     async def handleMsg(self, message):
         if message.channel.id == self.interact and message.attachments:
             for emote in self.emotes:
-                print (emote)
                 if emote == None:
                     continue
                 await message.add_reaction(emote)
+        elif message.channel.id == self.interact and not message.attachments and (Config.getRankOfUser(message.author.id) < 200 or Config.getRankOfRole(message.author.top_role.id) < 200):
+          await message.delete()
 
 module = ReactModule
