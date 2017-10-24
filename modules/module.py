@@ -116,9 +116,8 @@ class Module:
 
         if self.restartLimitResetInterval and self.restartTime + self.restartLimitResetInterval < time.time():
             self.restarts = 0
-        self.restartTime = time.time()
 
-        if self.restarts > 3:
+        if self.restarts > self.restartLimit:
             n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
             print('{} was disabled for encountering a high number of exceptions.\n\n{}'.format(self.__class__.__name__, e))
         else:
@@ -143,16 +142,17 @@ class Module:
                 {'module': self}
             )
         )
+        self.stopTracking()
 
         if self.restarts > self.restartLimit:
             return
 
         if self.restartOnException:
-            r = self.restarts + 1
-            self.stopTracking()
+            r = int(self.restarts) + 1  # int() creates a separate int detached from the about-to-be-updated attribute
             time.sleep(5)
             self.__init__(self.client)  # "Restarts" the module, cleans out pending messages, sets first loop, etc.
             self.restarts = r
+            self.restartTime = time.time()
             self.startTracking()
 
     def createDiscordEmbed(self, title, description=Embed.Empty, *, multipleFields=False, color=None, url=None, **kwargs):
