@@ -160,8 +160,8 @@ class InvasionModule(Module):
         return inv
 
     def collectData(self):
-        r = requests.get(self.route[0], headers=uaHeader)
         try:
+            r = requests.get(self.route[0], headers=uaHeader)
             json = r.json()
             self.lastUpdated = self.getLastUpdated(json)
 
