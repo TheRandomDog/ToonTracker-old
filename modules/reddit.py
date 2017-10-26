@@ -161,7 +161,11 @@ class NewCommentAnnouncement(Announcer):
             color = Color.green()
             authorIcon = 'https://cdn.discordapp.com/emojis/338254475674255361.png'
 
-        embed = module.createDiscordEmbed(title='Reply to ' + comment.submission.title, description=desc, url="https://www.reddit.com" + comment.permalink, color=color)
+        embed = module.createDiscordEmbed(
+            title='Reply to ' + comment.submission.title,
+            description=desc,
+            url="https://www.reddit.com" + (comment.permalink if type(comment.permalink) == str else comment.permalink()),
+            color=color)
         if authorIcon:
             embed.set_author(name=comment.author, icon_url=authorIcon)
         else:
