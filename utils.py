@@ -64,7 +64,7 @@ class Config:
     @classmethod
     def getModuleSetting(cls, module, setting, otherwise=None):
         pss = cls.getSetting(module)
-        if not pss or not pss.get(setting, None):
+        if not pss or pss.get(setting, None) == None:
             return otherwise
         return pss[setting]
 
