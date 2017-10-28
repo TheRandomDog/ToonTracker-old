@@ -318,14 +318,8 @@ class LobbyManagement(Module):
 
     def __init__(self, client):
         Module.__init__(self, client)
+        
         self.activeLobbies = []
-
-        self.commands = [
-            self.CreateLobbyCMD,
-            self.CreateTextLobbyCMD,
-            self.CreateVoiceLobbyCMD,
-            self.LobbyInviteCMD
-        ]
         self.channelID = Config.getModuleSetting("lobbies", "interaction")
 
     async def on_voice_state_update(self, member, before, after):

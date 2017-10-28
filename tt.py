@@ -5,6 +5,7 @@ import sys
 from extra.commands import Command, CommandResponse
 from importlib import import_module, reload
 from traceback import format_exc
+from inspect import isclass
 from utils import *
 
 this = sys.modules[__name__]
@@ -81,7 +82,7 @@ class ToonTracker(discord.Client):
         self.toLoad = Config.getSetting('load_modules')
         self.modules = {}
 
-        self.commands = [self.QuitCMD, self.ReloadCMD, self.EvalCMD, self.ExecCMD]
+        self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
         self.commandPrefix = Config.getSetting('command_prefix', '!')
 
         self.ready = False

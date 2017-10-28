@@ -4,9 +4,9 @@ import time
 import requests
 import threading
 from inspect import isclass
-from functools import wraps
 from discord import Color, Embed
-from traceback import format_exception, format_exc
+from extra.commands import Command
+from traceback import format_exc
 from utils import Config, assertTypeOrOtherwise, getVersion
 uaHeader = Config.getSetting('ua_header', getVersion())
 
@@ -24,10 +24,7 @@ class Module:
         self.isFirstLoop = True
         self.isTracking = False
 
-        self.commands = []
-        self.handlers = []
-        self.announcers = []
-        self.permaMsgs = []
+        self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
         self.pendingAnnouncements = []
         self.pendingUpdates = []
 

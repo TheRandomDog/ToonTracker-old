@@ -370,20 +370,6 @@ class ModerationModule(Module):
 
     def __init__(self, client):
         Module.__init__(self, client)
-        self.commands = [
-            self.LookupCMD,
-            self.AddBadWordCMD,
-            self.RemoveBadWordCMD,
-            self.AddPluralExceptionCMD,
-            self.RemovePluralExceptionCMD,
-            self.PunishCMD,
-            self.WarnCMD,
-            self.KickCMD,
-            self.TmpBanCMD,
-            self.PermBanCMD,
-            self.EditPunishReasonCMD,
-            self.RemovePunishmentCMD
-        ]
 
         self.badWordFilterOn = Config.getModuleSetting('moderation', 'badwordfilter')
         self.badImageFilterOn = Config.getModuleSetting('moderation', 'badimagefilter')
