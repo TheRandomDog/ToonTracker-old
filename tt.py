@@ -76,6 +76,27 @@ class ToonTracker(discord.Client):
             client.toLoad = Config.getSetting('load_modules')
             await client.load_config(term='reload', channel=message.channel)
 
+    # Helps.
+    class HelpCMD(Command):
+        NAME = 'help'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            rank = max([Config.getRankOfUser(message.author.id), Config.getRankOfRole(message.author.top_role.id)])
+
+            msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
+            for module in client.modules.values():
+                for command in module.commands:
+                    if command.RANK <= rank and command.__doc__:
+                        if args and args[0].lower() == command.NAME.lower():
+                            doc = command.__doc__.split('\n')
+                            doc[0] = '`' + doc[0] + '`'
+                            doc = '\n'.join([line.strip() for line in doc])
+                            return doc
+                        msg += '\n\t' + client.commandPrefix + command.NAME
+            return msg
+
+
     def __init__(self):
         super().__init__()
 

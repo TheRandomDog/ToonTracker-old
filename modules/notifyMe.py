@@ -5,9 +5,9 @@ from utils import Config, assertTypeOrOtherwise
 
 class NotifyMeModule(Module):
     class NotifyMeCMD(Command):
-        """~notifyMe <role>
+        """~notifyMe <role name>
 
-            This will give you the specified <role> allowing you to receive notifications for only what you want to hear.
+            This will give you the specified role allowing you to receive notifications for only what you want to hear.
         """
         NAME = 'notifyMe'
 
@@ -36,9 +36,9 @@ class NotifyMeModule(Module):
             return "Got it, you've been signed up for {}notifications for `{}`! :thumbsup:".format((role[1] + ' ') if role[1] else '', role[0].name)
 
     class StopNotifyingMeCMD(Command):
-        """~stopNotifyingMe <role>
+        """~stopNotifyingMe <role name>
 
-            This removes the specified <role> and you will not receive any more notifications about it.
+            This removes the specified role and you will not receive any more notifications about it.
         """
         NAME = 'stopNotifyingMe'
 
