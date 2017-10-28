@@ -1,10 +1,5 @@
-import sys
-import time
-import praw
-import threading
-from discord import Color
-from modules.module import Module, Announcer
-from traceback import format_exception, format_exc
+from modules.module import Module
+from extra.commands import Command
 from utils import Config, assertTypeOrOtherwise
 
 class NotifyMeModule(Module):
@@ -185,9 +180,9 @@ class NotifyMeModule(Module):
         self.refreshAvailableRoles()
 
     def refreshAvailableRoles(self):
-        self.availableRoles = assertTypeOrOtherwise(Config.getModuleSetting('notifyMe', 'roles'), dict, {})
+        self.availableRoles = assertTypeOrOtherwise(Config.getModuleSetting('notifyMe', 'roles'), dict, otherwise={})
         for role, data in self.availableRoles.items():
-            if not assertTypeOrOtherwise(data.get('id', None), int, None):
+            if not assertTypeOrOtherwise(data.get('id', None), int, otherwise=None):
                 del self.availableRoles[role]
 
             roleObject = discord.utils.get(self.client.rTTR.roles, id=data['id'])

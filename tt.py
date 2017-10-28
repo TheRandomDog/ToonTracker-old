@@ -68,7 +68,7 @@ class ToonTracker(discord.Client):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            for module in client.modules:
+            for module in client.modules.values():
                 module.stopTracking()
 
             client.modules.clear()
@@ -375,7 +375,7 @@ while True:
 
     TT.ttLoop()
 
-    for module in TT.modules:
+    for module in TT.modules.values():
         module.stopTracking()
 
     if TT.restart:
