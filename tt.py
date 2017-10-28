@@ -17,7 +17,7 @@ def delegateEvent(func):
         if not self.ready:
             pass
 
-        for module in self.modules:
+        for module in self.modules.values():
             if hasattr(module, func.__name__):
                 await getattr(module, func.__name__)(*args)
 
@@ -79,7 +79,7 @@ class ToonTracker(discord.Client):
         super().__init__()
 
         self.toLoad = Config.getSetting('load_modules')
-        self.modules = []
+        self.modules = {}
 
         self.commands = [self.QuitCMD, self.ReloadCMD, self.EvalCMD, self.ExecCMD]
         self.commandPrefix = Config.getSetting('command_prefix', '!')
@@ -122,7 +122,7 @@ class ToonTracker(discord.Client):
                 except Exception:
                     await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
-        for module in self.modules:
+        for module in self.modules.values():
             try:
                 response = await module._handleMsg(message)
                 if type(response) == CommandResponse:
@@ -177,7 +177,7 @@ class ToonTracker(discord.Client):
     async def announceUpdates(self):
         self.prevUpdateTime = time.time()
 
-        for module in self.modules:
+        for module in self.modules.values():
             for announcement in module.pendingAnnouncements:
                 # announcement[0] = Target
                 # announcement[1] = Message
@@ -328,7 +328,7 @@ class ToonTracker(discord.Client):
                 print(w + '\n\n{}'.format(format_exc()))
                 continue
 
-            self.modules.append(m)
+            self.modules[module] = m
             if hasattr(m, 'restoreSession'):
                 await m.restoreSession()
             m.startTracking()
