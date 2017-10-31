@@ -378,3 +378,8 @@ def createDiscordEmbed(title, description=Embed.Empty, *, multipleFields=False, 
         #embed.set_thumbnail(url=TTR_ICON)
 
     return embed
+
+def isPrintable(string, codec='utf8'): # thanks coteup
+    try: string.decode(codec)
+    except UnicodeDecodeError: return False
+    else: return True
