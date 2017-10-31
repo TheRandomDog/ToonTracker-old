@@ -210,6 +210,8 @@ class InvasionModule(Module):
         districts = [di['district'] for di in data]
         for inv in self.invasions:
             if inv.district not in districts:
+                global invasionCache
+                invasionCache.remove(inv)
                 self.invasions.remove(inv)
 
         self.updatePermaMsg(InvPermaMsg)
