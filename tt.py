@@ -5,6 +5,7 @@ import sys
 from extra.commands import Command, CommandResponse
 from importlib import import_module, reload
 from traceback import format_exc
+from inspect import isclass
 from utils import *
 
 this = sys.modules[__name__]
@@ -17,7 +18,7 @@ def delegateEvent(func):
         if not self.ready:
             pass
 
-        for module in self.modules:
+        for module in self.modules.values():
             if hasattr(module, func.__name__):
                 await getattr(module, func.__name__)(*args)
 
@@ -68,20 +69,41 @@ class ToonTracker(discord.Client):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            for module in client.modules:
+            for module in client.modules.values():
                 module.stopTracking()
 
             client.modules.clear()
             client.toLoad = Config.getSetting('load_modules')
             await client.load_config(term='reload', channel=message.channel)
 
+    # Helps.
+    class HelpCMD(Command):
+        NAME = 'help'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            rank = max([Config.getRankOfUser(message.author.id), Config.getRankOfRole(message.author.top_role.id)])
+
+            msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
+            for module in client.modules.values():
+                for command in module.commands:
+                    if command.RANK <= rank and command.__doc__:
+                        if args and args[0].lower() == command.NAME.lower():
+                            doc = command.__doc__.split('\n')
+                            doc[0] = '`' + doc[0] + '`'
+                            doc = '\n'.join([line.strip() for line in doc])
+                            return doc
+                        msg += '\n\t' + client.commandPrefix + command.NAME
+            return msg
+
+
     def __init__(self):
         super().__init__()
 
         self.toLoad = Config.getSetting('load_modules')
-        self.modules = []
+        self.modules = {}
 
-        self.commands = [self.QuitCMD, self.ReloadCMD, self.EvalCMD, self.ExecCMD]
+        self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
         self.commandPrefix = Config.getSetting('command_prefix', '!')
 
         self.ready = False
@@ -122,13 +144,12 @@ class ToonTracker(discord.Client):
                 except Exception:
                     await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
-        for module in self.modules:
+        for module in self.modules.values():
             try:
                 response = await module._handleMsg(message)
                 if type(response) == CommandResponse:
                     await self.send_command_response(response)
                 elif response:
-                    print(response)
                     await self.send_message(message.channel, response)
             except Exception:
                 await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
@@ -178,7 +199,7 @@ class ToonTracker(discord.Client):
     async def announceUpdates(self):
         self.prevUpdateTime = time.time()
 
-        for module in self.modules:
+        for module in self.modules.values():
             for announcement in module.pendingAnnouncements:
                 # announcement[0] = Target
                 # announcement[1] = Message
@@ -329,7 +350,7 @@ class ToonTracker(discord.Client):
                 print(w + '\n\n{}'.format(format_exc()))
                 continue
 
-            self.modules.append(m)
+            self.modules[module] = m
             if hasattr(m, 'restoreSession'):
                 await m.restoreSession()
             m.startTracking()
@@ -376,7 +397,7 @@ while True:
 
     TT.ttLoop()
 
-    for module in TT.modules:
+    for module in TT.modules.values():
         module.stopTracking()
 
     if TT.restart:
