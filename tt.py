@@ -250,11 +250,21 @@ class ToonTracker(discord.Client):
                 self.prevUpdateTime = time.time()
 
     @delegateEvent
-    async def on_channel_create(self, channel): pass
+    async def on_private_channel_create(self, channel): pass
     @delegateEvent
-    async def on_channel_delete(self, channel): pass
+    async def on_private_channel_delete(self, channel): pass
     @delegateEvent
-    async def on_channel_update(self, before, after): pass
+    async def on_private_channel_update(self, before, after): pass
+    @delegateEvent
+    async def on_private_channel_pins_update(self, channel, lastPin): pass
+    @delegateEvent
+    async def on_guild_channel_create(self, channel): pass
+    @delegateEvent
+    async def on_guild_channel_delete(self, channel): pass
+    @delegateEvent
+    async def on_guild_channel_update(self, before, after): pass
+    @delegateEvent
+    async def on_guild_channel_pins_update(self, channel, lastPin): pass
     @delegateEvent
     async def on_member_ban(self, guild, user): pass
     @delegateEvent
