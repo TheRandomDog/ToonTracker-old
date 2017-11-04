@@ -375,6 +375,7 @@ class ModerationModule(Module):
         self.badImageFilterOn = Config.getModuleSetting('moderation', 'badimagefilter')
         self.botspam = Config.getModuleSetting('moderation', 'announcements')
         self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
+        self.filterBots = Config.getModuleSetting('moderation', 'filter_bots', False)
 
         self.scheduledUnbans = []
         asyncio.get_event_loop().create_task(self.scheduleUnbans())
@@ -555,7 +556,7 @@ class ModerationModule(Module):
         #    await self.client.send_message(self.botspam, "Image posted was fine. **[Rating: {}]**".format(rating))
 
     async def handleMsg(self, message):
-        if message.channel.id in self.exceptions or message.author.id in self.exceptions:
+        if message.channel.id in self.exceptions or message.author.id in self.exceptions or (message.author.bot and not self.filterBots):
             return
 
         timeStart = time.time()
