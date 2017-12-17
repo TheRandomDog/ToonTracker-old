@@ -178,11 +178,11 @@ class Users:
             content = cls.getUsers()
         user = content[member.id]
 
-        embed = Embed(title='User Details', color=member.top_role.color if isinstance(member, Member) else Color.default())
+        embed = Embed(title='{} Details'.format('Bot' if member.bot else 'User'), color=member.top_role.color if isinstance(member, Member) else Color.default())
         embed.set_author(name=str(member), icon_url=member.avatar_url)
         embed.add_field(name='Account Creation Date', value=str(member.created_at.date()), inline=True)
         embed.add_field(name='Join Date', value=str(member.joined_at.date()) if isinstance(member, Member) else 'Not on the server.', inline=True)
-        embed.add_field(name='Level | XP', value='{} | {}'.format(user['level'], user['xp']), inline=True)
+        embed.add_field(name='Level | XP', value='N/A' if member.bot else '{} | {}'.format(user['level'], user['xp']), inline=True)
         for punishment in user['punishments']:
             if punishment.get('length', None):
                 embed.add_field(
