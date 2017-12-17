@@ -9,6 +9,9 @@ class UserTrackingModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
+        self.memberStatusTimeStart = {member: time.time() for member in client.rTTR.members}
+        self.trackStatuses = Config.getModuleSetting('usertracking', 'track_statuses', True)
+
         self.levelCooldowns = {}
         self.levelCooldown = assertTypeOrOtherwise(Config.getModuleSetting('usertracking', 'level_cooldown'), int, 60)
         self.levelCap = assertTypeOrOtherwise(Config.getModuleSetting('usertracking', 'level_cap'), int, -1)
@@ -68,3 +71,15 @@ class UserTrackingModule(Module):
                 leveled = self.level(message.author)
                 if leveled and self.allowUserRewards:
                     pass  # Rewards TBD
+
+    async def on_member_update(self, before, after):
+        if self.trackStatuses and before.status != after.status:
+            if before.status == discord.Status.online:
+                Users.setUserTimeOnline(before.id, Users.getUserTimeOnline(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
+            elif before.status == discord.Status.offline:
+                Users.setUserTimeOffline(before.id, Users.getUserTimeOffline(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
+            elif before.status == discord.Status.idle:
+                Users.setUserTimeIdle(before.id, Users.getUserTimeIdle(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
+            elif before.status == discord.status.dnd:
+                Users.setUserTimeDND(before.id, Users.getUserTimeDND(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
+            self.memberStatusTimeStart[before.id] = time.time()
