@@ -468,7 +468,7 @@ class ModerationModule(Module):
         await self.client.rTTR.unban(user, reason='The user\'s temporary ban expired.')
         self.scheduledUnbans.remove(userID)
 
-    async def filterBadWords(self, message):
+    async def filterBadWords(self, message, edited=' '):
         text = message.content
 
         for word in text.split(' '):
@@ -479,19 +479,19 @@ class ModerationModule(Module):
             if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
                 await self.client.delete_message(message)
                 if self.botspam:
-                    await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, message.content.replace(word, '**' + word + '**')))
+                    await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + word + '**')))
                     return True
             for badword in self.words:
                 if ' ' in badword and (badword == text.lower() or badword.rstrip('s').rstrip('e') == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
                     await self.client.delete_message(message)
                     if self.botspam:
-                        await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, message.content.replace(badword, '**' + badword + '**')))
+                        await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(badword, '**' + badword + '**')))
                         return True
             whole = text.replace(' ', '')
             if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
                 await self.client.delete_message(message)
                 if self.botspam:
-                    await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, '**' + message.content + '**'))
+                    await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, '**' + message.content + '**'))
                     return True
 
     async def filterBadImages(self, message):
@@ -625,5 +625,16 @@ class ModerationModule(Module):
             await asyncio.sleep(1)
         await self.filterBadImages(message)
 
+    async def on_message_edit(self, before, after):
+        if message.channel.id in self.exceptions or message.author.id in self.exceptions or (message.author.bot and not self.filterBots):
+            return
+
+        # We'll only check for edited-in bad words for right now.
+        try:
+            if self.badWordFilterOn:
+                await self.filterBadWords(after, edited=' edited ')
+        except discord.errors.NotFound:
+            print('Tried to remove edited message in bad word filter but message wasn\'t found.')
+            return
 
 module = ModerationModule
