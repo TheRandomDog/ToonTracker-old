@@ -285,31 +285,42 @@ class LobbyManagement(Module):
         for category in self.client.rTTR.categories:
             if category.name.startswith('Lobby'):
                 lobby = Lobby()
+                lobby.id = category.id
+                lobby.category = category
                 for channel in category.channels:
                     if channel.__class__ == discord.TextChannel:
                         lobby.textChannel = channel
                     elif channel.__class__ == discord.VoiceChannel:
                         lobby.voiceChannel = channel
-
-        for channel in self.client.rTTR.channels:
-            if channel.type == discord.ChannelType.voice and channel.name.startswith('Lobby'):
-                lobby = Lobby()
-                lobby.openLobby = not not channel.user_limit
-                lobby.textChannel = discord.utils.get(self.client.rTTR.channels, type=discord.ChannelType.text, name=channel.name.lower().replace(' ', '-').replace('[', '').replace(']', ''))
-                lobby.voiceChannel = channel
-                lobby.role = discord.utils.get(self.client.rTTR.roles, name=channel.name)
-                lobby.number = int(channel.name.split(' ')[1])
-                lobby.limit = channel.user_limit
-                if channel.name.find('[') != -1:
-                    lobby.customName = channel.name[channel.name.find('[') + 1:-1]
-
+                lobby.role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
+                lobby.ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
+                lobby.created = category.created_at
+                lobby.customName = category.name.replace('Lobby [', '').replace(']', '')
                 self.activeLobbies.append(lobby)
 
     async def bumpInactiveLobbies(self, fromRestore=False):
         if fromRestore:
-            toRemove = []
             for category in self.client.rTTR.categories:
-                pass
+                if not category.name.startswith('Lobby'):
+                    continue
+                if any([channel.__class__ == discord.TextChannel for channel in category.channels]):
+                    lastMessage = await category.channels[0].history(limit=1).flatten()
+                    if lastMessage.author != self.client.rTTR.me and time.time() - lastMessage.created_at.timestamp() > 604800:
+                        role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
+                        ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
+                        for channel in category.channels:
+                            await channel.delete()
+                        await category.delete()
+                        await role.delete()
+                        await ownerRole.delete()
+                elif len(category.channels[0].voice_members) == 0 and time.time() - category.created_at > 300:
+                    role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
+                    ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
+                    for channel in category.channels:
+                        await channel.delete()
+                    await category.delete()
+                    await role.delete()
+                    await ownerRole.delete()
         else:
             inactiveLobbies = []
             for lobby in self.activeLobbies:
