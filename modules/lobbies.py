@@ -18,7 +18,6 @@ class Lobby:
         self.customName = ""
         self.invited = []
 
-
 async def createLobby(client, module, message, *args, textChannelOnly=False, voiceChannelOnly=False):
     if message.channel.id != module.channelID:
         return
@@ -32,10 +31,6 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
     elif residingLobby:
         return '{} You are in a lobby right now. You\'ll have to `~leaveLobby` to create a new one.'.format(message.author.mention)
 
-    lobby = Lobby()
-    lobbyID = str(message.id)
-    module.activeLobbies[lobbyID] = lobby
-
     name = ' '.join(args)
     if len(name) > 30:
         module.activeLobbies.remove(lobbyID)
@@ -43,31 +38,30 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
     elif not name:
         module.activeLobbies.remove(lobbyID)
         return '{} Give your lobby a name!'.format(message.author.mention)
+
+    category = await client.rTTR.create_category(name='Lobby [{}]'.format(name), reason=auditLogReason)
+
+    lobby = Lobby()
+    lobby.category = category
     lobby.customName = name
-    lobby.id = message.id
+    lobby.id = category.id
+    module.activeLobbies[lobbyID] = lobby
 
     lobby.ownerRole = await client.rTTR.create_role(
-        name='lobby-{}-owner'.format(lobbyID),
+        name='lobby-{}-owner'.format(lobby.id),
         reason=auditLogReason
     )
     lobby.role = await client.rTTR.create_role(
-        name='lobby-{}'.format(lobbyID),
+        name='lobby-{}'.format(lobby.id),
         reason=auditLogReason
     )
     await message.author.add_roles(lobby.ownerRole, reason=auditLogReason)
 
-    categoryName = 'Lobby [{}]'.format(name)
     discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
-    lobby.category = await client.rTTR.create_category(
-        name=categoryName,
-        overwrites={
-            client.rTTR.default_role: discord.PermissionOverwrite(read_messages=False),
-            lobby.ownerRole: discord.PermissionOverwrite(read_messages=True),
-            lobby.role: discord.PermissionOverwrite(read_messages=True),
-            discordModRole: discord.PermissionOverwrite(read_messages=True, send_messages=False)
-        },
-        reason=auditLogReason
-    )
+    await category.set_permissions(client.rTTR.default_role, read_messages=False)
+    await category.set_permissions(lobby.ownerRole, read_messages=True)
+    await category.set_permissions(lobby.role, read_messages=True)
+    await category.set_permissions(discordModRole, read_messages=True, send_messages=False)
 
     if not voiceChannelOnly:
         lobby.textChannel = await client.rTTR.create_text_channel(
@@ -84,6 +78,19 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
 
     return '{} Your lobby has been created!'.format(message.author.mention)
 
+def getUsersLobby(member):
+    assert member.__class__ == discord.Member
+    lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
+    for lobby in module.activeLobbies.values():
+        if lobbyRole in (lobby.role, lobby.ownerRole):
+            return lobby
+
+def getOwnersLobby(member):
+    assert member.__class__ == discord.Member
+    lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
+    for lobby in module.activeLobbies.values():
+        if lobbyRole == lobby.ownerRole:
+            return lobby
 
 class LobbyManagement(Module):
     class CreateLobbyCMD(Command):
@@ -195,6 +202,7 @@ class LobbyManagement(Module):
             invited = module.activeLobbies[args[0]].invited
             inLobby = discord.utils.find(lambda r: 'lobby-' in r.name, client.rTTR.get_member(message.author.id).roles)
             ownsLobby = 'owner' in inLobby.name if inLobby else False
+
             if message.author.id not in invited:
                 return '{} Sorry, but you weren\'t invited to that lobby.'.format(message.author.mention)
             elif ownsLobby:
@@ -207,151 +215,51 @@ class LobbyManagement(Module):
 
             return "{} You're now in the **{}** lobby! Have fun!".format(message.author.mention, module.activeLobbies[args[0]].customName)
 
-    class LobbyCMD(Command):
-        NAME = 'lobby'
+    class LobbyLeaveCMD(Command):
+        NAME = 'leaveLobby'
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.id != module.channelID or message.channel.name.startswith('Lobby'):
+            if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID:
                 return
+            message.author = client.rTTR.get_member(message.author.id)
+            if not message.author:
+                return 'Sorry, but you need to be in the Toontown Rewritten Discord to use lobbies.'
 
-                entered = ' Please enter the voice channel.'
+            lobby = getUsersLobby(message.author)
+            if lobby.ownerRole in message.author.roles:
+                return '{} You own the **{}** lobby, meaning you need to use `~disbandLobby` to ensure you actually want to disband the lobby.'.format(message.author.mention, lobby.customName)
+            elif not lobby:
+                return '{} You\'re not currently in a lobby.'.format(message.author.mention)
 
-                lobby = Lobby()
-                lobby.number = newLobbyNumber
-                module.activeLobbies.append(lobby)
+            await message.author.remove_roles(lobby.role, reason='User left lobby via ~leaveLobby')
 
-                # I forgot regex existed when making the following code block.
-                # Please forgive.
-                splitText = text.split(' ')
-                cns = []
-                ca = False
-                for word in splitText:
-                    if word.startswith('"') and word.endswith('"') and len(word) > 2:
-                        cns.append(word[1:-1])
-                        break
-                    if word.startswith('"') and not ca:
-                        ca = True
-                        cns.append(word[1:])
-                    elif word.endswith('"') and ca:
-                        ca = False
-                        cns.append(word[:-1])
-                        break
-                    elif ca:
-                        cns.append(word)
-                cn = ' '.join(cns)
-                if cns and not ca:
-                    if len(cn) > 10:
-                        module.activeLobbies.remove(lobby)
-                        return '{} Your custom lobby name must be 10 characters or less.'.format(message.author.mention)
-                    for l in cn:
-                        if l.lower() not in 'abcdefghijklmnopqrstuvwxyz1234567890 -':
-                            module.activeLobbies.remove(lobby)
-                            return '{} Your custom lobby name must be alphanumeric.'.format(message.author.mention)
-                    lobby.customName = cn
+    class LobbyDisbandCD(Command):
+        NAME = 'disbandLobby'
 
-                lobby.openLobby = 'open' in splitText
-                if lobby.openLobby:
-                    try:
-                        lobby.limit = int(splitText[splitText.index('open') + 1])
-                        if lobby.limit > 99:
-                            module.activeLobbies.remove(lobby)
-                            return '{} Your lobby cannot have a limit more than 99 -- if you like, you can choose not to have a limit by not specifying a number.'.format(message.author.mention)
-                        elif lobby.limit < 0:
-                            module.activeLobbies.remove(lobby)
-                            return '{} Your lobby cannot have a negative limit.'.format(message.author.mention)
-                    except:
-                        lobby.limit = 0
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID:
+                return
+            message.author = client.rTTR.get_member(message.author.id)
+            if not message.author:
+                return 'Sorry, but you need to be in the Toontown Rewritten Discord to use lobbies.'
 
-                lobbyName = 'Lobby {}'.format(newLobbyNumber) + (' [{}]'.format(lobby.customName) if lobby.customName else '')
+            lobby = getUsersLobby(message.author)
 
-                lobby.role = await client.create_role(
-                    client.rTTR,
-                    name=lobbyName
-                )
-                lobby.role.name = lobbyName  # value ensurance, doesn't send anything
-                
-                lobby.textChannel = await client.create_channel(
-                    client.rTTR,
-                    lobbyName.lower().replace(' ', '-').replace('[', '').replace(']', ''),
-                    (client.rTTR.default_role, discord.PermissionOverwrite(read_messages=False)),
-                    (lobby.role, discord.PermissionOverwrite(read_messages=True)),
-                )
-                #lobby.textChannel = discord.utils.get(self.client.get_all_channels(), id=tc.id)
-                if lobby.openLobby:
-                    lobby.voiceChannel = await client.create_channel(
-                        client.rTTR,
-                        lobbyName,
-                        type=discord.ChannelType.voice,
-                    )
-                    #lobby.vcID = vc.id# = discord.utils.get(self.client.get_all_channels(), id=vc.id)
-                    await client.edit_channel(lobby.voiceChannel, user_limit=lobby.limit)
-                else:
-                    lobby.voiceChannel = await client.create_channel(
-                        client.rTTR,
-                        lobbyName,
-                        (client.rTTR.default_role, discord.PermissionOverwrite(connect=False)),
-                        (lobby.role, discord.PermissionOverwrite(connect=True)),
-                        type=discord.ChannelType.voice
-                    )
-                    #lobby.vcID = vc.id#l = discord.utils.get(self.client.get_all_channels(), id=vc.id)
-
-                for member in message.mentions + [message.author]:
-                    if member.id == client.rTTR.me.id:
-                        busyMembers.append(member)
-
-                    for role in member.roles:
-                        if role.name.startswith('Lobby'):
-                            if member.voice.voice_channel and member.voice.voice_channel.name == role.name:
-                                busyMembers.append(member)
-                                break
-                            else:
-                                await client.remove_roles(member, role)
-                                break
-
-                    if member not in busyMembers:
-                        if member != message.author:
-                            addedMembers.append(member)
-                        await client.add_roles(member, lobby.role)
-                        if member.voice.voice_channel:
-                            entered = ''
-                            await client.move_member(member, lobby.voiceChannel)
-
-                #self.activeLobbies.append(lobby)
-
-                busy = ' (**{}** busy)'.format(len(busyMembers)) if len(busyMembers) else ''
-                others = ' with **{}** other people{}'.format(len(addedMembers), busy) if len(addedMembers) or len(busyMembers) else ''
-                return '{} **{}** created{}!{}'.format(message.author.mention, lobby.role.name, others, entered)
-            elif message.mentions:
-                for l in module.activeLobbies:
-                    if l.role.name == inLobby.name:
-                        lobby = l
-                        break
-
-                busyMembers = []
-                addedMembers = []
-                for member in message.mentions:
-                    for role in member.roles:
-                        if role.name.startswith('Lobby'):
-                            if member.voice.voice_channel and member.voice.voice_channel.name == role.name:
-                                busyMembers.append(member)
-                                break
-                            else:
-                                await client.remove_roles(member, role)
-                                break
-
-                    if member not in busyMembers:
-                        addedMembers.append(member)
-                        await client.add_roles(member, lobby.role)
-                        if member.voice.voice_channel:
-                            await client.move_member(member, lobby.voiceChannel)
-
-                busy = ' (**{}** busy)'.format(len(busyMembers)) if len(busyMembers) else ''
-                others = '**{}** other people{} '.format(len(addedMembers), busy) if len(addedMembers) else ''
-                return '{} {}added to **{}**.'.format(message.author.mention, others, lobby.role.name)
-            else:
-                return '{} You are in **{}**.'.format(message.author.mention, inLobby.name)
-
+            if not lobby:
+                return '{} You\'re not currently in a lobby.'.format(message.author.mention)
+            elif not lobby.ownerRole in message.author.roles:
+                return '{} You don\'t own the **{}** lobby, meaning you need to use `~leaveLobby` to part with the group.'.format(message.author.mention, lobby.customName)
+            
+            auditLogReason = 'User disbanded lobby via ~disbandLobby'
+            await lobby.role.delete(reason=auditLogReason)
+            await lobby.ownerRole.delete(reason=auditLogReason)
+            category = discord.utils.get(client.rTTR.categories, id=lobby.id)
+            for channel in category.channels:
+                await channel.delete(reason=auditLogReason)
+            category.delete(reason=auditLogReason)
+            await client.rTTR.send_message(self.channelID, '{} You\'ve disbanded your lobby, everyone\'s free now!'.format(message.author.mention))
 
     def __init__(self, client):
         Module.__init__(self, client)
@@ -373,8 +281,16 @@ class LobbyManagement(Module):
             await self.bumpInactiveLobbies()
 
     async def restoreSession(self):
-        return
         await self.bumpInactiveLobbies(fromRestore=True)
+        for category in self.client.rTTR.categories:
+            if category.name.startswith('Lobby'):
+                lobby = Lobby()
+                for channel in category.channels:
+                    if channel.__class__ == discord.TextChannel:
+                        lobby.textChannel = channel
+                    elif channel.__class__ == discord.VoiceChannel:
+                        lobby.voiceChannel = channel
+
         for channel in self.client.rTTR.channels:
             if channel.type == discord.ChannelType.voice and channel.name.startswith('Lobby'):
                 lobby = Lobby()
@@ -392,30 +308,26 @@ class LobbyManagement(Module):
     async def bumpInactiveLobbies(self, fromRestore=False):
         if fromRestore:
             toRemove = []
-            for channel in self.client.rTTR.channels:
-                if channel.type == discord.ChannelType.voice and channel.name.startswith('Lobby') and len(channel.voice_members) == 0:
-                    role = discord.utils.get(self.client.rTTR.roles, name=channel.name)
-                    textChannel = discord.utils.get(self.client.rTTR.channels, type=discord.ChannelType.text, name=channel.name.lower().replace(' ', '-').replace('[', '').replace(']', ''))
-                    toRemove.extend([channel, textChannel])
-                    print('deleting role')
-                    if role:
-                        await self.client.delete_role(self.client.rTTR, role)
-                    print('deletingg role')
-            for channel in toRemove:
-                print('deleting channel')
-                if channel:
-                    await self.client.delete_channel(channel)
-                print('deletingg channel')
+            for category in self.client.rTTR.categories:
+                pass
         else:
             inactiveLobbies = []
             for lobby in self.activeLobbies:
-                voiceChannel = discord.utils.get(self.client.rTTR.channels, type=discord.ChannelType.voice, name=lobby.role.name)
-                textChannel = discord.utils.get(self.client.rTTR.channels, type=discord.ChannelType.text, name=lobby.role.name.lower().replace(' ', '-').replace('[', '').replace(']', ''))
-                role = discord.utils.get(self.client.rTTR.roles, name=lobby.role.name)
-                if len(voiceChannel.voice_members) == 0 and (lobby.visited or time.time() - lobby.created > 300):
-                    await self.client.delete_channel(voiceChannel)
-                    await self.client.delete_channel(textChannel)
-                    await self.client.delete_role(self.client.rTTR, role)
+                if not lobby.voiceChannelOnly:
+                    lastMessage = await lobby.textChannel.history(limit=1).flatten()
+                    if lastMessage.author != self.client.rTTR.me and time.time() - lastMessage.created_at.timestamp() > 604800:
+                        if lobby.voiceChannel:
+                            await lobby.voiceChannel.delete()
+                        await lobby.textChannel.delete()
+                        await lobby.category.delete()
+                        await lobby.role.delete()
+                        await lobby.ownerRole.delete()
+                        inactiveLobbies.append(lobby)
+                elif len(lobby.voiceChannel.voice_members) == 0 and (lobby.visited or time.time() - lobby.created > 300):
+                    await lobby.voiceChannel.delete()
+                    await lobby.category.delete()
+                    await lobby.role.delete()
+                    await lobby.ownerRole.delete()
                     inactiveLobbies.append(lobby)
             for inactiveLobby in inactiveLobbies:
                 self.activeLobbies.remove(inactiveLobby)
