@@ -468,31 +468,47 @@ class ModerationModule(Module):
         await self.client.rTTR.unban(user, reason='The user\'s temporary ban expired.')
         self.scheduledUnbans.remove(userID)
 
+    async def _testForBadWord(self, word, text):
+        if word.lower() == "he'll": return ('', '')  # I'll get rid of this someday.
+
+        word = re.sub(r'\W+', '', word)
+        if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
+            await self.client.delete_message(message)
+            return ('DIRECT', word)
+        for badword in self.words:
+            if ' ' in badword and (badword == text.lower() or badword.rstrip('s').rstrip('e') == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
+                await self.client.delete_message(message)
+                return ('PHRASE', badword)
+        whole = text.replace(' ', '')
+        if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
+            await self.client.delete_message(message)
+            return ('WHOLE', message.content)
+        return ('', '')
+
     async def filterBadWords(self, message, edited=' '):
         text = message.content
-
         for word in text.split(' '):
-            if word.lower() == "he'll":
-                continue
+            badWord = await self._testForBadWord(word, text)
+            if badWord[1] and self.botspam:
+                await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
+                return True
 
-            word = re.sub(r'\W+', '', word)
-            if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
-                await self.client.delete_message(message)
-                if self.botspam:
-                    await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + word + '**')))
-                    return True
-            for badword in self.words:
-                if ' ' in badword and (badword == text.lower() or badword.rstrip('s').rstrip('e') == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
-                    await self.client.delete_message(message)
-                    if self.botspam:
-                        await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(badword, '**' + badword + '**')))
+        for embed in message.embeds:
+            for attr in [(embed.title, 'title'), (embed.description, 'description'), (embed.footer, 'footer'), (embed.author, 'author')]:
+                for word in attr[0].split(' '):
+                    badWord = await self._testForBadWord(word, attr[0])
+                    if badWord[1] and self.botspam:
+                        await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
+                            edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**')))
                         return True
-            whole = text.replace(' ', '')
-            if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
-                await self.client.delete_message(message)
-                if self.botspam:
-                    await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, '**' + message.content + '**'))
-                    return True
+            for field in embed.fields:
+                for fieldattr in [(field.name, 'field name'), (field.value, 'field value')]:
+                    for word in fieldattr[0].split(' '):
+                        badWord = await self._testForBadWord(word, fieldattr[0])
+                        if badWord[1] and self.botspam:
+                            await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
+                                edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**')))
+                            return True
 
     async def filterBadImages(self, message):
         # Refreshes embed info from the API.
