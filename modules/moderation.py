@@ -486,6 +486,13 @@ class ModerationModule(Module):
             if badWord[1] and self.botspam:
                 await self.client.delete_message(message)
                 await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
+                try:
+                    await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
+                        "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
+                        "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
+                            message.author.mention, badWord[1]))
+                except discord.HTTPException:
+                    pass
                 return True
 
         for embed in message.embeds:
@@ -496,6 +503,13 @@ class ModerationModule(Module):
                         await self.client.delete_message(message)
                         await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
                             edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**')))
+                        try:
+                            await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
+                                "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
+                                "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
+                                    message.author.mention, badWord[1]))
+                        except discord.HTTPException:
+                            pass
                         return True
             for field in embed.fields:
                 for fieldattr in [(field.name, 'field name'), (field.value, 'field value')]:
@@ -505,6 +519,13 @@ class ModerationModule(Module):
                             await self.client.delete_message(message)
                             await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
                                 edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**')))
+                            try:
+                                await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
+                                    "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
+                                    "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
+                                        message.author.mention, badWord[1]))
+                            except discord.HTTPException:
+                                pass
                             return True
 
     async def filterBadImages(self, message):
