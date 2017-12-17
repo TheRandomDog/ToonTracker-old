@@ -110,8 +110,12 @@ class LobbyManagement(Module):
             if message.channel.id != module.channelID:
                 return
 
-            residingLobby = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
-            ownsLobby = 'owner' in residingLobby.name if residingLobby else False
+            residingLobby = None
+            lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
+            for lobby in self.activeLobbies:
+                if lobbyRole in (lobby.role, lobby.ownerRole):
+                    residingLobby = lobby
+            ownsLobby = 'owner' in lobbyRole.name if residingLobby else False
 
             if not residingLobby:
                 return '{} You\'re not in a lobby yourself -- create a lobby before you invite users.'.format(message.author.mention)
