@@ -362,7 +362,14 @@ class ToonTracker(discord.Client):
 
             self.modules[module] = m
             if hasattr(m, 'restoreSession'):
-                await m.restoreSession()
+                try:
+                    await m.restoreSession()
+                except Exception as e:
+                    w = 'The **{}** modules encountered an exception while trying to restore its session.'.format(module)
+                    warnings.append(w)
+                    print(w + '\n\n{}'.format(format_exc()))
+                    if not m.runWithoutRestoredSession:
+                        continue
             m.startTracking()
 
         full = 'ToonTracker {}ed with {} warning(s).'.format(term, 'no' if len(warnings) == 0 else '**' + str(len(warnings)) + '**')
