@@ -33,24 +33,28 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
         return '{} You are in a lobby right now. You\'ll have to `~leaveLobby` to create a new one.'.format(message.author.mention)
 
     lobby = Lobby()
-    module.activeLobbies.append(lobby)
+    lobbyID = str(message.id)
+    module.activeLobbies[lobbyID] = lobby
 
     name = ' '.join(args)
     if len(name) > 30:
-        module.activeLobbies.remove(lobby)
+        module.activeLobbies.remove(lobbyID)
         return '{} Your lobby name must be 30 characters or less.'.format(message.author.mention)
     elif not name:
-        module.activeLobbies.remove(lobby)
+        module.activeLobbies.remove(lobbyID)
         return '{} Give your lobby a name!'.format(message.author.mention)
     lobby.customName = name
     lobby.id = message.id
 
-    lobbyID = message.id
-    lobby.role = await client.rTTR.create_role(
+    lobby.ownerRole = await client.rTTR.create_role(
         name='lobby-{}-owner'.format(lobbyID),
         reason=auditLogReason
     )
-    await message.author.add_roles(lobby.role, reason=auditLogReason)
+    lobby.role = await client.rTTR.create_role(
+        name='lobby-{}'.format(lobbyID),
+        reason=auditLogReason
+    )
+    await message.author.add_roles(lobby.ownerRole, reason=auditLogReason)
 
     categoryName = 'Lobby [{}]'.format(name)
     discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
@@ -58,6 +62,7 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
         name=categoryName,
         overwrites={
             client.rTTR.default_role: discord.PermissionOverwrite(read_messages=False),
+            lobby.ownerRole: discord.PermissionOverwrite(read_messages=True),
             lobby.role: discord.PermissionOverwrite(read_messages=True),
             discordModRole: discord.PermissionOverwrite(read_messages=True, send_messages=False)
         },
@@ -112,7 +117,7 @@ class LobbyManagement(Module):
 
             residingLobby = None
             lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
-            for lobby in module.activeLobbies:
+            for lobby in module.activeLobbies.values():
                 if lobbyRole in (lobby.role, lobby.ownerRole):
                     residingLobby = lobby
             ownsLobby = 'owner' in lobbyRole.name if residingLobby else False
@@ -173,6 +178,34 @@ class LobbyManagement(Module):
             else:
                 return '{} Invite{} sent!'.format(message.author.mention, 's' if len(message.mentions) > 1 else '')
 
+    class LobbyInviteAcceptCMD(Command):
+        NAME = 'acceptLobbyInvite'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID:
+                return
+
+            if args[0] not in module.activeLobbies:
+                return "{} Sorry, but I didn't recognize that Lobby ID. The Lobby may have been disbanded or the invite may have expired.".format(message.author.mention)
+
+            message.author = client.rTTR.get_member(message.author.id)
+            if not message.author:
+                return 'Sorry, but you need to be in the Toontown Rewritten Discord to use lobbies.'
+            invited = module.activeLobbies[args[0]].invited
+            inLobby = discord.utils.find(lambda r: 'lobby-' in r.name, client.rTTR.get_member(message.author.id).roles)
+            ownsLobby = 'owner' in inLobby.name if inLobby else False
+            if message.author.id not in invited:
+                return '{} Sorry, but you weren\'t invited to that lobby.'.format(message.author.mention)
+            elif ownsLobby:
+                return '{} Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~disbandLobby`.'.format(message.author.mention)
+            elif inLobby:
+                return '{} Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~leaveLobby`.'.format(message.author.mention)
+
+            module.activeLobbies[args[0]].invited.remove(message.author.id)
+            await message.author.add_roles(module.activeLobbies[args[0]].role, reason='Accepted invite to lobby')
+
+            return "{} You're now in the **{}** lobby! Have fun!".format(message.author.mention, module.activeLobbies[args[0]].customName)
 
     class LobbyCMD(Command):
         NAME = 'lobby'
@@ -323,7 +356,7 @@ class LobbyManagement(Module):
     def __init__(self, client):
         Module.__init__(self, client)
         
-        self.activeLobbies = []
+        self.activeLobbies = {}
         self.channelID = Config.getModuleSetting("lobbies", "interaction")
 
     async def on_voice_state_update(self, member, before, after):
