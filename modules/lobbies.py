@@ -112,7 +112,7 @@ class LobbyManagement(Module):
 
             residingLobby = None
             lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
-            for lobby in self.activeLobbies:
+            for lobby in module.activeLobbies:
                 if lobbyRole in (lobby.role, lobby.ownerRole):
                     residingLobby = lobby
             ownsLobby = 'owner' in lobbyRole.name if residingLobby else False
