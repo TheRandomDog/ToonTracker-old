@@ -473,15 +473,12 @@ class ModerationModule(Module):
 
         word = re.sub(r'\W+', '', word)
         if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
-            await self.client.delete_message(message)
             return ('DIRECT', word)
         for badword in self.words:
             if ' ' in badword and (badword == text.lower() or badword.rstrip('s').rstrip('e') == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
-                await self.client.delete_message(message)
                 return ('PHRASE', badword)
         whole = text.replace(' ', '')
         if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
-            await self.client.delete_message(message)
             return ('WHOLE', message.content)
         return ('', '')
 
@@ -490,6 +487,7 @@ class ModerationModule(Module):
         for word in text.split(' '):
             badWord = await self._testForBadWord(word, text)
             if badWord[1] and self.botspam:
+                await self.client.delete_message(message)
                 await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
                 return True
 
@@ -498,6 +496,7 @@ class ModerationModule(Module):
                 for word in attr[0].split(' '):
                     badWord = await self._testForBadWord(word, attr[0])
                     if badWord[1] and self.botspam:
+                        await self.client.delete_message(message)
                         await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
                             edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**')))
                         return True
@@ -506,6 +505,7 @@ class ModerationModule(Module):
                     for word in fieldattr[0].split(' '):
                         badWord = await self._testForBadWord(word, fieldattr[0])
                         if badWord[1] and self.botspam:
+                            await self.client.delete_message(message)
                             await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
                                 edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**')))
                             return True
