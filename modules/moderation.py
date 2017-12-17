@@ -11,7 +11,7 @@ MOD_LOG = Config.getModuleSetting('moderation', 'mod_log', None)
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
 NO_REASON_MOD = 'No reason yet.'
 
-async def punishUser(client, module, message, *args, punishment=None):
+async def punishUser(client, module, message, *args, punishment=None, silent=False):
     if not message.mentions:
         if not message.raw_mentions:
             try:
@@ -97,7 +97,7 @@ async def punishUser(client, module, message, *args, punishment=None):
         'created': time.time(),
         'noticeID': None
     }
-    if nextPunishment == 'Warning':
+    if nextPunishment == 'Warning' and not silent:
         try:
             notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
                 'and has been marked down officially. Here\'s the reason:\n```{}```\nAs a refresher, we recommend re-reading ' \
@@ -107,17 +107,18 @@ async def punishUser(client, module, message, *args, punishment=None):
         except Exception as e:
             await client.send_message(message.author, 'Could not send warning notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send warning notification message to {}'.format(user.id))
-    elif nextPunishment == 'Kick':                                     
-        try:
-            notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
-                'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n```{}```\n' \
-                'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run ' \
-                'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
-                    user.mention, reason))
-            punishmentAdd['noticeID'] = notice.id
-        except Exception as e:
-            await client.send_message(message.author, 'Could not send kick notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
-            print('Could not send kick notification message to {}'.format(user.id))
+    elif nextPunishment == 'Kick': 
+        if not silent:                              
+            try:
+                notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
+                    'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n```{}```\n' \
+                    'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run ' \
+                    'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
+                        user.mention, reason))
+                punishmentAdd['noticeID'] = notice.id
+            except Exception as e:
+                await client.send_message(message.author, 'Could not send kick notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
+                print('Could not send kick notification message to {}'.format(user.id))
         try:
             await client.rTTR.kick(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
@@ -125,30 +126,32 @@ async def punishUser(client, module, message, *args, punishment=None):
     elif nextPunishment == 'Temporary Ban':
         punishmentAdd['endTime'] = time.time() + length
         punishmentAdd['length'] = lengthText
-        try:
-            notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
-                'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
-                'the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
-                'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long ' \
-                'as you stay Toony!'.format(user.mention, lengthText, reason))
-            punishmentAdd['noticeID'] = notice.id
-        except Exception as e:
-            await client.send_message(message.author, 'Could not send temporary ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
-            print('Could not send temporary ban notification message to {}'.format(user.id))
+        if not silent:
+            try:
+                notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
+                    'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
+                    'the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
+                    'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long ' \
+                    'as you stay Toony!'.format(user.mention, lengthText, reason))
+                punishmentAdd['noticeID'] = notice.id
+            except Exception as e:
+                await client.send_message(message.author, 'Could not send temporary ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
+                print('Could not send temporary ban notification message to {}'.format(user.id))
         try:
             await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
             await client.send_message(message.author, 'Could not ban the user. This is probably bad. ' \
             'You should use Discord\'s built-in moderation tools to enforce the ban.')
     elif nextPunishment == 'Permanent Ban':
-        try:
-            notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
-                'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n```{}```\nIf you feel this is illegitimate, ' \
-                'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
-            punishmentAdd['noticeID'] = notice.id
-        except Exception as e:
-            await client.send_message(message.author, 'Could not send permanent ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
-            print('Could not send permanent ban notification message to {}'.format(user.id))
+        if not silent:
+            try:
+                notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
+                    'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n```{}```\nIf you feel this is illegitimate, ' \
+                    'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
+                punishmentAdd['noticeID'] = notice.id
+            except Exception as e:
+                await client.send_message(message.author, 'Could not send permanent ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
+                print('Could not send permanent ban notification message to {}'.format(user.id))
         try:
             await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
@@ -269,6 +272,14 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args)
 
+    class SilentPunishCMD(Command):
+        NAME = 'silentPunish'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, silent=True)
+
     class WarnCMD(Command):
         NAME = 'warn'
         RANK = 300
@@ -276,6 +287,14 @@ class ModerationModule(Module):
         @classmethod
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args, punishment='Warning')
+
+    class SilentWarnCMD(Command):
+        NAME = 'silentWarn'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, punishment='Warning', silent=True)
 
     class KickCMD(Command):
         NAME = 'kick'
@@ -285,6 +304,14 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args, punishment='Kick')
 
+    class SilentKickCMD(Command):
+        NAME = 'silentKick'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, punishment='Kick', silent=True)
+
     class TmpBanCMD(Command):
         NAME = 'tb'
         RANK = 300
@@ -293,6 +320,18 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args, punishment='Temporary Ban')
 
+    class SilentTmpBanCMD(Command):
+        NAME = 'silentTB'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, punishment='Temporary Ban', silent=True)
+    class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
+        NAME = 'silentTb'
+    class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
+        NAME = 'silenttb'
+
     class PermBanCMD(Command):
         NAME = 'ban'
         RANK = 300
@@ -300,6 +339,14 @@ class ModerationModule(Module):
         @classmethod
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args, punishment='Permanent Ban')
+
+    class SilentPermBanCMD(Command):
+        NAME = 'silentBan'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, punishment='Permanent Ban', silent=True)
 
     class EditPunishReasonCMD(Command):
         NAME = 'editReason'
