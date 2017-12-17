@@ -304,8 +304,9 @@ class LobbyManagement(Module):
                 if not category.name.startswith('Lobby'):
                     continue
                 if any([channel.__class__ == discord.TextChannel for channel in category.channels]):
-                    lastMessage = await category.channels[0].history(limit=1).flatten()
-                    if lastMessage.author != self.client.rTTR.me and time.time() - lastMessage.created_at.timestamp() > 604800:
+                    lastMessages = await category.channels[0].history(limit=1).flatten()
+                    if (not lastMessages and time.time() - category.created_at > 9000) or \
+                      (lastMessages[0].author != self.client.rTTR.me and time.time() - lastMessages[0].created_at.timestamp() > 604800):
                         role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
                         ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
                         for channel in category.channels:
@@ -325,8 +326,9 @@ class LobbyManagement(Module):
             inactiveLobbies = []
             for lobby in self.activeLobbies:
                 if not lobby.voiceChannelOnly:
-                    lastMessage = await lobby.textChannel.history(limit=1).flatten()
-                    if lastMessage.author != self.client.rTTR.me and time.time() - lastMessage.created_at.timestamp() > 604800:
+                    lastMessages = await lobby.textChannel.history(limit=1).flatten()
+                    if (not lastMessages and time.time() - category.created_at > 9000) or \
+                      (lastMessage.author != self.client.rTTR.me and time.time() - lastMessage.created_at.timestamp() > 604800):
                         if lobby.voiceChannel:
                             await lobby.voiceChannel.delete()
                         await lobby.textChannel.delete()
