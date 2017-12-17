@@ -9,6 +9,9 @@ class UserTrackingModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
+        self.trackMessages = Config.getModuleSetting('usertracking', 'track_messages', True)
+        self.trackingExceptions = Config.getModuleSetting('usertracking', 'tracking_exceptions', [])
+
         self.memberStatusTimeStart = {member: time.time() for member in client.rTTR.members}
         self.trackStatuses = Config.getModuleSetting('usertracking', 'track_statuses', True)
 
@@ -45,10 +48,19 @@ class UserTrackingModule(Module):
         return response
 
     async def handleMsg(self, message):
-        # You don't want to level up if there's an exception being made.
+        # You don't want to progress if there's an exception being made.
         if message.channel.id in self.levelingExceptions or message.author.id in self.levelingExceptions or \
             any([role.id in self.levelingExceptions for role in message.author.roles]):
             return
+        if message.channel.id in self.trackingExceptions:
+            return
+
+        if self.trackMessages:
+            channelHistory = Users.getUserChannelHistory(message.author.id, message.channel.id)
+            channelHistory['messages'] += 1
+            channelHistory['attachments'] += len(message.attachments)
+            channelHistory['embed'] += len(message.embeds)
+            Users.setUserChannelHistory(message.author.id, message.channel.id, channelHistory)
 
         bot = message.author.bot
         mod = any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])
