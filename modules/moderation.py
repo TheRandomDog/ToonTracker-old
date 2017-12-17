@@ -107,51 +107,48 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
         except Exception as e:
             await client.send_message(message.author, 'Could not send warning notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send warning notification message to {}'.format(user.id))
-    elif nextPunishment == 'Kick': 
-        if not silent:                              
-            try:
-                notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
-                    'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n```{}```\n' \
-                    'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run ' \
-                    'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
-                        user.mention, reason))
-                punishmentAdd['noticeID'] = notice.id
-            except Exception as e:
-                await client.send_message(message.author, 'Could not send kick notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
-                print('Could not send kick notification message to {}'.format(user.id))
+    elif nextPunishment == 'Kick' and not silent:                    
+        try:
+            notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
+                'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n```{}```\n' \
+                'As a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar with the way we run ' \
+                'things there if you decide to rejoin. We\'d love to have you back, as long as you stay Toony!'.format(
+                    user.mention, reason))
+            punishmentAdd['noticeID'] = notice.id
+        except Exception as e:
+            await client.send_message(message.author, 'Could not send kick notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
+            print('Could not send kick notification message to {}'.format(user.id))
         try:
             await client.rTTR.kick(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
             await client.send_message(message.author, 'Could not kick the user. If the user was not on the server, this is expected.')
-    elif nextPunishment == 'Temporary Ban':
+    elif nextPunishment == 'Temporary Ban' and not silent:
         punishmentAdd['endTime'] = time.time() + length
         punishmentAdd['length'] = lengthText
-        if not silent:
-            try:
-                notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
-                    'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
-                    'the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
-                    'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long ' \
-                    'as you stay Toony!'.format(user.mention, lengthText, reason))
-                punishmentAdd['noticeID'] = notice.id
-            except Exception as e:
-                await client.send_message(message.author, 'Could not send temporary ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
-                print('Could not send temporary ban notification message to {}'.format(user.id))
+        try:
+            notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been temporarily banned from the ' \
+                'Toontown Rewritten Discord server by a moderator for **{}**, and this has been marked down officially. Here\'s ' \
+                'the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server\'s rules so you\'re familiar ' \
+                'with the way we run things there if you decide to rejoin after your ban. We\'d love to have you back, as long ' \
+                'as you stay Toony!'.format(user.mention, lengthText, reason))
+            punishmentAdd['noticeID'] = notice.id
+        except Exception as e:
+            await client.send_message(message.author, 'Could not send temporary ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
+            print('Could not send temporary ban notification message to {}'.format(user.id))
         try:
             await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
             await client.send_message(message.author, 'Could not ban the user. This is probably bad. ' \
             'You should use Discord\'s built-in moderation tools to enforce the ban.')
-    elif nextPunishment == 'Permanent Ban':
-        if not silent:
-            try:
-                notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
-                    'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n```{}```\nIf you feel this is illegitimate, ' \
-                    'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
-                punishmentAdd['noticeID'] = notice.id
-            except Exception as e:
-                await client.send_message(message.author, 'Could not send permanent ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
-                print('Could not send permanent ban notification message to {}'.format(user.id))
+    elif nextPunishment == 'Permanent Ban' and not silent:
+        try:
+            notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
+                'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n```{}```\nIf you feel this is illegitimate, ' \
+                'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
+            punishmentAdd['noticeID'] = notice.id
+        except Exception as e:
+            await client.send_message(message.author, 'Could not send permanent ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
+            print('Could not send permanent ban notification message to {}'.format(user.id))
         try:
             await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
