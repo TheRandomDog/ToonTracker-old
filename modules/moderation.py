@@ -28,8 +28,11 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
     else:
         user = message.mentions[0]
     
-    if user.bot:
+    if user.bot and not Config.getModuleSetting('moderation', 'allow_bot_punishments', False):
         return CommandResponse(message.channel, '{} You cannot punish a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
+            deleteIn=5, priorMessage=message)
+    if (Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])) and not Config.getModuleSetting('moderation', 'allow_mod_punishments', False):
+        return CommandResponse(message.channel, '{} You cannot punish another mod. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
             deleteIn=5, priorMessage=message)
 
     if not punishment:
@@ -420,6 +423,9 @@ class ModerationModule(Module):
         self.botspam = Config.getModuleSetting('moderation', 'announcements')
         self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
         self.filterBots = Config.getModuleSetting('moderation', 'filter_bots', False)
+        self.filterMods = Config.getModuleSetting('moderation', 'filter_mods', True)
+        self.allowBotPunishments = Config.getModuleSetting('moderation', 'allow_bot_punishments', False)
+        self.allowModPunishments = Config.getModuleSetting('moderation', 'allow_mod_punishments', False)
 
         self.scheduledUnbans = []
         asyncio.get_event_loop().create_task(self.scheduleUnbans())
@@ -637,7 +643,8 @@ class ModerationModule(Module):
         #    await self.client.send_message(self.botspam, "Image posted was fine. **[Rating: {}]**".format(rating))
 
     async def handleMsg(self, message):
-        if message.channel.id in self.exceptions or message.author.id in self.exceptions or (message.author.bot and not self.filterBots):
+        if message.channel.id in self.exceptions or message.author.id in self.exceptions or \
+            (message.author.bot and not self.filterBots) or ((Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])) and not self.filterMods):
             return
 
         timeStart = time.time()
