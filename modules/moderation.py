@@ -418,8 +418,8 @@ class ModerationModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.badWordFilterOn = Config.getModuleSetting('moderation', 'badwordfilter')
-        self.badImageFilterOn = Config.getModuleSetting('moderation', 'badimagefilter')
+        self.badWordFilterOn = Config.getModuleSetting('moderation', 'badwordfilter', True)
+        self.badImageFilterOn = Config.getModuleSetting('moderation', 'badimagefilter', True)
         self.botspam = Config.getModuleSetting('moderation', 'announcements')
         self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
         self.filterBots = Config.getModuleSetting('moderation', 'filter_bots', False)
