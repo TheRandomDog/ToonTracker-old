@@ -308,7 +308,10 @@ class ToonTracker(discord.Client):
         if not channel:
             channel = Config.getSetting('botspam')
             try:
-                channel = int(channel)
+                if type(channel) == list:
+                    channel = [int(c) for c in channel]
+                else:
+                    channel = int(channel)
             except ValueError:
                 channel = None
 
