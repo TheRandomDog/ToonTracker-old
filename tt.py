@@ -307,18 +307,26 @@ class ToonTracker(discord.Client):
     async def load_config(self, term='start', channel=None):
         if not channel:
             channel = Config.getSetting('botspam')
+            try:
+                channel = int(channel)
+            except ValueError:
+                channel = None
 
         warnings = []
         errors = []
 
         rTTR = Config.getSetting('rTTR')
         if not rTTR:
-            e = 'No guild ID was designated as rTTR in config.'
+            e = 'No guild ID was designated as rTTR in config, or it was malformed.'
             errors.append(e)
             print('[!!!] ' + e)
         self.rTTR = self.get_guild(rTTR)
         if not self.rTTR:
-            e = 'No known guild was designated as rTTR in config.'
+            e = 'No known guild was designated as rTTR in config, or it was malformed.'
+            errors.append(e)
+            print('[!!!] ' + e)
+        if not channel:
+            e = 'No known channel was designated as the bot output in the config, or it was malformed.'
             errors.append(e)
             print('[!!!] ' + e)
 
@@ -326,7 +334,8 @@ class ToonTracker(discord.Client):
             full = 'ToonTracker failed to {} with **{}** error(s).\n\n'.format(term, len(errors))
             print(full)
             full += '\n'.join([':exclamation: ' + e for e in errors])
-            await self.send_message(channel, full)
+            if channel:
+                await self.send_message(channel, full)
             await self.logout()
             await self.close()
 
