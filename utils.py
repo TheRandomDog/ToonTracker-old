@@ -245,7 +245,7 @@ class Users:
         user = cls.getUserJSON(userID)
         channelHistory = user['channel_history']
         if channelID:
-            return channelHistory.get(channelID, {'messages': 0, 'attachments': 0})
+            return channelHistory.get(channelID, {'messages': 0, 'attachments': 0, 'embeds': 0})
         return channelHistory
 
     @classmethod
