@@ -155,8 +155,8 @@ class Users:
             content = {int(userID): data for userID, data in json.loads(file.read()).items()}
             return content
         except json.JSONDecodeError:
-            print('[!!!] Tried to read user id "{}", but {} did not have valid JSON content.'.format(
-                userID, os.path.basename(file.name))
+            print('[!!!] Tried to read user data, but {} did not have valid JSON content.'.format(
+                os.path.basename(file.name))
             )
             return otherwise
         finally:
