@@ -31,7 +31,8 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
     if user.bot and not Config.getModuleSetting('moderation', 'allow_bot_punishments', False):
         return CommandResponse(message.channel, '{} You cannot punish a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
             deleteIn=5, priorMessage=message)
-    if (Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])) and not Config.getModuleSetting('moderation', 'allow_mod_punishments', False):
+    if (Config.getRankOfUser(user.id) >= 300 or (client.rTTR.get_member(user.id) and any([Config.getRankOfRole(role.id) >= 300 for role in client.rTTR.get_member(user.id).roles]))) \
+     and not Config.getModuleSetting('moderation', 'allow_mod_punishments', False):
         return CommandResponse(message.channel, '{} You cannot punish another mod. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
             deleteIn=5, priorMessage=message)
 
