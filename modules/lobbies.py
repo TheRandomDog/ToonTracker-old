@@ -148,17 +148,12 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.id != module.channelID:
+            if not message.channel.category or not message.channel.category.name.startswith('Lobby'):
                 return
 
-            residingLobby = None
-            lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
-            for lobby in module.activeLobbies.values():
-                if lobbyRole in (lobby.role, lobby.ownerRole):
-                    residingLobby = lobby
-            ownsLobby = 'owner' in lobbyRole.name if residingLobby else False
+            lobby = getUsersLobby(module, message.author)
 
-            if not residingLobby:
+            if not lobby:
                 return '{} You\'re not in a lobby yourself -- create a lobby before you invite users.'.format(message.author.mention)
             elif not message.mentions:
                 return '{} I need a mention of the user you want to invite to your lobby.'.format(message.author.mention)
@@ -171,19 +166,19 @@ class LobbyManagement(Module):
                     failedBot.append(user.mention)
                     continue
 
-                if user.id in residingLobby.invited:
+                if user.id in lobby.invited:
                     failedPendingInvite.append(user.mention)
                     continue
 
                 try:
-                    residingLobby.invited.append(user.id)
+                    lobby.invited.append(user.id)
                     await user.send("Hey there, {}! {} has invited you to join their private lobby on the Toontown Rewritten Discord. " \
                         "\n\nTo accept, {}copy & paste `~acceptLobbyInvite {}`. If you're not interested, you can ignore this message.".format(
                             user.mention,
                             message.author.mention,
                             'first leave your current lobby with `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* and then ' \
-                            if discord.utils.find(lambda r: 'lobby-' in r.name, user.roles) else '',
-                            residingLobby.id
+                            if getUsersLobby(module, user) else '',
+                            lobby.id
                         )
                     )
                 except discord.HTTPException as e:
@@ -194,7 +189,7 @@ class LobbyManagement(Module):
                     len(failedMessages + failedBot),
                     'person' if len(failedMessages + failedBot) == 1 else 'people',
                     ', '.join(failedMessages) + (' and [uninvitable] bots' if failedBot else ''),
-                    residingLobby.id,
+                    lobby.id,
                     'Also, you\'ve already sent an invite that\'s pending to {} of the mentioned users. '.format(len(failedPendingInvite)) if failedPendingInvite else ''
                 )
             elif len(failedBot) == len(message.mentions):
