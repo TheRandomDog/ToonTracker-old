@@ -152,7 +152,8 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.__class__ == discord.DMChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby'):
+            if message.channel.id != module.channelID and message.channel.__class__ == discord.DMChannel and \
+                not message.channel.category and not message.channel.category.name.startswith('Lobby'):
                 return
 
             lobby = getUsersLobby(module, message.author)
@@ -181,16 +182,16 @@ class LobbyManagement(Module):
                 try:
                     lobby.invited.append(user.id)
                     await user.send("Hey there, {}! {} has invited you to join their private lobby on the Toontown Rewritten Discord. {}" \
-                        "\n\nTo accept, {}copy & paste `~acceptLobbyInvite {}`. If you're not interested, you can ignore this message.".format(
+                        "\n\nIf you're not interested, you can ignore this message. To accept, {}copy & paste the following:".format(
                             user.mention,
                             message.author.mention,
                             'Note that the bad word filter in this lobby is **disabled**, and you should not accept this invite if you are of a younger age. Anything 18+ will still be moderated.' \
                             if not lobby.filter else '',
                             'first leave your current lobby with `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* and then ' \
-                            if getUsersLobby(module, user) else '',
-                            lobby.id
+                            if getUsersLobby(module, user) else ''
                         )
                     )
+                    await user.send("`~acceptLobbyInvite {}`".format(lobby.id))
                 except discord.HTTPException as e:
                     failedMessages.append(user.mention)
             if failedMessages:
@@ -221,7 +222,7 @@ class LobbyManagement(Module):
     class LobbyInviteCMD_Variant1(LobbyInviteCMD): NAME = 'invitetolobby'
 
     class LobbyInviteAcceptCMD(Command):
-        """~acceptLobbyInvite
+        """~acceptLobbyInvite <lobby id>
 
             This allows you to accept an invite to a lobby from another user.
             Once you accept, you'll be able to see and chat within their lobby.
@@ -230,7 +231,8 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.__class__ != discord.DMChannel:
+            if message.channel.__class__ != discord.DMChannel and message.channel.__class__ == discord.DMChannel and \
+                not message.channel.category and not message.channel.category.name.startswith('Lobby'):
                 return
 
             try:
