@@ -161,6 +161,10 @@ class LobbyManagement(Module):
                 return '{} You\'re not in a lobby yourself -- create a lobby before you invite users.'.format(message.author.mention)
             elif not message.mentions:
                 return '{} I need a mention of the user you want to invite to your lobby.'.format(message.author.mention)
+            elif len(message.mentions) == 1 and message.mentions[0] == message.author:
+                return '{} No need to invite yourself to the lobby!'.format(message.author.mention)
+            elif message.author in message.mentions:
+                message.mentions.remove(message.author)
 
             failedMessages = []
             failedBot = []
