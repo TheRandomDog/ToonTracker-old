@@ -20,7 +20,7 @@ class Lobby:
         self.visited = None
         self.expiryWarning = None
         self.filter = True
-        self.filterVotes = 0
+        self.filterVotes = []
         self.filterVotesNeeded = 0
         self.filterWarning = False
 
@@ -378,15 +378,20 @@ class LobbyManagement(Module):
             if not lobby:
                 return '{} You\'re not currently in a lobby.'.format(message.author.mention)
                 # Ironic, since it shouldn't get here.
-            if lobby.filter:
+            moderation = client.requestModule('moderation')
+            if not moderation:
+                return '{} The lobby filter cannot be enabled because the `moderation` module has not been loaded.'.format(message.author.mention)
+            elif lobby.filter:
                 return '{} The lobby filter is already enabled.'.format(message.author.mention)
+            elif message.author.id in lobby.filterVotes:
+                return '{} You\'ve already voted!'.format(message.author.mention)
 
             lobby.filterVotesNeeded = int(len([m for m in filter(lambda m: lobby.role in m.roles, client.rTTR.members)]) / 2) + 1  # (+ 1) == owner
-            lobby.filterVotes += 1
+            lobby.filterVotes.append(message.author.id)
 
-            if lobby.filterVotes >= lobby.filterVotesNeeded:
+            if len(lobby.filterVotes) >= lobby.filterVotesNeeded:
                 lobby.filterVotesNeeded = 0
-                lobby.filterVotes = 0
+                lobby.filterVotes = []
                 lobby.filter = True
                 return 'The bad word filter has been re-enabled.'
             else:
@@ -413,18 +418,17 @@ class LobbyManagement(Module):
             if not lobby:
                 return '{} You\'re not currently in a lobby.'.format(message.author.mention)
                 # Ironic, since it shouldn't get here.
-            moderation = client.requestModule('moderation')
-            if not moderation:
-                return '{} The lobby filter cannot be enabled because the `moderation` module has not been loaded.'.format(message.author.mention)
-            elif not lobby.filter:
+            if not lobby.filter:
                 return '{} The lobby filter is already disabled.'.format(message.author.mention)
+            elif message.author.id in lobby.filterVotes:
+                return '{} You\'ve already voted!'.format(message.author.mention)
 
             lobby.filterVotesNeeded = len([m for m in filter(lambda m: lobby.role in m.roles, client.rTTR.members)]) + 1  # (+ 1) == owner
-            lobby.filterVotes += 1
+            lobby.filterVotes.append(message.author.id)
 
-            if lobby.filterVotes >= lobby.filterVotesNeeded:
+            if len(lobby.filterVotes) >= lobby.filterVotesNeeded:
                 lobby.filterVotesNeeded = 0
-                lobby.filterVotes = 0
+                lobby.filterVotes = []
                 lobby.filter = False
                 return 'The bad word filter has been disabled. To re-enable it, use `~enableFilter`.'
             else:
