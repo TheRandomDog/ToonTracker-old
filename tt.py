@@ -103,6 +103,14 @@ class ToonTracker(discord.Client):
             rank = max([Config.getRankOfUser(message.author.id), Config.getRankOfRole(message.author.top_role.id)])
 
             msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
+            for command in sorted(client.commands, key=lambda c: c.NAME):
+                if command.RANK <= rank and command.__doc__:
+                    if args and args[0].lower() == command.NAME.lower():
+                        doc = command.__doc__.split('\n')
+                        doc[0] = '`' + doc[0] + '`'
+                        doc = '\n'.join([line.strip() for line in doc])
+                        return doc
+                    msg += '\n\t' + client.commandPrefix + command.NAME
             for module in client.modules.values():
                 for command in sorted(module.commands, key=lambda c: c.NAME):
                     if command.RANK <= rank and command.__doc__:
