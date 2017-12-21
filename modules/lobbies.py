@@ -76,7 +76,8 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
     await category.set_permissions(client.rTTR.default_role, read_messages=False)
     await category.set_permissions(lobby.ownerRole, read_messages=True)
     await category.set_permissions(lobby.role, read_messages=True)
-    await category.set_permissions(discordModRole, read_messages=True, send_messages=False)
+    if discordModRole:
+        await category.set_permissions(discordModRole, read_messages=True, send_messages=False)
 
     if not voiceChannelOnly:
         lobby.textChannel = await client.rTTR.create_text_channel(
