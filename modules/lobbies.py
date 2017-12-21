@@ -283,12 +283,12 @@ class LobbyManagement(Module):
             inLobby = discord.utils.find(lambda r: 'lobby-' in r.name, client.rTTR.get_member(message.author.id).roles)
             ownsLobby = 'owner' in inLobby.name if inLobby else False
 
-            if message.author.id not in invited:
-                return '{} Sorry, but you weren\'t invited to that lobby.'.format(message.author.mention)
-            elif ownsLobby:
+            if ownsLobby:
                 return '{} Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~disbandLobby`.'.format(message.author.mention)
             elif inLobby:
                 return '{} Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~leaveLobby`.'.format(message.author.mention)
+            elif message.author.id not in invited:
+                return '{} Sorry, but you weren\'t invited to that lobby.'.format(message.author.mention)
 
             module.activeLobbies[lobby].invited.remove(message.author.id)
             await message.author.add_roles(module.activeLobbies[lobby].role, reason='Accepted invite to lobby')
