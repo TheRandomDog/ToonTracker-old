@@ -33,10 +33,8 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
 
     name = ' '.join(args)
     if len(name) > 30:
-        module.activeLobbies.remove(lobbyID)
         return '{} Your lobby name must be 30 characters or less.'.format(message.author.mention)
     elif not name:
-        module.activeLobbies.remove(lobbyID)
         return '{} Give your lobby a name!'.format(message.author.mention)
 
     category = await client.rTTR.create_category(name='Lobby [{}]'.format(name), reason=auditLogReason)
@@ -45,7 +43,7 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
     lobby.category = category
     lobby.customName = name
     lobby.id = category.id
-    module.activeLobbies[lobbyID] = lobby
+    module.activeLobbies[lobby.id] = lobby
 
     lobby.ownerRole = await client.rTTR.create_role(
         name='lobby-{}-owner'.format(lobby.id),
@@ -78,16 +76,16 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
 
     return '{} Your lobby has been created!'.format(message.author.mention)
 
-def getUsersLobby(member):
+def getUsersLobby(module, member):
     assert member.__class__ == discord.Member
-    lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
+    lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, member.roles)
     for lobby in module.activeLobbies.values():
         if lobbyRole in (lobby.role, lobby.ownerRole):
             return lobby
 
-def getOwnersLobby(member):
+def getOwnersLobby(module, member):
     assert member.__class__ == discord.Member
-    lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
+    lobbyRole = discord.utils.find(lambda r: 'lobby-' in r.name, member.roles)
     for lobby in module.activeLobbies.values():
         if lobbyRole == lobby.ownerRole:
             return lobby
@@ -226,7 +224,7 @@ class LobbyManagement(Module):
             if not message.author:
                 return 'Sorry, but you need to be in the Toontown Rewritten Discord to use lobbies.'
 
-            lobby = getUsersLobby(message.author)
+            lobby = getUsersLobby(module, message.author)
             if lobby.ownerRole in message.author.roles:
                 return '{} You own the **{}** lobby, meaning you need to use `~disbandLobby` to ensure you actually want to disband the lobby.'.format(message.author.mention, lobby.customName)
             elif not lobby:
@@ -245,7 +243,7 @@ class LobbyManagement(Module):
             if not message.author:
                 return 'Sorry, but you need to be in the Toontown Rewritten Discord to use lobbies.'
 
-            lobby = getUsersLobby(message.author)
+            lobby = getUsersLobby(module, message.author)
 
             if not lobby:
                 return '{} You\'re not currently in a lobby.'.format(message.author.mention)
@@ -258,8 +256,9 @@ class LobbyManagement(Module):
             category = discord.utils.get(client.rTTR.categories, id=lobby.id)
             for channel in category.channels:
                 await channel.delete(reason=auditLogReason)
-            category.delete(reason=auditLogReason)
-            await client.rTTR.send_message(self.channelID, '{} You\'ve disbanded your lobby, everyone\'s free now!'.format(message.author.mention))
+            await category.delete(reason=auditLogReason)
+            await client.send_message(message.channel if message.channel.__class__ == discord.DMChannel else module.channelID, 
+                '{} You\'ve disbanded your lobby, everyone\'s free now!'.format(message.author.mention))
 
     def __init__(self, client):
         Module.__init__(self, client)
@@ -296,7 +295,7 @@ class LobbyManagement(Module):
                 lobby.ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
                 lobby.created = category.created_at
                 lobby.customName = category.name.replace('Lobby [', '').replace(']', '')
-                self.activeLobbies.append(lobby)
+                self.activeLobbies[lobby.id] = lobby
 
     async def bumpInactiveLobbies(self, fromRestore=False):
         if fromRestore:
@@ -305,8 +304,9 @@ class LobbyManagement(Module):
                     continue
                 if any([channel.__class__ == discord.TextChannel for channel in category.channels]):
                     lastMessages = await category.channels[0].history(limit=1).flatten()
-                    if (not lastMessages and time.time() - category.created_at.timestamp() > 9000) or \
-                      (lastMessages[0].author != self.client.rTTR.me and time.time() - lastMessages[0].created_at.timestamp() > 604800):
+                    if not lastMessages and time.time() - category.created_at.timestamp() < 9000:
+                        continue
+                    elif not lastMessages or (lastMessages[0].author != self.client.rTTR.me and time.time() - lastMessages[0].created_at.timestamp() > 604800):
                         role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
                         ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
                         for channel in category.channels:
@@ -324,11 +324,12 @@ class LobbyManagement(Module):
                     await ownerRole.delete()
         else:
             inactiveLobbies = []
-            for lobby in self.activeLobbies:
+            for lobby in self.activeLobbies.values():
                 if not lobby.voiceChannelOnly:
                     lastMessages = await lobby.textChannel.history(limit=1).flatten()
-                    if (not lastMessages and time.time() - category.created_at.timestamp() > 9000) or \
-                      (lastMessage.author != self.client.rTTR.me and time.time() - lastMessage.created_at.timestamp() > 604800):
+                    if not lastMessages and time.time() - category.created_at.timestamp() < 9000:
+                        continue
+                    elif not lastMessages or (lastMessage.author != self.client.rTTR.me and time.time() - lastMessage.created_at.timestamp() > 604800):
                         if lobby.voiceChannel:
                             await lobby.voiceChannel.delete()
                         await lobby.textChannel.delete()
@@ -343,6 +344,6 @@ class LobbyManagement(Module):
                     await lobby.ownerRole.delete()
                     inactiveLobbies.append(lobby)
             for inactiveLobby in inactiveLobbies:
-                self.activeLobbies.remove(inactiveLobby)
+                del self.activeLobbies[inactiveLobby.id]
 
 module = LobbyManagement
