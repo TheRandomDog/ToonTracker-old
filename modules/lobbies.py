@@ -248,7 +248,7 @@ class LobbyManagement(Module):
 
             await message.author.remove_roles(lobby.role, reason='User left lobby via ~leaveLobby')
 
-    class LobbyDisbandCD(Command):
+    class LobbyDisbandCMD(Command):
         NAME = 'disbandLobby'
 
         @staticmethod
