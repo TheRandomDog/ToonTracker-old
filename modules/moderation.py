@@ -651,7 +651,7 @@ class ModerationModule(Module):
 
     async def handleMsg(self, message):
         if message.channel.id in self.exceptions or message.author.id in self.exceptions or \
-            (message.channel.category and message.channel.category.name.startswith('Lobby')) or \
+            (message.channel.category != discord.DMChannel and message.channel.category and message.channel.category.name.startswith('Lobby')) or \
             (message.author.bot and not self.filterBots) or ((Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])) and not self.filterMods):
             return
 
