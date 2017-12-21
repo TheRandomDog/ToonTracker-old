@@ -148,7 +148,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not message.channel.category or not message.channel.category.name.startswith('Lobby'):
+            if message.channel.__class__ == discord.DMChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby'):
                 return
 
             lobby = getUsersLobby(module, message.author)
@@ -220,7 +220,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID:
+            if message.channel.__class__ != discord.DMChannel:
                 return
 
             try:
@@ -247,7 +247,7 @@ class LobbyManagement(Module):
             module.activeLobbies[lobby].invited.remove(message.author.id)
             await message.author.add_roles(module.activeLobbies[lobby].role, reason='Accepted invite to lobby')
 
-            return "{} You're now in the **{}** lobby! Have fun!".format(message.author.mention, module.activeLobbies[args[0]].customName)
+            return "{} You're now in the **{}** lobby! Have fun!".format(message.author.mention, module.activeLobbies[lobby].customName)
     class LobbyInviteAcceptCMD_Variant1(LobbyInviteAcceptCMD): NAME = 'acceptlobbyinvite'
 
     class LobbyLeaveCMD(Command):
@@ -261,7 +261,8 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID:
+            if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID and \
+                (message.channel.__class__ == discord.TextChannel and message.channel.category and message.channel.category.name.startswith('Lobby')):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -285,7 +286,8 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID:
+            if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID and \
+                (message.channel.__class__ == discord.TextChannel and message.channel.category and message.channel.category.name.startswith('Lobby')):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -362,23 +364,23 @@ class LobbyManagement(Module):
     async def bumpInactiveLobbies(self):
         inactiveLobbies = []
         for lobby in self.activeLobbies.values():
-            # If the lobby has not been visited for 10 minutes...
-            if not lobby.visited and not lobby.expiryWarning and lobby.created >= self.unvisitedExpiryWarningTime:
+            # If the lobby has not been visited...
+            if not lobby.visited and not lobby.expiryWarning and time.mktime(time.gmtime()) - lobby.created >= self.unvisitedExpiryWarningTime:
                 lobby.expiryWarning = time.mktime(time.gmtime())
                 target = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members) if not lobby.textChannel else lobby.textChannel
                 await self.client.send_message(target, 'Just a heads up, to prevent lobby spam, your lobby will be disbanded if not used within the next {}.'.format(
                     getTimeFromSeconds(self.unvisitedExpiryTime))
                 )
-            # If the lobby was last visited 6 days ago...
-            elif lobby.visited and not lobby.expiryWarning and lobby.visited >= self.visitedExpiryWarningTime:
+            # If the lobby was last visited...
+            elif lobby.visited and not lobby.expiryWarning and time.mktime(time.gmtime()) - lobby.visited >= self.visitedExpiryWarningTime:
                 lobby.expiryWarning = time.mktime(time.gmtime())
                 target = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members) if not lobby.textChannel else lobby.textChannel
                 await self.client.send_message(target, "Just a heads up -- your lobby hasn't been used in a while, and will expire in {} if left unused.".format(
                     getTimeFromSeconds(self.visitedExpiryTime))
                 )
-            # If the lobby was visited and an expiry warning was sent 24 hours ago...
+            # If the lobby was visited and an expiry warning was sent...
             # OR
-            # If the lobby was not visited and an expiry warning was sent 5 minutes ago...
+            # If the lobby was not visited and an expiry warning was sent...
             elif lobby.expiryWarning and time.mktime(time.gmtime()) - lobby.expiryWarning >= (self.visitedExpiryTime if lobby.visited else self.unvisitedExpiryTime):
                 for member in filter(lambda m: lobby.role in m.roles, self.client.rTTR.members):
                     await self.client.send_message(member, "The lobby you were in was disbanded because it was left inactive for an extended period of time.")
