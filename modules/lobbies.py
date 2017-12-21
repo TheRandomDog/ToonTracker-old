@@ -31,8 +31,13 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
     elif residingLobby:
         return '{} You are in a lobby right now. You\'ll have to `~leaveLobby` to create a new one.'.format(message.author.mention)
 
+    moderation = client.requestModule('moderation')
+
     name = ' '.join(args)
-    if len(name) > 30:
+    if moderation:
+        await moderation.filterBadWords(message)
+        return
+    elif len(name) > 30:
         return '{} Your lobby name must be 30 characters or less.'.format(message.author.mention)
     elif not name:
         return '{} Give your lobby a name!'.format(message.author.mention)

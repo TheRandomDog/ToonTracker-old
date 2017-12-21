@@ -114,7 +114,7 @@ class ToonTracker(discord.Client):
         self.updateDelay = assertTypeOrOtherwise(Config.getSetting('update_delay'), int, float, otherwise=10)
 
     def isModuleAvailable(self, module):
-        if module in self.modules and module.publicModule:
+        if module in self.modules and self.modules[module].publicModule:
             return True
 
     def requestModule(self, module):
