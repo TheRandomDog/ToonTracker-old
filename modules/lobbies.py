@@ -23,7 +23,7 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
         return
 
     lobby = getUsersLobby(module, message.author)
-    ownsLobby = lobby.ownerRole in message.author.roles
+    ownsLobby = lobby and lobby.ownerRole in message.author.roles
     auditLogReason = 'Lobby created by {}'.format(str(message.author))
 
     if ownsLobby:
@@ -223,13 +223,17 @@ class LobbyManagement(Module):
             if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID:
                 return
 
-            if args[0] not in module.activeLobbies:
+            try:
+                lobby = int(args[0])
+            except ValueError:
+                lobby = args[0]
+            if lobby not in module.activeLobbies:
                 return "{} Sorry, but I didn't recognize that Lobby ID. The Lobby may have been disbanded or the invite may have expired.".format(message.author.mention)
 
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
                 return 'Sorry, but you need to be in the Toontown Rewritten Discord to use lobbies.'
-            invited = module.activeLobbies[args[0]].invited
+            invited = module.activeLobbies[lobby].invited
             inLobby = discord.utils.find(lambda r: 'lobby-' in r.name, client.rTTR.get_member(message.author.id).roles)
             ownsLobby = 'owner' in inLobby.name if inLobby else False
 
@@ -240,8 +244,8 @@ class LobbyManagement(Module):
             elif inLobby:
                 return '{} Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~leaveLobby`.'.format(message.author.mention)
 
-            module.activeLobbies[args[0]].invited.remove(message.author.id)
-            await message.author.add_roles(module.activeLobbies[args[0]].role, reason='Accepted invite to lobby')
+            module.activeLobbies[lobby].invited.remove(message.author.id)
+            await message.author.add_roles(module.activeLobbies[lobby].role, reason='Accepted invite to lobby')
 
             return "{} You're now in the **{}** lobby! Have fun!".format(message.author.mention, module.activeLobbies[args[0]].customName)
     class LobbyInviteAcceptCMD_Variant1(LobbyInviteAcceptCMD): NAME = 'acceptlobbyinvite'
@@ -319,7 +323,7 @@ class LobbyManagement(Module):
         self.client.loop.create_task(self.bumpInactiveLobbies())
 
     async def handleMsg(self, message):
-        if message.channel.category and message.channel.category.name.startswith('Lobby'):
+        if message.channel.__class__ == discord.TextChannel and message.channel.category and message.channel.category.name.startswith('Lobby'):
             lobby = getLobbyByID(self, message.channel.category.id)
             lobby.visited = time.mktime(time.gmtime())
             lobby.expiryWarning = None
