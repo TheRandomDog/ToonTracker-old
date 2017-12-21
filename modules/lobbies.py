@@ -93,6 +93,37 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
 
     return '{} Your lobby has been created!'.format(message.author.mention)
 
+async def getChatLog(client, lobby, savingMessage=None):
+    chatlog = ""
+    participants = []
+    creator = discord.utils.find(lambda m: lobby.ownerRole in m.roles, client.rTTR.members)
+    async for m in lobby.textChannel.history(limit=10000, reverse=True):
+        if savingMessage and m.content == savingMessage:
+            continue
+        participant =  m.author.name + '#' + m.author.discriminator + (' [BOT]' if m.author.bot else '')
+        if participant not in participants:
+            participants.append(participant)
+        messageHeader = '== {name}{bot} - {time}{edited}{attachments}{embeds} =='.format(
+            name=m.author.name,
+            bot=' [BOT]' if m.author.bot else '',
+            time=m.created_at.strftime('%m/%d/%Y @ %I:%M%p'),
+            edited=(' (edited on ' + m.edited_at.strftime('%m/%d/%Y @ %I:%M%p') + ')') if m.edited_at else '',
+            attachments=' *' if m.attachments else '',
+            embeds=' **' if m.embeds else '',
+        )
+        chatlog += '\r\n\r\n{messageHeader}\r\n{content}'.format(
+            messageHeader=messageHeader,
+            content=m.clean_content.replace('\n', '\r\n')
+        )
+    chatlog = '{} Lobby\r\nCreated by {}\r\nCreated on {}\r\nAll Lobby Participants:\r\n\t{}\r\n\r\n' \
+        '* = This message included an attachment.\r\n** = This message included an embed.\r\n\r\n============= BEGIN CHAT LOG ============='.format(
+        lobby.customName,
+        creator.name + '#' + creator.discriminator + (' [BOT]' if creator.bot else ''),
+        datetime.fromtimestamp(lobby.created).strftime('%m/%d/%Y @ %I:%M%p'),
+        '\r\n\t'.join(participants)
+    ) + chatlog
+    return chatlog
+
 def getLobbyByID(module, id):
     for lobby in module.activeLobbies.values():
         if lobby.id == id:
@@ -316,31 +347,8 @@ class LobbyManagement(Module):
             
             savingMessage = "Alrighty, will do! I'm just saving you a copy of your chat logs in case you want them in the future, hang on a second..."
             await client.send_message(message.channel, savingMessage)
-            chatlog = ""
-            participants = []
             async with message.channel.typing():
-                async for m in message.channel.history(limit=10000, reverse=True):
-                    if m.content == savingMessage:
-                        continue
-                    participant =  m.author.name + '#' + m.author.discriminator + (' [BOT]' if m.author.bot else '')
-                    if participant not in participants:
-                        participants.append(participant)
-                    chatlog += '\r\n\r\n{}{} - {}{}{}{}\r\n{}'.format(
-                        m.author.name,
-                        ' [BOT]' if m.author.bot else '',
-                        m.created_at.strftime('%m/%d/%Y @ %I:%M%p'),
-                        (' (edited on ' + m.edited_at.strftime('%m/%d/%Y @ %I:%M%p') + ')') if m.edited_at else '',
-                        ' *' if m.attachments else '',
-                        ' **' if m.embeds else '',
-                        m.content
-                    )
-            chatlog = '{} Lobby\r\nCreated by {}\r\nCreated on {}\r\nAll Lobby Participants:\r\n\t{}\r\n\r\n' \
-                '* = This message included an attachment.\r\n** = This message included an embed.\r\n\r\n============= BEGIN CHAT LOG ============='.format(
-                lobby.customName,
-                message.author.name + '#' + message.author.discriminator + (' [BOT]' if message.author.bot else ''),
-                datetime.fromtimestamp(lobby.created).strftime('%m/%d/%Y @ %I:%M%p'),
-                '\r\n\t'.join(participants)
-            ) + chatlog
+                chatlog = await getChatLog(client, lobby, savingMessage)
 
             auditLogReason = 'User disbanded lobby via ~disbandLobby'
             await lobby.role.delete(reason=auditLogReason)
@@ -435,6 +443,38 @@ class LobbyManagement(Module):
                 return '{} Your vote to disable the bad word filter has been submitted; **{} more vote{} required.'.format(
                     message.author.mention, lobby.filterVotesNeeded - lobby.filterVotes, '** is' if lobby.filterVotesNeeded - lobby.filterVotes == 1 else 's** are')
     class LobbyFilterDisableCMD_Variant1(LobbyFilterDisableCMD): NAME = 'disablefilter'
+
+    class LobbyChatLogCMD(Command):
+        """~chatlog
+
+            Generates a chat log in a downloadable .txt format, and outputs it to the channel. This may take a few seconds depending on the history size of your lobby.
+            If you're about to disband your lobby, there's no need to run this command, a chatlog is generated for you upon disband automatically.
+            Only the first 10,000 messages are generaetd.
+        """
+        NAME = 'getChatLog'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if message.channel.__class__ == discord.DMChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby'):
+                return
+
+            lobby = getUsersLobby(module, message.author)
+
+            if not lobby:
+                return '{} You\'re not currently in a lobby.'.format(message.author.mention)
+
+            savingMessage = "Alrighty, I'm fetching that chat log for you, hang on a second..."
+            await client.send_message(message.channel, savingMessage)
+            async with message.channel.typing():
+                chatlog = await getChatLog(client, lobby, savingMessage)
+
+            confirmationMessage = await client.send_message(message.channel, 'Here\'s that chat log for you...')
+            async with message.author.typing():
+                file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(message.created_at.timestamp())))
+                await client.send_message(message.channel, file)
+            await confirmationMessage.edit(content='Here\'s that chat log for you:')
+    class LobbyChatLogCMD_Variant1(LobbyChatLogCMD): NAME = 'getchatlog'
+    class LobbyChatLogCMD_Variant2(LobbyChatLogCMD): NAME = 'chatlog'
 
     def __init__(self, client):
         Module.__init__(self, client)
