@@ -86,7 +86,7 @@ class ToonTracker(discord.Client):
 
             msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
             for module in client.modules.values():
-                for command in module.commands:
+                for command in sorted(module.commands, key=lambda c: c.NAME):
                     if command.RANK <= rank and command.__doc__:
                         if args and args[0].lower() == command.NAME.lower():
                             doc = command.__doc__.split('\n')
