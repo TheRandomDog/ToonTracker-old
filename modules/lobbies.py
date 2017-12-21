@@ -108,6 +108,13 @@ def getOwnersLobby(module, member):
 
 class LobbyManagement(Module):
     class CreateLobbyCMD(Command):
+        """~createLobby <lobby name>
+
+            This will create you a lobby with a text channel and a voice channel.
+            You can also choose to have a lobby with only one of those two by doing:
+                `~createTextLobby`
+                `~createVoiceLobby`
+        """
         NAME = 'createLobby'
 
         @staticmethod
@@ -129,6 +136,11 @@ class LobbyManagement(Module):
             return await createLobby(client, module, message, *args, voiceChannelOnly=True)
 
     class LobbyInviteCMD(Command):
+        """~inviteToLobby <mention>
+
+            This will send a DM to another user asking them to join your lobby.
+            If they accept, they'll be able to see and chat within your lobby.
+        """
         NAME = 'inviteToLobby'
 
         @staticmethod
@@ -200,6 +212,11 @@ class LobbyManagement(Module):
                 return '{} Invite{} sent!'.format(message.author.mention, 's' if len(message.mentions) > 1 else '')
 
     class LobbyInviteAcceptCMD(Command):
+        """~acceptLobbyInvite
+
+            This allows you to accept an invite to a lobby from another user.
+            Once you accept, you'll be able to see and chat within their lobby.
+        """
         NAME = 'acceptLobbyInvite'
 
         @staticmethod
@@ -230,6 +247,12 @@ class LobbyManagement(Module):
             return "{} You're now in the **{}** lobby! Have fun!".format(message.author.mention, module.activeLobbies[args[0]].customName)
 
     class LobbyLeaveCMD(Command):
+        """~leaveLobby
+
+            This will leave the lobby you are currently in.
+            You will no longer be able to see and chat within the lobby and you'll need to ask for another invite to rejoin.
+            If you own the lobby, use `~disbandLobby` instead.
+        """
         NAME = 'leaveLobby'
 
         @staticmethod
@@ -249,6 +272,10 @@ class LobbyManagement(Module):
             await message.author.remove_roles(lobby.role, reason='User left lobby via ~leaveLobby')
 
     class LobbyDisbandCMD(Command):
+        """~disbandLobby
+
+            This will disband your lobby if you are the lobby's owner.
+        """
         NAME = 'disbandLobby'
 
         @staticmethod
