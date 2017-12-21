@@ -486,7 +486,7 @@ class ModerationModule(Module):
             return ('WHOLE', message.content)
         return ('', '')
 
-    async def filterBadWords(self, message, edited=' '):
+    async def filterBadWords(self, message, edited=' ', silentFilter=False):
         text = message.content
         for word in text.split(' '):
             badWord = await self._testForBadWord(word, text)
@@ -494,6 +494,8 @@ class ModerationModule(Module):
                 await self.client.delete_message(message)
                 await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
                 try:
+                    if silentFilter:
+                        return True
                     await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
                         "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
                         "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
@@ -511,6 +513,8 @@ class ModerationModule(Module):
                         await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
                             edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**')))
                         try:
+                            if silentFilter:
+                                return True
                             await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
                                 "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
                                 "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
@@ -527,6 +531,8 @@ class ModerationModule(Module):
                             await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
                                 edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**')))
                             try:
+                                if silentFilter:
+                                    return True
                                 await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
                                     "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
                                     "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
@@ -645,6 +651,7 @@ class ModerationModule(Module):
 
     async def handleMsg(self, message):
         if message.channel.id in self.exceptions or message.author.id in self.exceptions or \
+            (message.channel.category and message.channel.category.name.startswith('Lobby')) or \
             (message.author.bot and not self.filterBots) or ((Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])) and not self.filterMods):
             return
 

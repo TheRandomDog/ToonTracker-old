@@ -17,6 +17,10 @@ class Lobby:
         self.invited = []
         self.visited = None
         self.expiryWarning = None
+        self.filter = True
+        self.filterVotes = 0
+        self.filterVotesNeeded = 0
+        self.filterWarning = False
 
 async def createLobby(client, module, message, *args, textChannelOnly=False, voiceChannelOnly=False):
     if message.channel.id != module.channelID:
@@ -172,10 +176,12 @@ class LobbyManagement(Module):
 
                 try:
                     lobby.invited.append(user.id)
-                    await user.send("Hey there, {}! {} has invited you to join their private lobby on the Toontown Rewritten Discord. " \
+                    await user.send("Hey there, {}! {} has invited you to join their private lobby on the Toontown Rewritten Discord. {}" \
                         "\n\nTo accept, {}copy & paste `~acceptLobbyInvite {}`. If you're not interested, you can ignore this message.".format(
                             user.mention,
                             message.author.mention,
+                            'Note that the bad word filter in this lobby is **disabled**, and you should not accept this invite if you are of a younger age. Anything 18+ will still be moderated.' \
+                            if not lobby.filter else '',
                             'first leave your current lobby with `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* and then ' \
                             if getUsersLobby(module, user) else '',
                             lobby.id
@@ -262,7 +268,7 @@ class LobbyManagement(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID and \
-                (message.channel.__class__ == discord.TextChannel and message.channel.category and message.channel.category.name.startswith('Lobby')):
+                (message.channel.__class__ != discord.TextChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby')):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -287,7 +293,7 @@ class LobbyManagement(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             if message.channel.__class__ != discord.DMChannel and message.channel.id != module.channelID and \
-                (message.channel.__class__ == discord.TextChannel and message.channel.category and message.channel.category.name.startswith('Lobby')):
+                (message.channel.__class__ != discord.TextChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby')):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -309,7 +315,79 @@ class LobbyManagement(Module):
             await category.delete(reason=auditLogReason)
             await client.send_message(message.channel if message.channel.__class__ == discord.DMChannel else module.channelID, 
                 '{} You\'ve disbanded your lobby, everyone\'s free now!'.format(message.author.mention))
-    class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandLobby'
+    class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandlobby'
+
+    class LobbyFilterEnableCMD(Command):
+        """~enableFilter
+
+            This re-enables the bad word filter for the lobby.
+            Half of the users in the lobby must also use the command to re-enable the bad word filter, to ensure that a majority consents to it.
+        """
+        NAME = 'enableFilter'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if message.channel.__class__ == discord.DMChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby'):
+                return
+
+            lobby = getUsersLobby(module, message.author)
+
+            if not lobby:
+                return '{} You\'re not currently in a lobby.'.format(message.author.mention)
+                # Ironic, since it shouldn't get here.
+            if lobby.filter:
+                return '{} The lobby filter is already enabled.'.format(message.author.mention)
+
+            lobby.filterVotesNeeded = int(len([m for m in filter(lambda m: lobby.role in m.roles, client.rTTR.members)]) / 2) + 1  # (+ 1) == owner
+            lobby.filterVotes += 1
+
+            if lobby.filterVotes >= lobby.filterVotesNeeded:
+                lobby.filterVotesNeeded = 0
+                lobby.filterVotes = 0
+                lobby.filter = True
+                return 'The bad word filter has been re-enabled.'
+            else:
+                return '{} Your vote to re-enabled the bad word filter has been submitted; **{} more vote{} required.'.format(
+                    message.author.mention, lobby.filterVotesNeeded - lobby.filterVotes, '** is' if lobby.filterVotesNeeded - lobby.filterVotes == 1 else 's** are')
+    class LobbyFilterEnableCMD_Variant1(LobbyFilterEnableCMD): NAME = 'enablefilter'
+
+    class LobbyFilterDisableCMD(Command):
+        """~disableFilter
+
+            This disables the bad word filter for the lobby.
+            Please note that anything that breaks Discord's Terms of Service or Community Guidelines is still prohibited, including any messages or content that's 18+ (as the lobby channel is not a properly labeled NSFW channel, and is not intended to be).
+            All of the users in the lobby must also use the command to disable the bad world filter, to ensure that everyone consents to it.
+        """
+        NAME = 'disableFilter'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if message.channel.__class__ == discord.DMChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby'):
+                return
+
+            lobby = getUsersLobby(module, message.author)
+
+            if not lobby:
+                return '{} You\'re not currently in a lobby.'.format(message.author.mention)
+                # Ironic, since it shouldn't get here.
+            moderation = client.requestModule('moderation')
+            if not moderation:
+                return '{} The lobby filter cannot be enabled because the `moderation` module has not been loaded.'.format(message.author.mention)
+            elif not lobby.filter:
+                return '{} The lobby filter is already disabled.'.format(message.author.mention)
+
+            lobby.filterVotesNeeded = len([m for m in filter(lambda m: lobby.role in m.roles, client.rTTR.members)]) + 1  # (+ 1) == owner
+            lobby.filterVotes += 1
+
+            if lobby.filterVotes >= lobby.filterVotesNeeded:
+                lobby.filterVotesNeeded = 0
+                lobby.filterVotes = 0
+                lobby.filter = False
+                return 'The bad word filter has been disabled. To re-enable it, use `~enableFilter`.'
+            else:
+                return '{} Your vote to disable the bad word filter has been submitted; **{} more vote{} required.'.format(
+                    message.author.mention, lobby.filterVotesNeeded - lobby.filterVotes, '** is' if lobby.filterVotesNeeded - lobby.filterVotes == 1 else 's** are')
+    class LobbyFilterDisableCMD_Variant1(LobbyFilterDisableCMD): NAME = 'disablefilter'
 
     def __init__(self, client):
         Module.__init__(self, client)
@@ -329,6 +407,20 @@ class LobbyManagement(Module):
             lobby = getLobbyByID(self, message.channel.category.id)
             lobby.visited = time.mktime(time.gmtime())
             lobby.expiryWarning = None
+
+            moderation = self.client.requestModule('moderation')
+            if lobby.filter and moderation:
+                filterActivated = await moderation.filterBadWords(message, silentFilter=True)
+                if filterActivated and not lobby.filterWarning:
+                    lobby.filterWarning = True
+                    await self.client.send_message(
+                        message.channel, 
+                        "{} Your message was removed because it contained a bad word. " \
+                        "This is a reminder that, if everyone in the lobby agrees they're okay with it, you can disable the bad word filter " \
+                        "by using `~disableFilter`.\n\nNote that **anything that breaks Discord's Terms of Service or Community Guidelines is " \
+                        "still prohibited.** This includes any messages or content that's 18+, as the lobby channel is " \
+                        "labeled NSFW channel, and is not intended to be.".format(message.author.mention)
+                    )
 
     async def on_voice_state_update(self, member, before, after):
         if after.channel and after.channel.category and after.channel.category.name.startswith('Lobby'):
@@ -358,6 +450,7 @@ class LobbyManagement(Module):
                         lobby.visited = lastMessages[1].created_at.timestamp()
                 elif lastMessages[0]:
                     lobby.visited = lastMessages[0].created_at.timestamp()
+
                 self.activeLobbies[lobby.id] = lobby
         await self.bumpInactiveLobbies()
 
