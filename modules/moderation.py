@@ -675,13 +675,14 @@ class ModerationModule(Module):
         await self.filterBadImages(message)
 
     async def on_message_edit(self, before, after):
+        message = after
         if message.channel.id in self.exceptions or message.author.id in self.exceptions or (message.author.bot and not self.filterBots):
             return
 
         # We'll only check for edited-in bad words for right now.
         try:
             if self.badWordFilterOn:
-                await self.filterBadWords(after, edited=' edited ')
+                await self.filterBadWords(message, edited=' edited ')
         except discord.errors.NotFound:
             print('Tried to remove edited message in bad word filter but message wasn\'t found.')
             return
