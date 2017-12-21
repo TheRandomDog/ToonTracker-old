@@ -28,6 +28,11 @@ def delegateEvent(func):
 class ToonTracker(discord.Client):
     # Evaluate Pythonic code.
     class EvalCMD(Command):
+        """~eval <python>
+
+            Evaluates Python code and returns the output. You shouldn't use this unless you know what you're doing.
+            To get to the client instance, use `TT`.
+        """
         NAME = 'eval'
         RANK = 500
 
@@ -41,6 +46,11 @@ class ToonTracker(discord.Client):
 
     # Execute Pythonic code.
     class ExecCMD(Command):
+        """~exec <python>
+
+            Executes Python code (doesn't return an output). You shouldn't use this unless you know what you're doing.
+            To get to the client instance, use `TT`.
+        """
         NAME = 'exec'
         RANK = 500
 
@@ -56,6 +66,10 @@ class ToonTracker(discord.Client):
     class QuitCMD(Command):
         NAME = 'quit'
         RANK = 500
+        """~quit
+
+            Logs out of the bot account, closes the client, and exits the program.
+        """
 
         @staticmethod
         async def execute(client, module, message, *args):
@@ -66,6 +80,10 @@ class ToonTracker(discord.Client):
     class ReloadCMD(Command):
         NAME = 'reload'
         RANK = 400
+        """~reload
+
+            Reloads all modules and the configuration file.
+        """
 
         @staticmethod
         async def execute(client, module, message, *args):
