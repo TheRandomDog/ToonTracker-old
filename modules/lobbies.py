@@ -120,6 +120,7 @@ class LobbyManagement(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             return await createLobby(client, module, message, *args)
+    class CreateLobbyCMD_Variant1(CreateLobbyCMD): NAME = 'createlobby'
 
     class CreateTextLobbyCMD(Command):
         NAME = 'createTextLobby'
@@ -127,6 +128,7 @@ class LobbyManagement(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             return await createLobby(client, module, message, *args, textChannelOnly=True)
+    class CreateTextLobbyCMD_Variant1(CreateTextLobbyCMD): NAME = 'createtextlobby'
 
     class CreateVoiceLobbyCMD(Command):
         NAME = 'createVoiceLobby'
@@ -134,6 +136,7 @@ class LobbyManagement(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             return await createLobby(client, module, message, *args, voiceChannelOnly=True)
+    class CreateVoiceLobbyCMD_Variant1(CreateVoiceLobbyCMD): NAME = 'createvoicelobby'
 
     class LobbyInviteCMD(Command):
         """~inviteToLobby <mention>
@@ -210,6 +213,7 @@ class LobbyManagement(Module):
                 )
             else:
                 return '{} Invite{} sent!'.format(message.author.mention, 's' if len(message.mentions) > 1 else '')
+    class LobbyInviteCMD_Variant1(LobbyInviteCMD): NAME = 'invitetolobby'
 
     class LobbyInviteAcceptCMD(Command):
         """~acceptLobbyInvite
@@ -245,6 +249,7 @@ class LobbyManagement(Module):
             await message.author.add_roles(module.activeLobbies[args[0]].role, reason='Accepted invite to lobby')
 
             return "{} You're now in the **{}** lobby! Have fun!".format(message.author.mention, module.activeLobbies[args[0]].customName)
+    class LobbyInviteAcceptCMD_Variant1(LobbyInviteAcceptCMD): NAME = 'acceptlobbyinvite'
 
     class LobbyLeaveCMD(Command):
         """~leaveLobby
@@ -270,6 +275,7 @@ class LobbyManagement(Module):
                 return '{} You\'re not currently in a lobby.'.format(message.author.mention)
 
             await message.author.remove_roles(lobby.role, reason='User left lobby via ~leaveLobby')
+    class LobbyLeaveCMD_Variant1(LobbyLeaveCMD): NAME = 'leavelobby'
 
     class LobbyDisbandCMD(Command):
         """~disbandLobby
@@ -302,6 +308,7 @@ class LobbyManagement(Module):
             await category.delete(reason=auditLogReason)
             await client.send_message(message.channel if message.channel.__class__ == discord.DMChannel else module.channelID, 
                 '{} You\'ve disbanded your lobby, everyone\'s free now!'.format(message.author.mention))
+    class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandLobby'
 
     def __init__(self, client):
         Module.__init__(self, client)
