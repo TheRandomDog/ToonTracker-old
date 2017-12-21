@@ -207,17 +207,26 @@ class ToonTracker(discord.Client):
                 try:
                     await self.send_message(announcement[0], announcement[1])
                 except Exception as e:
-                    print('{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncement: {}\n\n{}'.format(
+                    e = format_exc()
+                    info = '{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncement: {}\n'.format(
                         announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', 
                         announcement[0],
-                        announcement[1],
-                        format_exc()
-                    ))
-                    await self.send_message(botspam, '**{}** tried to send an announcement to {}, but an exception was raised.\n```\n{}```'.format(
-                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module',
-                        self.get_channel(announcement[0]).mention,
-                        format_exc()
-                    ))
+                        announcement[1]
+                    )
+                    log = '```{}```'.format(e)
+
+                    print(info + log)
+                    info = info.replace('channel ID {}'.format(announcement[0]), self.get_channel(announcement[0]).mention)
+                    if len(info + log) > 2000:
+                        r = requests.post('https://hastebin.com/documents', data=e)
+                        try:
+                            json = r.json()
+                            key = json['key']
+                            log = 'https://hastebin.com/raw/' + key
+                        except (KeyError, ValueError):
+                            log = '*Unable to post long log to Discord or Hastebin. The log can be found in the console.*'
+
+                    await self.send_message(botspam, info + log)
 
             # A permanent message is only available as an embed.
             for update in module.pendingUpdates:
