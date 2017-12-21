@@ -22,6 +22,7 @@ class Module:
         self.restartLimitResetInterval = assertTypeOrOtherwise(
             Config.getModuleSetting(moduleName, 'restart_limit_reset_interval'), int, otherwise=1800  # 30 minutes
         )  
+        self.publicModule = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'public_module'), bool, otherwise=True)
         self.isFirstLoop = True
         self.isTracking = False
 
