@@ -378,6 +378,11 @@ class ToonTracker(discord.Client):
                 warnings.append(w)
                 print(w)
                 continue
+            except Exception as e:
+                w = 'Could not load Python module of ToonTracker module "{}"'.format(module)
+                warnings.append(w)
+                print(w + '\n\n{}'.format(format_exc()))
+                continue
             if not hasattr(modsmod, 'module'):
                 w = 'Could not locate module subclass for "{}"'.format(module)
                 warnings.append(w)
