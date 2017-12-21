@@ -22,13 +22,13 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
     if message.channel.id != module.channelID:
         return
 
-    residingLobby = discord.utils.find(lambda r: 'lobby-' in r.name, message.author.roles)
-    ownsLobby = 'owner' in residingLobby.name if residingLobby else False
+    lobby = getUsersLobby(module, message.author)
+    ownsLobby = lobby.ownerRole in message.author.roles
     auditLogReason = 'Lobby created by {}'.format(str(message.author))
 
     if ownsLobby:
         return '{} You own a lobby right now. You\'ll have to `~disbandLobby` to create a new one.'.format(message.author.mention)
-    elif residingLobby:
+    elif lobby:
         return '{} You are in a lobby right now. You\'ll have to `~leaveLobby` to create a new one.'.format(message.author.mention)
 
     moderation = client.requestModule('moderation')
