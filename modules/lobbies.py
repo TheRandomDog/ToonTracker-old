@@ -1,5 +1,7 @@
 import discord
 import time
+from io import BytesIO
+from datetime import datetime
 from extra.commands import Command
 from modules.module import Module
 from utils import Config, assertTypeOrOtherwise, getTimeFromSeconds
@@ -312,6 +314,34 @@ class LobbyManagement(Module):
             elif not lobby.ownerRole in message.author.roles:
                 return '{} You don\'t own the **{}** lobby, meaning you need to use `~leaveLobby` to part with the group.'.format(message.author.mention, lobby.customName)
             
+            savingMessage = "Alrighty, will do! I'm just saving you a copy of your chat logs in case you want them in the future, hang on a second..."
+            await client.send_message(message.channel, savingMessage)
+            chatlog = ""
+            participants = []
+            async with message.channel.typing():
+                async for m in message.channel.history(limit=10000, reverse=True):
+                    if m.content == savingMessage:
+                        continue
+                    participant =  m.author.name + '#' + m.author.discriminator + (' [BOT]' if m.author.bot else '')
+                    if participant not in participants:
+                        participants.append(participant)
+                    chatlog += '\r\n\r\n{}{} - {}{}{}{}\r\n{}'.format(
+                        m.author.name,
+                        ' [BOT]' if m.author.bot else '',
+                        m.created_at.strftime('%m/%d/%Y @ %I:%M%p'),
+                        (' (edited on ' + m.edited_at.strftime('%m/%d/%Y @ %I:%M%p') + ')') if m.edited_at else '',
+                        ' *' if m.attachments else '',
+                        ' **' if m.embeds else '',
+                        m.content
+                    )
+            chatlog = '{} Lobby\r\nCreated by {}\r\nCreated on {}\r\nAll Lobby Participants:\r\n\t{}\r\n\r\n' \
+                '* = This message included an attachment.\r\n** = This message included an embed.\r\n\r\n============= BEGIN CHAT LOG ============='.format(
+                lobby.customName,
+                message.author.name + '#' + message.author.discriminator + (' [BOT]' if message.author.bot else ''),
+                datetime.fromtimestamp(lobby.created).strftime('%m/%d/%Y @ %I:%M%p'),
+                '\r\n\t'.join(participants)
+            ) + chatlog
+
             auditLogReason = 'User disbanded lobby via ~disbandLobby'
             await lobby.role.delete(reason=auditLogReason)
             await lobby.ownerRole.delete(reason=auditLogReason)
@@ -321,6 +351,13 @@ class LobbyManagement(Module):
             await category.delete(reason=auditLogReason)
             await client.send_message(message.channel if message.channel.__class__ == discord.DMChannel else module.channelID, 
                 '{} You\'ve disbanded your lobby, everyone\'s free now!'.format(message.author.mention))
+            del module.activeLobbies[lobby.id]
+
+            confirmationMessage = await client.send_message(message.author, 'Here\'s that chat log for you...')
+            async with message.author.typing():
+                file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
+                await client.send_message(message.author, file)
+            await confirmationMessage.edit(content='Here\'s that chat log for you:')
     class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandlobby'
 
     class LobbyFilterEnableCMD(Command):

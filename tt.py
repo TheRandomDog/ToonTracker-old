@@ -187,7 +187,9 @@ class ToonTracker(discord.Client):
             return
 
         # Deliver message
-        if message.__class__ == discord.Embed:
+        if message.__class__ == discord.File:
+            msgObj = await target.send(content='', file=message)
+        elif message.__class__ == discord.Embed:
             msgObj = await target.send(content=None, embed=message)
         else:
             msgObj = await target.send(message)
