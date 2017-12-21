@@ -35,8 +35,14 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
 
     name = ' '.join(args)
     if moderation:
-        await moderation.filterBadWords(message)
-        return
+        try:
+            filterActivated = await moderation.filterBadWords(message)
+            if filterActivated:
+                return
+        except discord.errors.NotFound:
+            # If a Not Found error returned, that means that it tried to remove something
+            # that contained a bad word, meaning we're safe to stop making the lobby.
+            return
     elif len(name) > 30:
         return '{} Your lobby name must be 30 characters or less.'.format(message.author.mention)
     elif not name:
