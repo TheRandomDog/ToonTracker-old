@@ -2,13 +2,11 @@ import discord
 import time
 from extra.commands import Command
 from modules.module import Module
-from utils import Config
+from utils import Config, assertTypeOrOtherwise, getTimeFromSeconds
 
 class Lobby:
     def __init__(self):
         self.id = None
-        self.publicLobby = False
-        self.voiceLimit = 0
         self.category = None
         self.textChannel = None
         self.voiceChannel = None
@@ -17,6 +15,8 @@ class Lobby:
         self.created = time.time()
         self.customName = ""
         self.invited = []
+        self.visited = None
+        self.expiryWarning = None
 
 async def createLobby(client, module, message, *args, textChannelOnly=False, voiceChannelOnly=False):
     if message.channel.id != module.channelID:
@@ -86,6 +86,11 @@ async def createLobby(client, module, message, *args, textChannelOnly=False, voi
         )
 
     return '{} Your lobby has been created!'.format(message.author.mention)
+
+def getLobbyByID(module, id):
+    for lobby in module.activeLobbies.values():
+        if lobby.id == id:
+            return lobby
 
 def getUsersLobby(module, member):
     assert member.__class__ == discord.Member
@@ -276,22 +281,27 @@ class LobbyManagement(Module):
         
         self.activeLobbies = {}
         self.channelID = Config.getModuleSetting("lobbies", "interaction")
+        self.unvisitedExpiryWarningTime = assertTypeOrOtherwise(Config.getModuleSetting('lobbies', 'unvisited_expiry_warning_time'), int, otherwise=600)
+        self.unvisitedExpiryTime = assertTypeOrOtherwise(Config.getModuleSetting('lobbies', 'unvisited_expiry_time'), int, otherwise=300)
+        self.visitedExpiryWarningTime = assertTypeOrOtherwise(Config.getModuleSetting('lobbies', 'visited_expiry_warning_time'), int, otherwise=518400)
+        self.visitedExpiryTime = assertTypeOrOtherwise(Config.getModuleSetting('lobbies', 'visited_expiry_time'), int, otherwise=86400)
+
+    def loopIteration(self):
+        self.client.loop.create_task(self.bumpInactiveLobbies())
+
+    async def handleMsg(self, message):
+        if message.channel.category and message.channel.category.name.startswith('Lobby'):
+            lobby = getLobbyByID(self, message.channel.category.id)
+            lobby.visited = time.time()
+            lobby.expiryWarning = None
 
     async def on_voice_state_update(self, member, before, after):
-        if after.channel and after.channel.name.startswith('Lobby'):
-            for lobby in self.activeLobbies:
-                if lobby.voiceChannel.name == after.channel.name:
-                    lobby.visited = True
-                    if lobby.openLobby:
-                        await member.add_roles(lobby.role)
-        if before.channel and before.channel.name.startswith('Lobby'):
-            for lobby in self.activeLobbies:
-                if lobby.voiceChannel and lobby.voiceChannel.name == before.channel.name and lobby.openLobby:
-                    await member.remove_roles(lobby.role)
-            await self.bumpInactiveLobbies()
+        if after.channel and after.channel.category and after.channel.category.name.startswith('Lobby'):
+            lobby = getLobbyByID(self, after.channel.category.id)
+            lobby.visited = time.time()
+            lobby.expiryWarning = None
 
     async def restoreSession(self):
-        await self.bumpInactiveLobbies(fromRestore=True)
         for category in self.client.rTTR.categories:
             if category.name.startswith('Lobby'):
                 lobby = Lobby()
@@ -304,57 +314,52 @@ class LobbyManagement(Module):
                         lobby.voiceChannel = channel
                 lobby.role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
                 lobby.ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
-                lobby.created = category.created_at
+                lobby.created = category.created_at.timestamp()
                 lobby.customName = category.name.replace('Lobby [', '').replace(']', '')
+                lastMessages = await category.channels[0].history(limit=2).flatten()
+                if len(lastMessages) > 0 and lastMessages[0].author == self.client.rTTR.me:
+                    lobby.expiryWarning = lastMessages[0].created_at.timestamp()
+                    if len(lastMessages) > 1:
+                        lobby.visited = lastMessages[1].created_at.timestamp()
+                elif lastMessages[0]:
+                    lobby.visited = lastMessages[0].created_at.timestamp()
                 self.activeLobbies[lobby.id] = lobby
+        await self.bumpInactiveLobbies()
 
-    async def bumpInactiveLobbies(self, fromRestore=False):
-        if fromRestore:
-            for category in self.client.rTTR.categories:
-                if not category.name.startswith('Lobby'):
-                    continue
-                if any([channel.__class__ == discord.TextChannel for channel in category.channels]):
-                    lastMessages = await category.channels[0].history(limit=1).flatten()
-                    if not lastMessages and time.time() - category.created_at.timestamp() < 9000:
-                        continue
-                    elif not lastMessages or (lastMessages[0].author != self.client.rTTR.me and time.time() - lastMessages[0].created_at.timestamp() > 604800):
-                        role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
-                        ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
-                        for channel in category.channels:
-                            await channel.delete()
-                        await category.delete()
-                        await role.delete()
-                        await ownerRole.delete()
-                elif len(category.channels[0].voice_members) == 0 and time.time() - category.created_at > 300:
-                    role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
-                    ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
-                    for channel in category.channels:
-                        await channel.delete()
-                    await category.delete()
-                    await role.delete()
-                    await ownerRole.delete()
-        else:
-            inactiveLobbies = []
-            for lobby in self.activeLobbies.values():
-                if not lobby.voiceChannelOnly:
-                    lastMessages = await lobby.textChannel.history(limit=1).flatten()
-                    if not lastMessages and time.time() - category.created_at.timestamp() < 9000:
-                        continue
-                    elif not lastMessages or (lastMessage.author != self.client.rTTR.me and time.time() - lastMessage.created_at.timestamp() > 604800):
-                        if lobby.voiceChannel:
-                            await lobby.voiceChannel.delete()
-                        await lobby.textChannel.delete()
-                        await lobby.category.delete()
-                        await lobby.role.delete()
-                        await lobby.ownerRole.delete()
-                        inactiveLobbies.append(lobby)
-                elif len(lobby.voiceChannel.voice_members) == 0 and (lobby.visited or time.time() - lobby.created > 300):
-                    await lobby.voiceChannel.delete()
-                    await lobby.category.delete()
-                    await lobby.role.delete()
-                    await lobby.ownerRole.delete()
-                    inactiveLobbies.append(lobby)
-            for inactiveLobby in inactiveLobbies:
-                del self.activeLobbies[inactiveLobby.id]
+    async def bumpInactiveLobbies(self):
+        inactiveLobbies = []
+        for lobby in self.activeLobbies.values():
+            # If the lobby has not been visited for 10 minutes...
+            if not lobby.visited and not lobby.expiryWarning and lobby.created >= self.unvisitedExpiryWarningTime:
+                lobby.expiryWarning = time.time()
+                target = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members) if not lobby.textChannel else lobby.textChannel
+                await self.client.send_message(target, 'Just a heads up, to prevent lobby spam, your lobby will be disbanded if not used within the next {}.'.format(
+                    getTimeFromSeconds(self.unvisitedExpiryTime))
+                )
+            # If the lobby was last visited 6 days ago...
+            elif lobby.visited and not lobby.expiryWarning and lobby.visited >= self.visitedExpiryWarningTime:
+                lobby.expiryWarning = time.time()
+                target = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members) if not lobby.textChannel else lobby.textChannel
+                await self.client.send_message(target, "Just a heads up -- your lobby hasn't been used in a while, and will expire in {} if left unused.".format(
+                    getTimeFromSeconds(self.visitedExpiryTime))
+                )
+            # If the lobby was visited and an expiry warning was sent 24 hours ago...
+            # OR
+            # If the lobby was not visited and an expiry warning was sent 5 minutes ago...
+            elif lobby.expiryWarning and time.time() - lobby.expiryWarning >= (self.visitedExpiryTime if lobby.visited else self.unvisitedExpiryTime):
+                for member in filter(lambda m: lobby.role in m.roles, self.client.rTTR.members):
+                    await self.client.send_message(member, "The lobby you were in was disbanded because it was left inactive for an extended period of time.")
+                owner = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members)
+                await self.client.send_message(owner, "The lobby you created was disbanded because it was left inactive for an extended period of time.")
+                
+                if lobby.textChannel: await lobby.textChannel.delete()
+                if lobby.voiceChannel: await lobby.voiceChannel.delete()
+                await lobby.category.delete()
+                await lobby.role.delete()
+                await lobby.ownerRole.delete()
+                inactiveLobbies.append(lobby)
+
+        for inactiveLobby in inactiveLobbies:
+            del self.activeLobbies[inactiveLobby.id]
 
 module = LobbyManagement
