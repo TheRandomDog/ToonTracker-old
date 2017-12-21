@@ -186,8 +186,8 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.id != module.channelID and message.channel.__class__ == discord.DMChannel and \
-                not message.channel.category and not message.channel.category.name.startswith('Lobby'):
+            if module.channel.id != module.channelID and \
+                (message.channel.__class__ == discord.DMChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby')):
                 return
 
             lobby = getUsersLobby(module, message.author)
