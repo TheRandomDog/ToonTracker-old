@@ -474,6 +474,7 @@ class ModerationModule(Module):
 
     async def _testForBadWord(self, word, text):
         if word.lower() == "he'll": return ('', '')  # I'll get rid of this someday.
+        elif word.lower() == "who're": return ('', '')  # This one too.
 
         word = re.sub(r'\W+', '', word)
         if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
