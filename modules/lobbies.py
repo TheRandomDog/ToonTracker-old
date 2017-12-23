@@ -206,10 +206,9 @@ class LobbyManagement(Module):
             if not lobby:
                 return message.author.mention + ' ' + INVITATION_FAILURE_MISSING_LOBBY
             elif not message.mentions:
-
-                return '{} I need a mention of the user you want to invite to your lobby.'.format(message.author.mention)
+                return message.author.mention + ' ' + INVITATION_FAILURE_MISSING_MENTION
             elif len(message.mentions) == 1 and message.mentions[0] == message.author:
-                return '{} No need to invite yourself to the lobby!'.format(message.author.mention)
+                return message.author.mention + ' ' + INVITATION_FAILURE_NARCISSISTIC
             elif message.author in message.mentions:
                 message.mentions.remove(message.author)
 
