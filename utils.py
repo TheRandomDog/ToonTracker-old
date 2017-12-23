@@ -31,6 +31,16 @@ def assertType(value, *types, otherwise=TypeError):
             return otherwise
     return value
 
+def assertClass(value, *classes, otherwise=TypeError):
+    if not value.__class__ in classes:
+        if otherwise == TypeError:
+            raise TypeError("Expected {} when passed value '{}', found {} instead".format(
+                ", ".join([str(c) for c in classes]), value, value.__class__)
+            )
+        else:
+            return otherwise
+    return value
+
 # CONFIG
 
 class Config:
