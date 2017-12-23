@@ -7,7 +7,7 @@ from inspect import isclass
 from discord import Color, Embed
 from extra.commands import Command
 from traceback import format_exc
-from utils import Config, assertTypeOrOtherwise, getVersion
+from utils import Config, assertType, getVersion
 uaHeader = Config.getSetting('ua_header', getVersion())
 
 class Module:
@@ -15,14 +15,14 @@ class Module:
         self.client = client
 
         moduleName = os.path.basename(sys.modules[self.__module__].__file__).replace('.py', '')
-        self.runWithoutRestoredSession = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'run_wo_restored_session'), bool, otherwise=False)
-        self.restartOnException = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'restart_on_exception'), bool, otherwise=True)
-        self.cooldownInterval = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'cooldown_interval'), int, otherwise=60)
-        self.restartLimit = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'restart_limit'), int, otherwise=3)
-        self.restartLimitResetInterval = assertTypeOrOtherwise(
+        self.runWithoutRestoredSession = assertType(Config.getModuleSetting(moduleName, 'run_wo_restored_session'), bool, otherwise=False)
+        self.restartOnException = assertType(Config.getModuleSetting(moduleName, 'restart_on_exception'), bool, otherwise=True)
+        self.cooldownInterval = assertType(Config.getModuleSetting(moduleName, 'cooldown_interval'), int, otherwise=60)
+        self.restartLimit = assertType(Config.getModuleSetting(moduleName, 'restart_limit'), int, otherwise=3)
+        self.restartLimitResetInterval = assertType(
             Config.getModuleSetting(moduleName, 'restart_limit_reset_interval'), int, otherwise=1800  # 30 minutes
         )  
-        self.publicModule = assertTypeOrOtherwise(Config.getModuleSetting(moduleName, 'public_module'), bool, otherwise=True)
+        self.publicModule = assertType(Config.getModuleSetting(moduleName, 'public_module'), bool, otherwise=True)
         self.isFirstLoop = True
         self.isTracking = False
 

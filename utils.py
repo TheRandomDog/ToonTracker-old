@@ -21,15 +21,15 @@ finally:
 
 # ASSERTIONS
 
-def assertType(value, *types):
+def assertType(value, *types, otherwise=TypeError):
     if not type(value) in types:
-        raise TypeError("Expected {} when passed value '{}', found {} instead".format(
-            ", ".join([str(t) for t in types]), value, type(value))
-        )
+        if otherwise == TypeError:
+            raise TypeError("Expected {} when passed value '{}', found {} instead".format(
+                ", ".join([str(t) for t in types]), value, type(value))
+            )
+        else:
+            return otherwise
     return value
-
-def assertTypeOrOtherwise(value, *types, otherwise):
-    return value if type(value) in types else otherwise
 
 # CONFIG
 

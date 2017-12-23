@@ -1,7 +1,7 @@
 import discord
 from modules.module import Module
 from extra.commands import Command
-from utils import Config, assertTypeOrOtherwise
+from utils import Config, assertType
 
 class NotifyMeModule(Module):
     class NotifyMeCMD(Command):
@@ -207,9 +207,9 @@ class NotifyMeModule(Module):
         self.refreshAvailableRoles()
 
     def refreshAvailableRoles(self):
-        self.availableRoles = assertTypeOrOtherwise(Config.getModuleSetting('notifyMe', 'roles'), dict, otherwise={})
+        self.availableRoles = assertType(Config.getModuleSetting('notifyMe', 'roles'), dict, otherwise={})
         for role, data in self.availableRoles.items():
-            if not assertTypeOrOtherwise(data[0], int, otherwise=None):
+            if not assertType(data[0], int, otherwise=None):
                 del self.availableRoles[role]
 
             roleObject = discord.utils.get(self.client.rTTR.roles, id=data[0])

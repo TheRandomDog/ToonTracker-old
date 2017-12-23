@@ -16,8 +16,8 @@ class UserTrackingModule(Module):
         self.trackStatuses = Config.getModuleSetting('usertracking', 'track_statuses', True)
 
         self.levelCooldowns = {}
-        self.levelCooldown = assertTypeOrOtherwise(Config.getModuleSetting('usertracking', 'level_cooldown'), int, 60)
-        self.levelCap = assertTypeOrOtherwise(Config.getModuleSetting('usertracking', 'level_cap'), int, -1)
+        self.levelCooldown = assertType(Config.getModuleSetting('usertracking', 'level_cooldown'), int, 60)
+        self.levelCap = assertType(Config.getModuleSetting('usertracking', 'level_cap'), int, -1)
         self.levelingExceptions = Config.getModuleSetting('usertracking', 'leveling_exceptions', [])
         self.allowUserLeveling = Config.getModuleSetting('usertracking', 'allow_user_leveling', True)
         self.allowUserRewards = Config.getModuleSetting('usertracking', 'allow_user_rewards', True)

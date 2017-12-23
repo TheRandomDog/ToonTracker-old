@@ -4,7 +4,7 @@ from io import BytesIO
 from datetime import datetime
 from extra.commands import Command
 from modules.module import Module
-from utils import Config, assertTypeOrOtherwise, getTimeFromSeconds
+from utils import Config, assertType, getTimeFromSeconds
 
 class Lobby:
     def __init__(self):
@@ -482,10 +482,10 @@ class LobbyManagement(Module):
         
         self.activeLobbies = {}
         self.channelID = Config.getModuleSetting("lobbies", "interaction")
-        self.unvisitedExpiryWarningTime = assertTypeOrOtherwise(Config.getModuleSetting('lobbies', 'unvisited_expiry_warning_time'), int, otherwise=600)
-        self.unvisitedExpiryTime = assertTypeOrOtherwise(Config.getModuleSetting('lobbies', 'unvisited_expiry_time'), int, otherwise=300)
-        self.visitedExpiryWarningTime = assertTypeOrOtherwise(Config.getModuleSetting('lobbies', 'visited_expiry_warning_time'), int, otherwise=518400)
-        self.visitedExpiryTime = assertTypeOrOtherwise(Config.getModuleSetting('lobbies', 'visited_expiry_time'), int, otherwise=86400)
+        self.unvisitedExpiryWarningTime = assertType(Config.getModuleSetting('lobbies', 'unvisited_expiry_warning_time'), int, otherwise=600)
+        self.unvisitedExpiryTime = assertType(Config.getModuleSetting('lobbies', 'unvisited_expiry_time'), int, otherwise=300)
+        self.visitedExpiryWarningTime = assertType(Config.getModuleSetting('lobbies', 'visited_expiry_warning_time'), int, otherwise=518400)
+        self.visitedExpiryTime = assertType(Config.getModuleSetting('lobbies', 'visited_expiry_time'), int, otherwise=86400)
 
     def loopIteration(self):
         self.client.loop.create_task(self.bumpInactiveLobbies())

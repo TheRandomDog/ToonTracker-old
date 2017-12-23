@@ -9,7 +9,7 @@ from modules.module import *
 from math import ceil, floor
 from extra.toontown import *
 from discord import Embed, Color
-from utils import Config, getTimeFromSeconds, getAttributeFromMatch, assertTypeOrOtherwise
+from utils import Config, getTimeFromSeconds, getAttributeFromMatch, assertType
 uaHeader = Config.getSetting('ua_header', getVersion())
 
 invasionCache = []
@@ -253,7 +253,7 @@ class InvPermaMsg(PermaMsg):
 
         invs = megainvs + invs
 
-        if time.time() >= (assertTypeOrOtherwise(module.lastUpdated, int, otherwise=0) + 300):
+        if time.time() >= (assertType(module.lastUpdated, int, otherwise=0) + 300):
             desc = 'We\'re experiencing some technical difficulties.\nInvasion tracking will be made reavailable as soon as possible.'
             msg = module.createDiscordEmbed(title=title, description=desc, color=Color.light_grey())
             msg.set_footer(text='We apologize for the inconvenience.')
