@@ -78,7 +78,7 @@ FILTER_WARNING = "Your message was removed because it contained a bad word. " \
 LOG_CONFIRM_1 = "Alrighty, I'm fetching that chat log for you, hang on a second..."
 LOG_CONFIRM_2 = "Here's that chat log for you..."
 LOG_CONFIRM_3 = "Here's that chat log for you:"
-LOG_NO_TEXT
+LOG_NO_TEXT = 'No chatlog was generated because the lobby does not have a text channel.'
 
 CORRUPTED_CHANNELS = 'Just a heads up -- your lobby (somehow) ended up with no channels associated with it, ' \
                     'so both a new text channel and voice channel have been assigned to it. Apologies for any inconvenience.'
