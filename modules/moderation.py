@@ -444,19 +444,6 @@ class ModerationModule(Module):
             self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
             self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
 
-    async def on_member_ban(self, guild, member):
-        botspam = Config.getSetting('botspam')
-        await self.client.send_message(botspam, "{} was banned.".format(member.display_name))
-
-    async def on_member_join(self, member):
-        botspam = Config.getSetting('botspam')
-        for channel in botspam:
-            await self.client.get_channel(channel).send(content='{} joined.'.format(member.mention), embed=Users.getUserEmbed(member))
-
-    async def on_member_remove(self, member):
-        botspam = Config.getSetting('botspam')
-        await self.client.send_message(botspam, "{} left.".format(member.display_name))
-
     async def scheduleUnbans(self):
         for userID, user in Users.getUsers().items():
             for punishment in user['punishments']:

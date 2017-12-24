@@ -255,7 +255,7 @@ class Users:
         user = cls.getUserJSON(userID)
         channelHistory = user['channel_history']
         if channelID:
-            return channelHistory.get(channelID, {'messages': 0, 'attachments': 0, 'embeds': 0})
+            return channelHistory.get(str(channelID), {'messages': 0, 'attachments': 0, 'embeds': 0})
         return channelHistory
 
     @classmethod
@@ -331,9 +331,9 @@ class Users:
         cls.setUserJSON(userID, userJSON)
 
     @classmethod
-    def setUserChannelHistory(cls, userID, channelID, **kwargs):
+    def setUserChannelHistory(cls, userID, channelID, channelHistory):
         userJSON = cls.getUserJSON(userID)
-        userJSON['channel_history'][channelID] = kwargs
+        userJSON['channel_history'][str(channelID)] = channelHistory
         cls.setUserJSON(userID, userJSON)
 
     @classmethod
