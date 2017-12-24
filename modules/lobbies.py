@@ -215,7 +215,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.id != module.lobbyChannel and not self.channelInLobby(message.channel):
+            if message.channel.id != module.lobbyChannel and not module.channelInLobby(message.channel):
                 return
 
             lobby = module.getLobby(member=message.author)
@@ -284,7 +284,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not self.channelIsDM(message.channel) and not self.channelInLobby(message.channel):
+            if not module.channelIsDM(message.channel) and not module.channelInLobby(message.channel):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -325,7 +325,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.id != module.lobbyChannel and not self.channelIsDM(message.channel):
+            if message.channel.id != module.lobbyChannel and not module.channelIsDM(message.channel):
                 return
 
             try:
@@ -365,7 +365,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not self.channelIsDM(message.channel) and not self.channelInLobby(message.channel):
+            if not module.channelIsDM(message.channel) and not module.channelInLobby(message.channel):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -413,7 +413,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.id != module.lobbyChannel and not self.channelIsDM(message.channel) and not self.channelInLobby(message.channel):
+            if message.channel.id != module.lobbyChannel and not module.channelIsDM(message.channel) and not module.channelInLobby(message.channel):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -437,7 +437,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.id != module.lobbyChannel and not self.channelIsDM(message.channel) and not self.channelInLobby(message.channel):
+            if message.channel.id != module.lobbyChannel and not module.channelIsDM(message.channel) and not module.channelInLobby(message.channel):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -482,7 +482,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not self.channelInLobby(message.channel):
+            if not module.channelInLobby(message.channel):
                 return
 
             lobby = module.getLobby(member=message.author)
@@ -524,7 +524,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not self.channelInLobby(message.channel):
+            if not module.channelInLobby(message.channel):
                 return
 
             lobby = module.getLobby(member=message.author)
