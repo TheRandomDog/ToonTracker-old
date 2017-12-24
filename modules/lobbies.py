@@ -50,6 +50,13 @@ INVITATION_MESSAGE_FILTER = 'Note that the bad word filter in this lobby is **di
 INVITATION_MESSAGE_LEAVE_LOBBY = 'first leave your current lobby with `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* and then '
 INVITATION_SUCCESS = 'Invite{plural} sent!'
 
+KICK_FAILURE_MEMBER = "You must be the owner of the lobby to kick users from it."
+KICK_FAILURE_SELF = 'No need to kick yourself from the lobby, that would be anarchy!'
+KICK_FAILURE_NONMEMBER = 'Could not kick any of the mentioned users, because none of them were currently in the lobby.'
+KICK_FAILURE_NONMEMBER_OTHERS = 'Could not kick some users because they were not in the lobby. But otherwise, kicks have been issued!'
+KICK_FAILURE_MISSING_MENTION = 'I need a mention of the user you want to kick from your lobby.'
+KICK_SUCCESS = 'The mentioned user{plural} successfully kicked.'
+
 RSVP_FAILURE_ID = "Sorry, but I didn't recognize that Lobby ID. The Lobby may have been disbanded or the invite may have expired."
 RSVP_FAILURE_OWNER = 'Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~disbandLobby`.'
 RSVP_FAILURE_MEMBER = 'Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~leaveLobby`.'
@@ -191,9 +198,9 @@ class LobbyManagement(Module):
     class CreateVoiceLobbyCMD_Variant1(CreateVoiceLobbyCMD): NAME = 'createvoicelobby'
 
     class LobbyInviteCMD(Command):
-        """~inviteToLobby <mention>
+        """~inviteToLobby <mention> [mentions]
 
-            This will send a DM to another user asking them to join your lobby.
+            This will send a DM to another user(s) asking them to join your lobby.
             If they accept, they'll be able to see and chat within your lobby.
         """
         NAME = 'inviteToLobby'
@@ -299,6 +306,53 @@ class LobbyManagement(Module):
 
             return message.author.mention + ' ' + RSVP_SUCCESS.format(name=module.activeLobbies[lobby].customName)
     class LobbyInviteAcceptCMD_Variant1(LobbyInviteAcceptCMD): NAME = 'acceptlobbyinvite'
+
+    class LobbyKickCMD(Command):
+        """~kickFromLobby <mention>
+
+            This allows you to remove a user from your lobby, you must be the owner to do this.
+            The user must receive another invite to re-join the lobby.
+        """
+        NAME = 'kickFromLobby'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if not self.channelIsDM(message.channel) and not self.channelInLobby(message.channel):
+                return
+            message.author = client.rTTR.get_member(message.author.id)
+            if not message.author:
+                return LOBBY_FAILURE_GUILD
+
+            lobby = module.getLobby(owner=message.author)
+            if not lobby:
+                return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
+            elif not lobby.ownerRole in message.author.roles:
+                return message.author.mention + ' ' + KICK_FAILURE_MEMBER
+            elif not message.mentions:
+                return message.author.mention + ' ' + KICK_FAILURE_MISSING_MENTION
+            elif len(message.mentions) == 1 and message.mentions[0] == message.author:
+                return message.author.mention + ' ' + KICK_FAILURE_SELF
+            elif message.author in message.mentions:
+                message.mentions.remove(message.author)
+
+            failedNotMember = []
+            for user in message.mentions:
+                if module.getLobby(member=user) != lobby:
+                    failedNotMember.append(user.mention)
+                    continue
+
+                await user.remove_roles(lobby.role, reason='Kicked by lobby owner')
+                try:
+                    await user.send(KICK_MESSAGE)
+                except discord.HTTPException as e:
+                    failedMessages.append(user.mention)
+            if len(failedNotMember) == len(message.mentions):
+                return message.author.mention + ' ' + KICK_FAILURE_NONMEMBER
+            elif failedNotMember:
+                return message.author.mention + ' ' + KICK_FAILURE_NONMEMBER_OTHERS
+            else:
+                return message.author.mention + ' ' + KICK_SUCCESS.format(plural='s were' if len(message.mentions) > 1 else ' was')
+    class LobbyKickCMD_Variant1(LobbyKickCMD): NAME = 'kickfromlobby'
 
     class LobbyLeaveCMD(Command):
         """~leaveLobby
