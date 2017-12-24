@@ -206,12 +206,12 @@ class LobbyManagement(Module):
     class CreateVoiceLobbyCMD_Variant1(CreateVoiceLobbyCMD): NAME = 'createvoicelobby'
 
     class LobbyInviteCMD(Command):
-        """~inviteToLobby <mention> [mentions]
+        """~invite <mention> [mentions]
 
             This will send a DM to another user(s) asking them to join your lobby.
             If they accept, they'll be able to see and chat within your lobby.
         """
-        NAME = 'inviteToLobby'
+        NAME = 'invite'
 
         @staticmethod
         async def execute(client, module, message, *args):
@@ -273,7 +273,6 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + INVITATION_FAILURE_PENDING_OTHERS.format(len(failedPendingInvite))
             else:
                 return message.author.mention + ' ' + INVITATION_SUCCESS.format(plural='s' if len(message.mentions) > 1 else '')
-    class LobbyInviteCMD_Variant1(LobbyInviteCMD): NAME = 'invitetolobby'
 
     class LobbyUninviteCMD(Command):
         """~uninvite <mention> [mentions]
