@@ -347,7 +347,7 @@ class LobbyManagement(Module):
             elif not lobby.ownerRole in message.author.roles:
                 return message.author.mention + ' ' + DISBAND_FAILURE_MEMBER.format(lobby.customName)
             
-            savingMessage = DISBAND_SAVE_MESSAGE
+            savingMessage = DISBAND_LOG_SAVE
             await client.send_message(message.channel, savingMessage)
             async with message.channel.typing():
                 chatlog = await module.getChatLog(lobby, savingMessage)
