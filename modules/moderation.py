@@ -111,6 +111,8 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
         except Exception as e:
             await client.send_message(message.author, 'Could not send warning notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send warning notification message to {}'.format(user.id))
+        punishments.append(punishmentAdd)
+        Users.setUserPunishments(user.id, punishments)
     elif nextPunishment == 'Kick' and not silent:                    
         try:
             notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
@@ -123,6 +125,8 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
             await client.send_message(message.author, 'Could not send kick notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send kick notification message to {}'.format(user.id))
         try:
+            punishments.append(punishmentAdd)
+            Users.setUserPunishments(user.id, punishments)
             await client.rTTR.kick(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
             await client.send_message(message.author, 'Could not kick the user. If the user was not on the server, this is expected.')
@@ -140,6 +144,8 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
             await client.send_message(message.author, 'Could not send temporary ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send temporary ban notification message to {}'.format(user.id))
         try:
+            punishments.append(punishmentAdd)
+            Users.setUserPunishments(user.id, punishments)
             await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
             await client.send_message(message.author, 'Could not ban the user. This is probably bad. ' \
@@ -154,13 +160,12 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
             await client.send_message(message.author, 'Could not send permanent ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send permanent ban notification message to {}'.format(user.id))
         try:
+            punishments.append(punishmentAdd)
+            Users.setUserPunishments(user.id, punishments)
             await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
         except discord.HTTPException:
             await client.send_message(message.author, 'Could not ban the user. This is probably bad. ' \
             'You should use Discord\'s built-in moderation tools to enforce the ban.')
-    punishments.append(punishmentAdd)
-
-    Users.setUserPunishments(user.id, punishments)
     await module.scheduleUnbans()
 
 class ModerationModule(Module):
