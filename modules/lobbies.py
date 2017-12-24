@@ -62,6 +62,7 @@ KICK_FAILURE_SELF = 'No need to kick yourself from the lobby, that would be anar
 KICK_FAILURE_NONMEMBER = 'Could not kick any of the mentioned users, because none of them were currently in the lobby.'
 KICK_FAILURE_NONMEMBER_OTHERS = 'Could not kick some users because they were not in the lobby. But otherwise, kicks have been issued!'
 KICK_FAILURE_MISSING_MENTION = 'I need a mention of the user you want to kick from your lobby.'
+KICK_MESSAGE = "You've been kicked from the **{lobbyName}** lobby."
 KICK_SUCCESS = 'The mentioned user{plural} successfully kicked.'
 
 RSVP_FAILURE_ID = "Sorry, but I didn't recognize that Lobby ID. The Lobby may have been disbanded or the invite may have expired."
@@ -390,9 +391,9 @@ class LobbyManagement(Module):
 
                 await user.remove_roles(lobby.role, reason='Kicked by lobby owner')
                 try:
-                    await user.send(KICK_MESSAGE)
+                    await user.send(KICK_MESSAGE.format(lobbyName=lobby.customName))
                 except discord.HTTPException as e:
-                    failedMessages.append(user.mention)
+                    pass
             if len(failedNotMember) == len(message.mentions):
                 return message.author.mention + ' ' + KICK_FAILURE_NONMEMBER
             elif failedNotMember:
