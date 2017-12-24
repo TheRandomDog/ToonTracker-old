@@ -50,8 +50,15 @@ INVITATION_MESSAGE_FILTER = 'Note that the bad word filter in this lobby is **di
 INVITATION_MESSAGE_LEAVE_LOBBY = 'first leave your current lobby with `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* and then '
 INVITATION_SUCCESS = 'Invite{plural} sent!'
 
+UNINVITE_FAILURE_MEMBER = "You must be the owner of the lobby to uninvite another user."
+UNINVITE_FAILURE_SELF = "You can't uninvite yourself to a lobby, please use `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* to leave."
+UNINVITE_FAILURE_NOT_INVITED = 'Could not uninvite any of the mentioned users, because either none of them were invited to start with or they already accepted.'
+UNINVITE_FAILURE_NOT_INVITED_OTHERS = "Could not uninvite some users because they weren't invited to begin with or had already accepted. Otherwise, all other mentioned invites have been voided."
+UNINVITE_FAILURE_MISSING_MENTION = 'I need a mention of the user you want to uninvite from your lobby.'
+UNINVITE_SUCCESS = 'The mentioned user{plural} taken off the invitation list.'
+
 KICK_FAILURE_MEMBER = "You must be the owner of the lobby to kick users from it."
-KICK_FAILURE_SELF = 'No need to kick yourself from the lobby, that would be anarchy!'
+KICK_FAILURE_SELF = 'No need to kick yourself from the lobby, that would be anarchy! You can use `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* to leave.'
 KICK_FAILURE_NONMEMBER = 'Could not kick any of the mentioned users, because none of them were currently in the lobby.'
 KICK_FAILURE_NONMEMBER_OTHERS = 'Could not kick some users because they were not in the lobby. But otherwise, kicks have been issued!'
 KICK_FAILURE_MISSING_MENTION = 'I need a mention of the user you want to kick from your lobby.'
@@ -266,6 +273,46 @@ class LobbyManagement(Module):
             else:
                 return message.author.mention + ' ' + INVITATION_SUCCESS.format(plural='s' if len(message.mentions) > 1 else '')
     class LobbyInviteCMD_Variant1(LobbyInviteCMD): NAME = 'invitetolobby'
+
+    class LobbyUninviteCMD(Command):
+        """~uninvite <mention> [mentions]
+
+            This will void an invite to your lobby that was sent to a user.
+        """
+        NAME = 'uninvite'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if not self.channelIsDM(message.channel) and not self.channelInLobby(message.channel):
+                return
+            message.author = client.rTTR.get_member(message.author.id)
+            if not message.author:
+                return LOBBY_FAILURE_GUILD
+
+            lobby = module.getLobby(owner=message.author)
+            if not lobby:
+                return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
+            elif not lobby.ownerRole in message.author.roles:
+                return message.author.mention + ' ' + UNINVITE_FAILURE_MEMBER
+            elif not message.mentions:
+                return message.author.mention + ' ' + UNINVITE_FAILURE_MISSING_MENTION
+            elif len(message.mentions) == 1 and message.mentions[0] == message.author:
+                return message.author.mention + ' ' + UNINVITE_FAILURE_SELF
+            elif message.author in message.mentions:
+                message.mentions.remove(message.author)
+
+            failedNotInvited = []
+            for user in message.mentions:
+                if user.id not in lobby.invited:
+                    failedNotInvited.append(user.mention)
+                    continue
+                lobby.invited.remove(user.id)
+            if len(failedNotInvited) == len(message.mentions):
+                return message.author.mention + ' ' + UNINVITE_FAILURE_NOT_INVITED
+            elif failedNotInvited:
+                return message.author.mention + ' ' + UNINVITE_FAILURE_NOT_INVITED_OTHERS
+            else:
+                return message.author.mention + ' ' + UNINVITE_SUCCESS.format(plural='s were' if len(message.mentions) > 1 else ' was')
 
     class LobbyInviteAcceptCMD(Command):
         """~acceptLobbyInvite <lobby id>
