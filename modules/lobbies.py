@@ -509,8 +509,9 @@ class LobbyManagement(Module):
             for lobby in self.activeLobbies.values():
                 if kwargs['role'] in (lobby.role, lobby.ownerRole):
                     return lobby
-        elif kwargs.get('member', None) or kwargs.get('owner', None):
-            role = discord.utils.find(lambda r: 'lobby-' in r.name, kwargs.get('member', kwargs['owner']).roles)
+        user = kwargs.get('member', None) or kwargs.get('owner', None)
+        if user:
+            role = discord.utils.find(lambda r: 'lobby-' in r.name, user.roles)
             return self.getLobby(role=role)
 
     def getLobbyOwner(self, lobby):
