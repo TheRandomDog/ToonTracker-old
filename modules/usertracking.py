@@ -2,7 +2,7 @@ import discord
 import asyncio
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from modules.module import Module
 from utils import Config, Users, assertType
 
@@ -17,9 +17,14 @@ class UserTrackingModule(Module):
             'title': 'User Joined'
         },
         'Leave': {
-            'color': discord.Color.blue(),
+            'color': discord.Color.dark_blue(),
             'icon': 'http://www.clker.com/cliparts/e/a/7/a/1194985593422726425arrow-left-blue_benji_pa_01.svg.hi.png',
             'title': 'User Left'
+        },
+        'Kicked': {
+            'color': discord.Color.from_rgb(130, 75, 36),
+            'icon': 'https://www.clker.com/cliparts/R/n/T/o/G/0/simple-brown-boot-hi.png',
+            'title': 'Kicked'
         },
         'Banned': {
             'color': discord.Color.red(),
@@ -125,7 +130,7 @@ class UserTrackingModule(Module):
         fields = []
         if punishments:
             punishment = punishments[-1]
-            if time.time() - punishment['created'] < 60:
+            if time.time() - punishment['created'] < 10:
                 fields = [{
                     'name': punishment['type'],
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
@@ -191,10 +196,11 @@ class UserTrackingModule(Module):
 
     async def on_member_remove(self, member):
         punishments = Users.getUserPunishments(member.id)
+        action = 'Leave'
         fields = []
         if punishments:
             punishment = punishments[-1]
-            if time.time() - punishment['created'] < 60:
+            if time.time() - punishment['created'] < 10:
                 fields = [{
                     'name': punishment['type'],
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
@@ -204,14 +210,19 @@ class UserTrackingModule(Module):
                         punishment['editID']
                     )
                 }]
+        async for entry in self.client.rTTR.audit_logs(limit=1, action=discord.AuditLogAction.kick):
+            print(entry.created_at, datetime.utcnow(), datetime.utcnow() - timedelta(seconds=10))
+            if entry.target.id == member.id and entry.created_at >= datetime.utcnow() - timedelta(seconds=10):
+                action = 'Kicked'
+                footer={'text': 'Kick performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
         await self.client.send_message(
             self.botOutput,
             self.createDiscordEmbed(
-                action='Leave',
+                action=action,
                 primaryInfo=str(member),
                 thumbnail=member.avatar_url,
                 fields=fields,
-                footer="You can use a punishment's edit ID to ~editReason or ~removePunishment" if fields else ''
+                footer=footer if action == 'Kicked' else ''
            )
         )
 
