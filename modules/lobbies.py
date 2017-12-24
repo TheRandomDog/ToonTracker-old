@@ -287,9 +287,9 @@ class LobbyManagement(Module):
             userInLobby = module.getLobby(member=message.author)
             userOwnsLobby = userInLobby and userInLobby.ownerRole in message.author.roles
 
-            if ownsLobby:
+            if userOwnsLobby:
                 return message.author.mention + ' ' + RSVP_FAILURE_OWNER
-            elif inLobby:
+            elif userInLobby:
                 return message.author.mention + ' ' + RSVP_FAILURE_MEMBER
             elif message.author.id not in invited:
                 return message.author.mention + ' ' + RSVP_FAILURE_UNINVITED
