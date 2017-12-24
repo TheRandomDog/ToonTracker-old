@@ -197,7 +197,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            return await module.CreateLobbyCMD.createLobby(client, module, message, *args, textChannelOnly=True)
+            return await module.CreateLobbyCMD.execute(client, module, message, *args, textChannelOnly=True)
     class CreateTextLobbyCMD_Variant1(CreateTextLobbyCMD): NAME = 'createtextlobby'
 
     class CreateVoiceLobbyCMD(Command):
@@ -205,7 +205,7 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            return await module.CreateLobbyCMD.createLobby(client, module, message, *args, voiceChannelOnly=True)
+            return await module.CreateLobbyCMD.execute(client, module, message, *args, voiceChannelOnly=True)
     class CreateVoiceLobbyCMD_Variant1(CreateVoiceLobbyCMD): NAME = 'createvoicelobby'
 
     class LobbyInviteCMD(Command):
@@ -457,10 +457,11 @@ class LobbyManagement(Module):
             elif not lobby.ownerRole in message.author.roles:
                 return message.author.mention + ' ' + DISBAND_FAILURE_MEMBER.format(lobby.customName)
             
-            savingMessage = DISBAND_LOG_SAVE
-            savingMsgObj = await client.send_message(message.channel, savingMessage)
-            async with message.channel.typing():
-                chatlog = await module.getChatLog(lobby, savingMessage)
+            if lobby.textChannel:
+                savingMessage = DISBAND_LOG_SAVE
+                savingMsgObj = await client.send_message(message.channel, savingMessage)
+                async with message.channel.typing():
+                    chatlog = await module.getChatLog(lobby, savingMessage)
 
             auditLogReason = 'User disbanded lobby via ~disbandLobby'
             await lobby.role.delete(reason=auditLogReason)
@@ -472,16 +473,17 @@ class LobbyManagement(Module):
                 message.author.mention + ' ' + DISBAND_SUCCESS)
             del module.activeLobbies[lobby.id]
 
-            try:
-                # This really only matters if the command was not sent in a lobby.
-                await savingMsgObj.delete()
-            except discord.errors.NotFound:
-                pass
-            confirmationMessage = await client.send_message(message.author, LOG_CONFIRM_2)
-            async with message.author.typing():
-                file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
-                await client.send_message(message.author, file)
-            await confirmationMessage.edit(content=LOG_CONFIRM_3)
+            if lobby.textChannel:
+                try:
+                    # This really only matters if the command was not sent in a lobby.
+                    await savingMsgObj.delete()
+                except discord.errors.NotFound:
+                    pass
+                confirmationMessage = await client.send_message(message.author, LOG_CONFIRM_2)
+                async with message.author.typing():
+                    file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
+                    await client.send_message(message.author, file)
+                await confirmationMessage.edit(content=LOG_CONFIRM_3)
     class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandlobby'
 
     class LobbyFilterEnableCMD(Command):
@@ -580,6 +582,8 @@ class LobbyManagement(Module):
             lobby = module.getLobby(member=message.author)
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
+            elif not lobby.textChannel:
+                return message.author.mention + ' ' + LOG_NO_TEXT
 
             confirmationMessage = LOG_CONFIRM_1
             await client.send_message(message.channel, confirmationMessage)
@@ -757,10 +761,11 @@ class LobbyManagement(Module):
                 owner = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members)
                 await self.client.send_message(owner, BUMP_OWNER)
                 
-                savingMessage = LOG_CONFIRM_4
-                savingMsgObj = await self.client.send_message(owner, savingMessage)
-                async with owner.typing():
-                    chatlog = await self.getChatLog(lobby, savingMessage)
+                if lobby.textChannel:
+                    savingMessage = LOG_CONFIRM_4
+                    savingMsgObj = await self.client.send_message(owner, savingMessage)
+                    async with owner.typing():
+                        chatlog = await self.getChatLog(lobby, savingMessage)
 
                 auditLogReason = 'Lobby hit expiration date of {}'.format(
                     getTimeFromSeconds(self.visitedExpiryTime if lobby.lastVisited else self.unvisitedExpiryTime))
@@ -771,12 +776,13 @@ class LobbyManagement(Module):
                 await lobby.ownerRole.delete(reason=auditLogReason)
                 inactiveLobbies.append(lobby)
 
-                await savingMsgObj.delete()
-                confirmationMessage = await self.client.send_message(owner, LOG_CONFIRM_5)
-                async with owner.typing():
-                    file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
-                    await self.client.send_message(owner, file)
-                await confirmationMessage.edit(content=LOG_CONFIRM_6)
+                if lobby.textChannel:
+                    await savingMsgObj.delete()
+                    confirmationMessage = await self.client.send_message(owner, LOG_CONFIRM_5)
+                    async with owner.typing():
+                        file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
+                        await self.client.send_message(owner, file)
+                    await confirmationMessage.edit(content=LOG_CONFIRM_6)
 
         for inactiveLobby in inactiveLobbies:
             del self.activeLobbies[inactiveLobby.id]
