@@ -68,7 +68,7 @@ KICK_SUCCESS = 'The mentioned user{plural} successfully kicked.'
 RSVP_FAILURE_ID = "Sorry, but I didn't recognize that Lobby ID. The Lobby may have been disbanded or the invite may have expired."
 RSVP_FAILURE_OWNER = 'Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~disbandLobby`.'
 RSVP_FAILURE_MEMBER = 'Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~leaveLobby`.'
-RSVP_FAILURE_UNINVITED = "Sorry, but you weren't invited to that lobby."
+RSVP_FAILURE_UNINVITED = "Sorry, but you weren't invited to that lobby or the invite was rescinded."
 RSVP_SUCCESS = "You're now in the **{name}** lobby! Have fun!"
 
 LEAVE_FAILURE_OWNER = 'You own the **{name}** lobby, meaning you need to use `~disbandLobby` to ensure you actually want to disband the lobby.'
@@ -100,7 +100,7 @@ CORRUPTED_CHANNELS = 'Just a heads up -- your lobby (somehow) ended up with no c
                     'so both a new text channel and voice channel have been assigned to it. Apologies for any inconvenience.'
 CORRUPTED_ROLE_MEMBER = 'Just a heads up -- your lobby (somehow) ended up with no role assigned to it that allows other users to join. ' \
                         "That's been fixed up for you, but we're not sure who, if anybody, was in your lobby with you. You may have to " \
-                        're-invite members with `~inviteToLobby`. Apologies for any inconvenience.'
+                        're-invite members with `~invite`. Apologies for any inconvenience.'
 
 BUMP_WARNING_UNVISITED = 'Just a heads up, to prevent lobby spam, your lobby will be disbanded if not used within the next {time}.'
 BUMP_WARNING_VISITED = "Just a heads up -- your lobby hasn't been used in a while, and will expire in {time} if left unused."
@@ -350,6 +350,8 @@ class LobbyManagement(Module):
 
             module.activeLobbies[lobby].invited.remove(message.author.id)
             await message.author.add_roles(module.activeLobbies[lobby].role, reason='Accepted invite to lobby')
+            if lobby.textChannel:
+                await lobby.textChannel.send('{} has joined the lobby!'.format(message.author.mention))
 
             return message.author.mention + ' ' + RSVP_SUCCESS.format(name=module.activeLobbies[lobby].customName)
     class LobbyInviteAcceptCMD_Variant1(LobbyInviteAcceptCMD): NAME = 'acceptlobbyinvite'
@@ -389,6 +391,8 @@ class LobbyManagement(Module):
                     continue
 
                 await user.remove_roles(lobby.role, reason='Kicked by lobby owner')
+                if lobby.textChannel:
+                    await lobby.textChannel.send('{} has left the lobby.'.format(user.mention))
                 try:
                     await user.send(KICK_MESSAGE.format(lobbyName=lobby.customName))
                 except discord.HTTPException as e:
@@ -425,6 +429,8 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
 
             await message.author.remove_roles(lobby.role, reason='User left lobby via ~leaveLobby')
+            if lobby.textChannel:
+                await lobby.textChannel.send('{} has left the lobby.'.format(message.author.mention))
     class LobbyLeaveCMD_Variant1(LobbyLeaveCMD): NAME = 'leavelobby'
 
     class LobbyDisbandCMD(Command):
