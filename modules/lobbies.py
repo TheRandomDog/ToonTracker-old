@@ -231,7 +231,7 @@ class LobbyManagement(Module):
                             invitee=user.mention,
                             author=message.author.mention,
                             filterStatus=INVITATION_MESSAGE_FILTER if not lobby.filter else '',
-                            inLobbyInstructions=INVITATION_MESSAGE_LEAVE_LOBBY if getUsersLobby(module, user) else ''
+                            inLobbyInstructions=INVITATION_MESSAGE_LEAVE_LOBBY if self.getLobby(member=user) else ''
                         )
                     )
                     await user.send(INVITATION_MESSAGE_2.format(lobby.id))
@@ -463,8 +463,7 @@ class LobbyManagement(Module):
             if message.channel.__class__ == discord.DMChannel or not message.channel.category or not message.channel.category.name.startswith('Lobby'):
                 return
 
-            lobby = getUsersLobby(module, message.author)
-
+            lobby = module.getLobby(member=message.author)
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
 
