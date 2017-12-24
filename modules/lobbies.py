@@ -1,5 +1,6 @@
 import discord
 import time
+import re
 from io import BytesIO
 from datetime import datetime
 from extra.commands import Command
