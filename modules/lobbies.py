@@ -469,7 +469,11 @@ class LobbyManagement(Module):
                 message.author.mention + ' ' + DISBAND_SUCCESS)
             del module.activeLobbies[lobby.id]
 
-            await savingMsgObj.delete()
+            try:
+                # This really only matters if the command was not sent in a lobby.
+                await savingMsgObj.delete()
+            except discord.errors.NotFound:
+                pass
             confirmationMessage = await client.send_message(message.author, LOG_CONFIRM_2)
             async with message.author.typing():
                 file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
