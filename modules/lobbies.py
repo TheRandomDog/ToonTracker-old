@@ -557,7 +557,7 @@ class LobbyManagement(Module):
                 lobby.role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
                 lobby.ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
                 lobby.created = category.created_at.timestamp()
-                match = re.match(r'Lobby \[(.+)\]', lobby.customName)
+                match = re.match(r'Lobby \[(.+)\]', category.name)
                 if match:
                     lobby.customName = match.group(1)
 
