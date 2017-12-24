@@ -59,7 +59,7 @@ RSVP_SUCCESS = "You're now in the **{name}** lobby! Have fun!"
 LEAVE_FAILURE_OWNER = 'You own the **{name}** lobby, meaning you need to use `~disbandLobby` to ensure you actually want to disband the lobby.'
 
 DISBAND_FAILURE_MEMBER = "You don't own the **{}** lobby, meaning you need to use `~leaveLobby` to part with the group."
-DISBAND_SUCCESS = "You've disbanded your lobby, everyone's free now!'"
+DISBAND_SUCCESS = "You've disbanded your lobby, everyone's free now!"
 DISBAND_LOG_SAVE = "Alrighty, will do! I'm just saving you a copy of your chat logs in case you want them in the future, hang on a second..."
 
 FILTER_ENABLE_FAILURE_MODULE = 'The lobby filter cannot be enabled because the `moderation` module has not been loaded.'
@@ -348,7 +348,7 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + DISBAND_FAILURE_MEMBER.format(lobby.customName)
             
             savingMessage = DISBAND_LOG_SAVE
-            await client.send_message(message.channel, savingMessage)
+            savingMsgObj = await client.send_message(message.channel, savingMessage)
             async with message.channel.typing():
                 chatlog = await module.getChatLog(lobby, savingMessage)
 
@@ -362,6 +362,7 @@ class LobbyManagement(Module):
                 message.author.mention + ' ' + DISBAND_SUCCESS)
             del module.activeLobbies[lobby.id]
 
+            await savingMsgObj.delete()
             confirmationMessage = await client.send_message(message.author, LOG_CONFIRM_2)
             async with message.author.typing():
                 file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
