@@ -94,6 +94,9 @@ FILTER_WARNING = "Your message was removed because it contained a bad word. " \
 LOG_CONFIRM_1 = "Alrighty, I'm fetching that chat log for you, hang on a second..."
 LOG_CONFIRM_2 = "Here's that chat log for you..."
 LOG_CONFIRM_3 = "Here's that chat log for you:"
+LOG_CONFIRM_4 = "We're generating a chat log for you in case you needed to save anything..."
+LOG_CONFIRM_5 = "Here's the chat log for your lobby, in case you needed to save anything..."
+LOG_CONFIRM_6 = "Here's the chat log for your lobby, in case you needed to save anything:"
 LOG_NO_TEXT = 'No chatlog was generated because the lobby does not have a text channel.'
 
 CORRUPTED_CHANNELS = 'Just a heads up -- your lobby (somehow) ended up with no channels associated with it, ' \
@@ -754,12 +757,26 @@ class LobbyManagement(Module):
                 owner = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members)
                 await self.client.send_message(owner, BUMP_OWNER)
                 
-                if lobby.textChannel: await lobby.textChannel.delete()
-                if lobby.voiceChannel: await lobby.voiceChannel.delete()
-                await lobby.category.delete()
-                await lobby.role.delete()
-                await lobby.ownerRole.delete()
+                savingMessage = LOG_CONFIRM_4
+                savingMsgObj = await self.client.send_message(owner, savingMessage)
+                async with owner.typing():
+                    chatlog = await self.getChatLog(lobby, savingMessage)
+
+                auditLogReason = 'Lobby hit expiration date of {}'.format(
+                    getTimeFromSeconds(self.visitedExpiryTime if lobby.lastVisited else self.unvisitedExpiryTime))
+                if lobby.textChannel: await lobby.textChannel.delete(reason=auditLogReason)
+                if lobby.voiceChannel: await lobby.voiceChannel.delete(reason=auditLogReason)
+                await lobby.category.delete(reason=auditLogReason)
+                await lobby.role.delete(reason=auditLogReason)
+                await lobby.ownerRole.delete(reason=auditLogReason)
                 inactiveLobbies.append(lobby)
+
+                await savingMsgObj.delete()
+                confirmationMessage = await self.client.send_message(owner, LOG_CONFIRM_5)
+                async with owner.typing():
+                    file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
+                    await self.client.send_message(owner, file)
+                await confirmationMessage.edit(content=LOG_CONFIRM_6)
 
         for inactiveLobby in inactiveLobbies:
             del self.activeLobbies[inactiveLobby.id]
