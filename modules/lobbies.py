@@ -109,7 +109,7 @@ class LobbyManagement(Module):
                 return
 
             lobby = module.getLobby(member=message.author)
-            owner = lobby.ownerRole in message.author.roles
+            owner = lobby and lobby.ownerRole in message.author.roles
             auditLogReason = 'Lobby created by {}'.format(str(message.author))
 
             if owner:
@@ -285,7 +285,7 @@ class LobbyManagement(Module):
                 return LOBBY_FAILURE_GUILD
             invited = module.activeLobbies[lobby].invited
             userInLobby = module.getLobby(member=message.author)
-            userOwnsLobby = userInLobby.ownerRole in message.author.roles
+            userOwnsLobby = userInLobby and userInLobby.ownerRole in message.author.roles
 
             if ownsLobby:
                 return message.author.mention + ' ' + RSVP_FAILURE_OWNER
@@ -318,7 +318,7 @@ class LobbyManagement(Module):
                 return LOBBY_FAILURE_GUILD
 
             lobby = module.getLobby(member=message.author)
-            if lobby.ownerRole in message.author.roles:
+            if lobby and lobby.ownerRole in message.author.roles:
                 return message.author.mention + ' ' + LEAVE_FAILURE_OWNER.format(lobby.customName)
             elif not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
