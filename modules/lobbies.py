@@ -231,7 +231,7 @@ class LobbyManagement(Module):
                             invitee=user.mention,
                             author=message.author.mention,
                             filterStatus=INVITATION_MESSAGE_FILTER if not lobby.filter else '',
-                            inLobbyInstructions=INVITATION_MESSAGE_LEAVE_LOBBY if self.getLobby(member=user) else ''
+                            inLobbyInstructions=INVITATION_MESSAGE_LEAVE_LOBBY if module.getLobby(member=user) else ''
                         )
                     )
                     await user.send(INVITATION_MESSAGE_2.format(lobby.id))
