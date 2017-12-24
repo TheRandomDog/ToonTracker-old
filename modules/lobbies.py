@@ -82,8 +82,8 @@ FILTER_ENABLE_FAILURE_ENABLED = 'The lobby filter is already enabled.'
 FILTER_ENABLE_VOTED = 'Your vote to re-enabled the bad word filter has been submitted; **{count} more vote{plural} required.'
 FILTER_ENABLE_SUCCESS = 'The bad word filter has been re-enabled.'
 FILTER_DISABLE_FAILURE_DISABLED = 'The lobby filter is already disabled.'
-FILTER_DISABLE_VOTED = 'The bad word filter has been disabled. To re-enable it, use `~enableFilter`.'
-FILTER_DISABLE_SUCCESS = 'Your vote to disable the bad word filter has been submitted; **{count} more vote{plural} required.'
+FILTER_DISABLE_SUCCESS = 'The bad word filter has been disabled. To re-enable it, use `~enableFilter`.'
+FILTER_DISABLE_VOTED = 'Your vote to disable the bad word filter has been submitted; **{count} more vote{plural} required.'
 FILTER_FAILURE_VOTED = "You've already voted!"
 FILTER_WARNING = "Your message was removed because it contained a bad word. " \
                 "This is a reminder that, if everyone in the lobby agrees they're okay with it, you can disable the bad word " \
