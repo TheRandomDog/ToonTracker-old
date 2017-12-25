@@ -17,19 +17,33 @@ class UserTrackingModule(Module):
             'title': 'User Joined'
         },
         'Leave': {
-            'color': discord.Color.dark_blue(),
+            'color': discord.Color.blue(),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394664540916154378/exit.png',
             'title': 'User Left'
         },
-        'Kicked': {
+        'Warn': {
+            'color': discord.Color.from_rgb(245, 165, 0),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394675747324821504/warn.png'
+        }
+        'Kick': {
             'color': discord.Color.from_rgb(130, 75, 36),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394635272748269569/kick.png',
             'title': 'Kicked'
         },
-        'Banned': {
+        'Ban': {
             'color': discord.Color.red(),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394664529302126593/ban.png',
             'title': 'Banned'
+        },
+        'Filter': {
+            'color': discord.Color.dark_red(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
+            'title': 'Message Filtered'
+        },
+        'Delete': {
+            'color': discord.Color.dark_blue(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394682117537398784/deleted2.png',
+            'title': 'Message Deleted'
         }
     }
 
@@ -145,7 +159,7 @@ class UserTrackingModule(Module):
         await self.client.send_message(
             self.botOutput,
             self.createDiscordEmbed(
-                action='Banned',
+                action='Ban',
                 primaryInfo=str(member),
                 thumbnail=member.avatar_url,
                 fields=fields,
@@ -214,7 +228,7 @@ class UserTrackingModule(Module):
         async for entry in self.client.rTTR.audit_logs(limit=1, action=discord.AuditLogAction.kick):
             print(entry.created_at, datetime.utcnow(), datetime.utcnow() - timedelta(seconds=10))
             if entry.target.id == member.id and entry.created_at >= datetime.utcnow() - timedelta(seconds=10):
-                action = 'Kicked'
+                action = 'Kick'
                 footer={'text': 'Kick performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
         await self.client.send_message(
             self.botOutput,
@@ -223,7 +237,50 @@ class UserTrackingModule(Module):
                 primaryInfo=str(member),
                 thumbnail=member.avatar_url,
                 fields=fields,
-                footer=footer if action == 'Kicked' else ''
+                footer=footer if action == 'Kick' else ''
+           )
+        )
+
+    # Specifically built for moderation module.
+    async def on_member_warn(self, member, punishment):
+        await self.client.send_message(
+            self.botOutput,
+            self.createDiscordEmbed(
+                action='Warned',
+                primaryInfo=str(member),
+                thumbnail=member.avatar_url,
+                fields=[{
+                    'name': punishment['type'],
+                    'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                        punishment['mod'],
+                        str(datetime.fromtimestamp(punishment['created']).date()),
+                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                        punishment['editID']
+                    )
+                }]
+           )
+        )
+
+    # Specifically built for moderation module.
+    async def on_message_filter(self, message):
+        await self.client.send_message(
+            self.botOutput,
+            self.createDiscordEmbed(
+                action='Filter',
+                primaryInfo=str(message.author),
+                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel, message.content),
+                thumbnail=message.author.avatar_url
+           )
+        )
+
+    async def on_message_delete(self, message):
+        await self.client.send_message(
+            self.botOutput,
+            self.createDiscordEmbed(
+                action='Delete',
+                primaryInfo=str(message.author),
+                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel, message.content),
+                thumbnail=message.author.avatar_url
            )
         )
 

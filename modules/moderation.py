@@ -113,6 +113,8 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
             print('Could not send warning notification message to {}'.format(user.id))
         punishments.append(punishmentAdd)
         Users.setUserPunishments(user.id, punishments)
+        if client.requestModule('usertracking'):
+            await client.requestModule('usertracking').on_member_warn(user, punishmentAdd)
     elif nextPunishment == 'Kick' and not silent:                    
         try:
             notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
@@ -485,7 +487,10 @@ class ModerationModule(Module):
             badWord = await self._testForBadWord(word, text)
             if badWord[1] and self.botspam:
                 await self.client.delete_message(message)
-                await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
+                if client.requestModule('usertracking'):
+                    await client.requestModule('usertracking').on_message_filter(message)
+                else:
+                    await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
                 try:
                     if silentFilter:
                         return True
