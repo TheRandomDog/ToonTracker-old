@@ -183,6 +183,7 @@ class UserTrackingModule(Module):
             self.createDiscordEmbed(
                 action='Join',
                 primaryInfo=str(member),
+                secondaryInfo=member.mention,
                 thumbnail=member.avatar_url,
                 fields=[
                     {'name': 'Account Creation Date', 'value': str(member.created_at.date()), 'inline': True},
