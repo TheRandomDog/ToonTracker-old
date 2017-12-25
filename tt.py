@@ -167,7 +167,7 @@ class ToonTracker(discord.Client):
             return
 
         for command in self.commands:
-            if message.content.startswith(self.commandPrefix + command.NAME) and \
+            if message.content and message.content.split(' ')[0] == self.commandPrefix + command.NAME and \
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
                 try:
                     response = await command.execute(self, None, message, *message.content.split(' ')[1:])

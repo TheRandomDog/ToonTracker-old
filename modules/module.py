@@ -75,7 +75,7 @@ class Module:
 
     async def _handleMsg(self, message):
         for command in self.commands:
-            if message.content.startswith(self.client.commandPrefix + command.NAME) and \
+            if message.content and message.content.split(' ')[0] == self.client.commandPrefix + command.NAME and \
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
                 response = await command.execute(self.client, self, message, *message.content.split(' ')[1:])
                 return response
