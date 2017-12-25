@@ -69,7 +69,7 @@ class UserTrackingModule(Module):
         if level >= self.levelCap:
             return
 
-        if Users.getUserXP(member.id) >= 5 * (level**2) + 50*n + 100:  # Sorry Mee6 I've never been good with original math
+        if Users.getUserXP(member.id) >= 5 * (level**2) + 50*level + 100:  # Sorry Mee6 I've never been good with original math
             level += 1
             response = level
         Users.setUserLevel(member.id, level)
