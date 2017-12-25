@@ -17,14 +17,15 @@ class UserTrackingModule(Module):
             'title': 'User Joined'
         },
         'Leave': {
-            'color': discord.Color.blue(),
+            'color': discord.Color.dark_blue(),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394664540916154378/exit.png',
             'title': 'User Left'
         },
         'Warn': {
             'color': discord.Color.from_rgb(245, 165, 0),
-            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394675747324821504/warn.png'
-        }
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394675747324821504/warn.png',
+            'title': 'Warned'
+        },
         'Kick': {
             'color': discord.Color.from_rgb(130, 75, 36),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394635272748269569/kick.png',
@@ -41,14 +42,16 @@ class UserTrackingModule(Module):
             'title': 'Message Filtered'
         },
         'Delete': {
-            'color': discord.Color.dark_blue(),
-            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394682117537398784/deleted2.png',
+            'color': discord.Color.blue(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394684550531383306/deleted3.png',
             'title': 'Message Deleted'
         }
     }
 
     def __init__(self, client):
         Module.__init__(self, client)
+
+        self.filtered = []
 
         self.trackMessages = Config.getModuleSetting('usertracking', 'track_messages', True)
         self.trackingExceptions = Config.getModuleSetting('usertracking', 'tracking_exceptions', [])
@@ -268,18 +271,21 @@ class UserTrackingModule(Module):
             self.createDiscordEmbed(
                 action='Filter',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel, message.content),
+                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel.mention, message.content),
                 thumbnail=message.author.avatar_url
            )
         )
+        self.filtered.append(message)
 
     async def on_message_delete(self, message):
+        if message in self.filtered:
+            return
         await self.client.send_message(
             self.botOutput,
             self.createDiscordEmbed(
                 action='Delete',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel, message.content),
+                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel.mention, message.content),
                 thumbnail=message.author.avatar_url
            )
         )
