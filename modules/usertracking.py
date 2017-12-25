@@ -278,7 +278,7 @@ class UserTrackingModule(Module):
         self.filtered.append(message)
 
     async def on_message_delete(self, message):
-        if message in self.filtered:
+        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message in self.filtered:
             return
         await self.client.send_message(
             self.botOutput,
@@ -299,7 +299,7 @@ class UserTrackingModule(Module):
                 Users.setUserTimeOffline(before.id, Users.getUserTimeOffline(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
             elif before.status == discord.Status.idle:
                 Users.setUserTimeIdle(before.id, Users.getUserTimeIdle(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
-            elif before.status == discord.status.dnd:
+            elif before.status == discord.Status.dnd:
                 Users.setUserTimeDND(before.id, Users.getUserTimeDND(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
             self.memberStatusTimeStart[before.id] = time.time()
 

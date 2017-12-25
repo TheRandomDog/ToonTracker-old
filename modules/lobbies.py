@@ -37,18 +37,20 @@ CREATION_SUCCESS = 'Your lobby has been created!'
 INVITATION_FAILURE_MISSING_LOBBY = "You're not in a lobby yourself -- create a lobby before you invite users."
 INVITATION_FAILURE_MISSING_MENTION = 'I need a mention of the user you want to invite to your lobby.'
 INVITATION_FAILURE_NARCISSISTIC = 'No need to invite yourself to the lobby!'
+INVITATION_FAILURE_PARTIAL = 'Some of the invites could not be sent out:'
+INVITATION_FAILURE_FULL = 'None of the invites could be sent out:'
 INVITATION_FAILURE_MESSAGE = '{author} Could not send out messages to {failedCount} {personGrammar} *({failedList})*... the channel is still open for them if they use `~acceptLobbyInvite {lobbyID}`. {alreadyPending}But otherwise, invites sent!'
-INVITATION_FAILURE_PENDING_SUPPLEMENT = "Also, you've already sent an invite that\'s pending to {} of the mentioned users. "
-INVITATION_FAILURE_BOT = 'Could not invite any mentioned users, because all mentioned users were bots.'
-INVITATION_FAILURE_BOT_OTHERS = 'Could not invite some users because they were bots. {}But otherwise, invites sent!'
-INVITATION_FAILURE_PENDING = "You've already sent pending invites to the mentioned users."
-INVITATION_FAILURE_PENDING_OTHERS = "You've already sent an invite that's pending to {} of the mentioned users. But otherwise, invites sent!"
+INVITATION_FAILURE_MESSAGE = 'Could not send messages out to these users: '
+INVITATION_FAILURE_BOT = 'Can not send invites to bots: '
+INVITATION_FAILURE_PENDING = 'An invite is already pending for these users: '
+INVITATION_FAILURE_JOINED = 'These users are already in the lobby: '
 INVITATION_MESSAGE_1 = "Hey there, {invitee}! {author} has invited you to join their private lobby on the Toontown Rewritten Discord. {filterStatus}" \
                         "\n\nIf you're not interested, you can ignore this message. To accept, {inLobbyInstructions}copy & paste the following:"
 INVITATION_MESSAGE_2 = '`~acceptLobbyInvite {}`'
 INVITATION_MESSAGE_FILTER = 'Note that the bad word filter in this lobby is **disabled**, and you should not accept this invite if you are of a younger age. Anything 18+ will still be moderated.'
 INVITATION_MESSAGE_LEAVE_LOBBY = 'first leave your current lobby with `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* and then '
 INVITATION_SUCCESS = 'Invite{plural} sent!'
+INVITATION_SUCCESS_PARTIAL = 'But otherwise, invites sent!'
 
 UNINVITE_FAILURE_MEMBER = "You must be the owner of the lobby to uninvite another user."
 UNINVITE_FAILURE_SELF = "You can't uninvite yourself to a lobby, please use `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* to leave."
@@ -146,7 +148,7 @@ class LobbyManagement(Module):
                     # If a Not Found error returned, that means that it tried to remove something
                     # that contained a bad word, meaning we're safe to stop making the lobby.
                     return
-            if len(name) > 30:
+            if len(name) > 25:
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_LENGTH
             elif not name:
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_MISSING
@@ -174,7 +176,13 @@ class LobbyManagement(Module):
             await category.set_permissions(lobby.ownerRole, read_messages=True)
             await category.set_permissions(lobby.role, read_messages=True)
             if discordModRole:
-                await category.set_permissions(discordModRole, read_messages=True, send_messages=False)
+                await category.set_permissions(
+                    discordModRole,
+                    read_messages=True,
+                    send_messages=False,
+                    manage_messages=True,
+                    add_reactions=False
+                )
 
             if not voiceChannelOnly:
                 lobby.textChannel = await client.rTTR.create_text_channel(
@@ -234,6 +242,7 @@ class LobbyManagement(Module):
             failedMessages = []
             failedBot = []
             failedPendingInvite = []
+            failedJoined = []
             for user in message.mentions:
                 if user.bot:
                     failedBot.append(user.mention)
@@ -241,6 +250,10 @@ class LobbyManagement(Module):
 
                 if user.id in lobby.invited:
                     failedPendingInvite.append(user.mention)
+                    continue
+
+                if module.getLobby(member=user) == lobby:
+                    failedJoined.append(user.mention)
                     continue
 
                 try:
@@ -255,27 +268,22 @@ class LobbyManagement(Module):
                     await user.send(INVITATION_MESSAGE_2.format(lobby.id))
                 except discord.HTTPException as e:
                     failedMessages.append(user.mention)
+            response = INVITATION_FAILURE_PARTIAL
             if failedMessages:
-                return INVITATION_FAILURE_MESSAGE.format(
-                    author=message.author.mention,
-                    failedCount=len(failedMessages + failedBot),
-                    personGrammar='person' if len(failedMessages + failedBot) == 1 else 'people',
-                    failedList=', '.join(failedMessages) + (' and [uninvitable] bots' if failedBot else ''),
-                    lobbyID=lobby.id,
-                    alreadyPending=INVITATION_FAILURE_PENDING_SUPPLEMENT.format(len(failedPendingInvite)) if failedPendingInvite else ''
-                )
-            elif len(failedBot) == len(message.mentions):
-                return message.author.mention + ' ' + INVITATION_FAILURE_BOT.format(message.author.mention)
-            elif failedBot:
-                return message.author.mention + ' ' + INVITATION_FAILURE_BOT_OTHERS.format(
-                    INVITATION_FAILURE_PENDING_SUPPLEMENT.format(len(failedPendingInvite)) if failedPendingInvite else ''
-                )
-            elif len(failedPendingInvite) == len(message.mentions):
-                return message.author.mention + ' ' + INVITATION_FAILURE_PENDING.format(message.author.mention)
-            elif failedPendingInvite:
-                return message.author.mention + ' ' + INVITATION_FAILURE_PENDING_OTHERS.format(len(failedPendingInvite))
+                response += '\n\t' + INVITATION_FAILURE_MESSAGE + ' '.join(failedMessages)
+            if failedBot:
+                response += '\n\t' + INVITATION_FAILURE_BOT + ' '.join(failedBot)
+            if failedPendingInvite:
+                response += '\n\t' + INVITATION_FAILURE_PENDING + ' '.join(failedPendingInvite)
+            if failedJoined:
+                response += '\n\t' + INVITATION_FAILURE_JOINED + ' '.join(failedJoined)
+            if len(failedMessages + failedBot + failedPendingInvite + failedJoined) == len(message.mentions):
+                response = response.replace(INVITATION_FAILURE_PARTIAL, INVITATION_FAILURE_FULL)
+            if response == INVITATION_FAILURE_PARTIAL:
+                response = INVITATION_SUCCESS.format(plural='s' if len(message.mentions) > 1 else '')
             else:
-                return message.author.mention + ' ' + INVITATION_SUCCESS.format(plural='s' if len(message.mentions) > 1 else '')
+                response += '\n' + INVITATION_SUCCESS_PARTIAL
+            return message.author.mention + ' ' + response
 
     class LobbyUninviteCMD(Command):
         """~uninvite <mention> [mentions]
@@ -336,11 +344,12 @@ class LobbyManagement(Module):
                 lobby = args[0]
             if lobby not in module.activeLobbies:
                 return message.author.mention + ' ' + RSVP_FAILURE_ID
+            else:
+                lobby = module.activeLobbies[lobby]
 
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
                 return LOBBY_FAILURE_GUILD
-            invited = module.activeLobbies[lobby].invited
             userInLobby = module.getLobby(member=message.author)
             userOwnsLobby = userInLobby and userInLobby.ownerRole in message.author.roles
 
@@ -348,15 +357,15 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + RSVP_FAILURE_OWNER
             elif userInLobby:
                 return message.author.mention + ' ' + RSVP_FAILURE_MEMBER
-            elif message.author.id not in invited:
+            elif message.author.id not in lobby.invited:
                 return message.author.mention + ' ' + RSVP_FAILURE_UNINVITED
 
-            module.activeLobbies[lobby].invited.remove(message.author.id)
-            await message.author.add_roles(module.activeLobbies[lobby].role, reason='Accepted invite to lobby')
+            lobby.invited.remove(message.author.id)
+            await message.author.add_roles(lobby.role, reason='Accepted invite to lobby')
             if lobby.textChannel:
                 await lobby.textChannel.send('{} has joined the lobby!'.format(message.author.mention))
 
-            return message.author.mention + ' ' + RSVP_SUCCESS.format(name=module.activeLobbies[lobby].customName)
+            return message.author.mention + ' ' + RSVP_SUCCESS.format(name=lobby.customName)
     class LobbyInviteAcceptCMD_Variant1(LobbyInviteAcceptCMD): NAME = 'acceptlobbyinvite'
 
     class LobbyKickCMD(Command):
@@ -427,7 +436,7 @@ class LobbyManagement(Module):
 
             lobby = module.getLobby(member=message.author)
             if lobby and lobby.ownerRole in message.author.roles:
-                return message.author.mention + ' ' + LEAVE_FAILURE_OWNER.format(lobby.customName)
+                return message.author.mention + ' ' + LEAVE_FAILURE_OWNER.format(name=lobby.customName)
             elif not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
 
@@ -560,8 +569,8 @@ class LobbyManagement(Module):
                 return FILTER_DISABLE_SUCCESS
             else:
                 return message.author.mention + ' ' + FILTER_DISABLE_VOTED.format(
-                    count=lobby.filterVotesNeeded - lobby.filterVotes,
-                    plural='** is' if lobby.filterVotesNeeded - lobby.filterVotes == 1 else 's** are'
+                    count=lobby.filterVotesNeeded - len(lobby.filterVotes),
+                    plural='** is' if lobby.filterVotesNeeded - len(lobby.filterVotes) == 1 else 's** are'
                 )
     class LobbyFilterDisableCMD_Variant1(LobbyFilterDisableCMD): NAME = 'disablefilter'
 
