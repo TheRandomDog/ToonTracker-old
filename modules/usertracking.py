@@ -13,22 +13,22 @@ class UserTrackingModule(Module):
     ACTIONS = {
         'Join': {
             'color': discord.Color.green(),
-            'icon': 'https://cdn.pixabay.com/photo/2012/04/02/15/56/right-24823_960_720.png',
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394664535430004756/enter.png',
             'title': 'User Joined'
         },
         'Leave': {
             'color': discord.Color.dark_blue(),
-            'icon': 'http://www.clker.com/cliparts/e/a/7/a/1194985593422726425arrow-left-blue_benji_pa_01.svg.hi.png',
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394664540916154378/exit.png',
             'title': 'User Left'
         },
         'Kicked': {
             'color': discord.Color.from_rgb(130, 75, 36),
-            'icon': 'https://www.clker.com/cliparts/R/n/T/o/G/0/simple-brown-boot-hi.png',
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394635272748269569/kick.png',
             'title': 'Kicked'
         },
         'Banned': {
             'color': discord.Color.red(),
-            'icon': 'https://www.iconsdb.com/icons/preview/red/gavel-xxl.png',
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394664529302126593/ban.png',
             'title': 'Banned'
         }
     }
