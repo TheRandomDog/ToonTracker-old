@@ -88,8 +88,8 @@ FILTER_FAILURE_VOTED = "You've already voted!"
 FILTER_WARNING = "Your message was removed because it contained a bad word. " \
                 "This is a reminder that, if everyone in the lobby agrees they're okay with it, you can disable the bad word " \
                 "filter by using `~disableFilter`.\n\nNote that **anything that breaks Discord's Terms of Service or Community " \
-                "Guidelines is still prohibited.** This includes any messages or content that's 18+, as the lobby channel is " \
-                "labeled NSFW channel, and is not intended to be."
+                "Guidelines is still prohibited.** This includes any messages or content that's 18+, as the lobby channel is not " \
+                "labeled as a NSFW channel, and is not intended to be."
 
 LOG_CONFIRM_1 = "Alrighty, I'm fetching that chat log for you, hang on a second..."
 LOG_CONFIRM_2 = "Here's that chat log for you..."
@@ -146,7 +146,7 @@ class LobbyManagement(Module):
                     # If a Not Found error returned, that means that it tried to remove something
                     # that contained a bad word, meaning we're safe to stop making the lobby.
                     return
-            elif len(name) > 30:
+            if len(name) > 30:
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_LENGTH
             elif not name:
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_MISSING
