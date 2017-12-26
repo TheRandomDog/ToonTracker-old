@@ -421,7 +421,7 @@ class ModerationModule(Module):
         asyncio.get_event_loop().create_task(self.scheduleUnbans())
 
         if self.badWordFilterOn:
-            self.words = Config.getModuleSetting('moderation', 'badwords')
+            self.words = [word.lower() for word in Config.getModuleSetting('moderation', 'badwords')]
             self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
 
         if self.badImageFilterOn:
