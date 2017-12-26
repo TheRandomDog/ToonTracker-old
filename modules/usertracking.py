@@ -52,6 +52,11 @@ class UserTrackingModule(Module):
             'color': discord.Embed.Empty,
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394635296098222100/lookup.png',
             'title': 'Look Up'
+        },
+        'Level': {
+            'color': discord.Color.purple(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/395337596240396288/levelup2.png',
+            'title': 'Level Up'
         }
     }
 
@@ -300,6 +305,15 @@ class UserTrackingModule(Module):
         if level == 7:
             if self.regularRole and self.regularRole not in member.roles:
                 await member.add_roles(self.regularRole, reason='User leveled up to level 7')
+                embed = self.createDiscordEmbed(
+                    action='Level',
+                    primaryInfo="You've leveled up to LEVEL 7!",
+                    secondaryInfo="Thanks for spending some of your time to chat with us! " \
+                    "You now have permission to *create your own private lobbies* and *upload files and images* to the server. Have fun!",
+                    thumbnail=member.avatar_url,
+                    footer={'text': '- The mods from the Toontown Rewritten Discord'}
+                )
+                await self.client.send_message(member, embed)
 
     def createDiscordEmbed(self, action, primaryInfo=discord.Embed.Empty, secondaryInfo=discord.Embed.Empty, thumbnail='', fields=[], footer={}, color=None):
         action = self.ACTIONS[action]
