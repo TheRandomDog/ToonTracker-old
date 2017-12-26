@@ -193,7 +193,9 @@ class LobbyManagement(Module):
                     manage_messages=True,
                     manage_roles=False,
                     manage_channels=False,
-                    add_reactions=False
+                    add_reactions=False,
+                    connect=True,
+                    speak=False
                 )
 
             if not voiceChannelOnly:
