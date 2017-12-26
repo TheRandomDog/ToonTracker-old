@@ -238,7 +238,6 @@ class UserTrackingModule(Module):
         prevXP = Users.getUserXP(member.id)
         xp += len(words)
         xp *= multiplier
-        print(prevXP, xp, min(25, max(0, xp)))
         Users.setUserXP(member.id, prevXP + min(25, max(0, xp)))
         self.levelCooldowns[member] = time.time() + self.levelCooldown
 
@@ -455,7 +454,12 @@ class UserTrackingModule(Module):
             self.createDiscordEmbed(
                 action='Filter',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel.mention, message.content),
+                secondaryInfo='{} in {}{}:\n\n{}'.format(
+                    message.author.mention,
+                    '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
+                    message.channel.mention,
+                    message.content
+                ),
                 thumbnail=message.author.avatar_url
            )
         )
@@ -468,13 +472,17 @@ class UserTrackingModule(Module):
             self.createDiscordEmbed(
                 action='Delete',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel.mention, message.content),
+                secondaryInfo='{} in {}{}:\n\n{}'.format(
+                    message.author.mention,
+                    '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
+                    message.channel.mention,
+                    message.content
+                ),
                 thumbnail=message.author.avatar_url
            )
         )
 
     async def on_member_update(self, before, after):
-        print(self.memberStatusTimeStart)
         if self.trackStatuses and before.status != after.status:
             if before.status == discord.Status.online:
                 Users.setUserTimeOnline(before.id, Users.getUserTimeOnline(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
