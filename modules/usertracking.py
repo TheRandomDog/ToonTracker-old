@@ -263,6 +263,9 @@ class UserTrackingModule(Module):
             return
         if message.channel.id in self.trackingExceptions:
             return
+        # Definitely don't want to progress if it's a heckin' webhook.
+        if message.webhook_id:
+            return
 
         if self.trackMessages:
             channelHistory = Users.getUserChannelHistory(message.author.id, message.channel.id)
