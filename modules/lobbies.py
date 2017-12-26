@@ -191,6 +191,8 @@ class LobbyManagement(Module):
                     read_messages=True,
                     send_messages=False,
                     manage_messages=True,
+                    manage_roles=False,
+                    manage_channels=False,
                     add_reactions=False
                 )
 
