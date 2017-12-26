@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import discord
 import asyncio
 import time
@@ -5,38 +7,40 @@ import re
 from clarifai.rest import ClarifaiApp, Image, Video
 from extra.commands import Command, CommandResponse
 from modules.module import Module
-from utils import Config, Users
+from utils import Config, Users, getShortTimeLength, getLongTime
 
-TIMED_BAN_FORMAT = re.compile(r'(?P<num>[0-9]+)(?P<char>[smhdwMy])')
-LENGTHS = {
-    's': 1,
-    'm': 60,
-    'h': 3600,
-    'd': 86400,
-    'w': 604800,
-    'M': 2629743,
-    'y': 31556926
-}
-FULL = {
-    's': 'seconds',
-    'm': 'minutes',
-    'h': 'hours',
-    'd': 'days',
-    'w': 'weeks',
-    'M': 'months',
-    'y': 'years'
-}
+FILTER_EVASION_CHAR_MAP = str.maketrans(
+    u'ªᵃÀΆΛΑÁɅλАÂÃᴀÄдȺÅĀĂƛĄǍǺǻȀȂȦӐӒӑӓɐɑɒȧȁȃάǎāаăąàáâαãäåǞǠДǟǡßƁɃБВΒҌҌҍҍƀЪЬՅᵇԵѢѣҔҕβʙʚɮɞɓƂϦƃъեыьϐбвƄƅƆƇƈȻȼĆĈСĊČϹʗÇҪҫҀҁϽϾϿͻͼͽćĉᴄċčᶜϲçсς¢ɔɕ©ðƉƊƋƌԀᴅԁժԂԃȡĎĐÐďɖɗđƎЭƏǝεƐᴇƷƸǮǯȜȝƹƺӬӭĒĔЕЗĖĘĚÈɆÉÊΕËȄξȆЀЁԐԑʒʓȨɆΈӖӗӘәᵉӚӛӞӠӟӡɇѐёȩєȅȇēĕэըėҼҽҾҿеęϧěèέЄéêëɘəɚɛɜɝ€ϵ϶£ƒƑƒᶠϜϝʃҒғӺӻʄƓĜĞĠĢǤǦǴԌᵍԍǵǥǧĝɠɡɢפğġģʛցʜʮμʯʰʱĤԊԋԦԧĦʜҢңҤҥȞӴӵНΉнΗћЧЊЋȟцʰчĥђӇӈӉӊӋӌҶիҷҸҹҺһɦɧħЂƖƗĨĪĬĮӏіїİÌΪɪÍӀίϊΙÎΊÏĩᶦȈȊІЇȉȋīſǏǐįıìɨɩɪíîȷʲմïĴᴊʲʝЈԺјɟǰϳĵɈɉĶķĸϏǨǩкӃӄƘκƙᴋќᵏКЌΚҚқҜԞԟҝҞҟҠҡʞʟĹլȽԸԼˡĻʟĽιɬɭĿʅʆŁȴĺļľŀłƚɯᵐΜϺмҦҧМՊӍӎщԠᴍԡϻЩɰɱɲήԮԯɳΝոռИѝЙՌɴԤԥԒԓŃŅŇΏŊƝӢӣӤӥпийлͶͷƞńņňŉמηπŋՈȠחПñⁿҊҋȵÑЛҊҋǸЍϞϟǹƟƠơǾǿÒÓΌÔÕφΘÖŌסŎӦᴏӧӨөӪӫΦθŐǑǪоǬȪȬʘΟϵȮȰОѲѳϘѺѻᵒϙȫϬϭфȭȯδȱόǫǭǒōФϕŏőòóοôσõöՓøØȌȎɵȍȏƤբƥÞþρᴘᵖΡƿԲǷРҎҏϷрϸɊɋԚԛգզԳʠϤϥ®ŔŖҐրґŘгѓЯʳʴʵʶʳɹɺɻɼɽӶӷԻɾɿʀՐՒʁяŕŗřƦȐɌɍȒȑȓƻƼƽƧƨŠʂϨЅϩˢšՏ§ŚŜŞŠȘȿșśŝşѕš†ŢТԎԏҬҭŤᴛтϮϯɫŦţᵗťτŧƫʇʈƬƭƮΤͲͳȾȚȶțƯưƱƲÙÚÛÜŨŪŬŮŰŲǓטɄǕǗǙǛȔȖȕȗǔᴜᵘǖϋՍύǘǚυǜũսūŭՄůűЦΰųùԱúûüʉЏʊƔᴠѴᵛѵѶѷνʋʌʍʷᴡѠѡѿŴԜԝшΨψϢϣωŵШώƜϗϰх×ҲҳχХӼӽΧƳƴӮӯӰӱӲӳÝΫŶŸϒҮүҰұϓϔȲץצУŷýÿγʸɎΎΥЎўʎʏɏɣɤ¥ȳуƵƶŽŹŻŽźżžȤΖʐʑɀȥžՀ',
+    u'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccccccccccccccccccccccccccdddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffgggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiijjjjjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkkkkklllllllllllllllllllllllllmmmmmmmmmmmmmmmmmmmnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooppppppppppppppppppqqqqqqqqqqqrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrssssssssssssssssssssssssssttttttttttttttttttttttttttttttttuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuvvvvvvvvvvwwwwwwwwwwwwwwwwwwwxxxxxxxxxxxyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyzzzzzzzzzzzzzzzzz'
+)
+
 MOD_LOG = Config.getModuleSetting('moderation', 'mod_log', None)
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
 NO_REASON_MOD = 'No reason yet.'
 
-async def punishUser(client, module, message, *args, punishment=None):
+async def punishUser(client, module, message, *args, punishment=None, silent=False):
     if not message.mentions:
-        return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+        if not message.raw_mentions:
+            try:
+                user = await client.get_user_info(int(args[0]))
+            except (ValueError, IndexError):
+                return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+            except discord.NotFound:
+                return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, args[0]), deleteIn=5, priorMessage=message)
+        else:
+            try:
+                user = await client.get_user_info(message.raw_mentions[0])
+            except discord.NotFound:
+                return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)   
+    else:
+        user = message.mentions[0]
     
-    user = message.mentions[0]
-    if user.bot:
+    if user.bot and not Config.getModuleSetting('moderation', 'allow_bot_punishments', False):
         return CommandResponse(message.channel, '{} You cannot punish a bot user. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
+            deleteIn=5, priorMessage=message)
+    if (Config.getRankOfUser(user.id) >= 300 or (client.rTTR.get_member(user.id) and any([Config.getRankOfRole(role.id) >= 300 for role in client.rTTR.get_member(user.id).roles]))) \
+     and not Config.getModuleSetting('moderation', 'allow_mod_punishments', False):
+        return CommandResponse(message.channel, '{} You cannot punish another mod. Please use Discord\'s built-in moderation tools.'.format(message.author.mention), 
             deleteIn=5, priorMessage=message)
 
     if not punishment:
@@ -58,32 +62,39 @@ async def punishUser(client, module, message, *args, punishment=None):
         punishments = Users.getUserPunishments(user.id)
         nextPunishment = punishment
 
-    match = TIMED_BAN_FORMAT.match(args[1] if len(args) > 1 else '')
-    if match:
+    if nextPunishment == 'Kick' and not message.mentions:
+        if not client.rTTR.get_member(user.id):
+            nextPunishment = 'Warning'
+            await client.send_message(message.author, 'The punishment (a kick) was downgraded to a warning because the user ' \
+                'is not currently on the server and kicking would have had no effect.')
+
+    try:
+        length = getShortTimeLength(args[1] if len(args) > 1 else '')
+        lengthText = getLongTime(args[1] if len(args) > 1 else '')
         nextPunishment = 'Temporary Ban'
-        length = LENGTHS[match.group('char')] * int(match.group('num'))
-        lengthText = '{} {}'.format(match.group('num'), FULL[match.group('char')])
         if not 15 <= length <= 63113852:
             return CommandResponse(message.channel, '{} Please choose a time between 15s - 2y.'.format(message.author.mention), deleteIn=5, priorMessage=message)
         reason = ' '.join(args[2:])
-    elif nextPunishment == 'Temporary Ban':
-        lengthText = '24 hours'
-        length = 86400  # 1 day
-        reason = ' '.join(args[1:])
-    else:
-        lengthText = None
-        reason = ' '.join(args[1:])
+    except ValueError:
+        if nextPunishment == 'Temporary Ban':
+            lengthText = '24 hours'
+            length = 86400
+            reason = ' '.join(args[1:])
+        else:
+            lengthText = None
+            reason = ' '.join(args[1:])
 
     if not reason:
         reason = NO_REASON
 
     modLog = None
     if MOD_LOG:
-        modLog = await client.send_message(MOD_LOG, "**User:** {}\n**Mod:** {}\n**Punishment:** {}\n**Reason:** {}".format(
+        modLog = await client.send_message(MOD_LOG, "**User:** {}\n**Mod:** {}\n**Punishment:** {}\n**Reason:** {}\n**Edit ID:** {}".format(
             str(user),
             message.author.mention,
             nextPunishment + (' ({})'.format(lengthText) if lengthText else ''),
-            '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'.format(client.commandPrefix, message.id) if reason == NO_REASON else reason
+            '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'.format(client.commandPrefix, message.id) if reason == NO_REASON else reason,
+            message.id
             )
         )
     await client.delete_message(message)
@@ -97,7 +108,7 @@ async def punishUser(client, module, message, *args, punishment=None):
         'created': time.time(),
         'noticeID': None
     }
-    if nextPunishment == 'Warning':
+    if nextPunishment == 'Warning' and not silent:
         try:
             notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been given a warning by a moderator ' \
                 'and has been marked down officially. Here\'s the reason:\n```{}```\nAs a refresher, we recommend re-reading ' \
@@ -105,9 +116,13 @@ async def punishUser(client, module, message, *args, punishment=None):
                     user.mention, reason))
             punishmentAdd['noticeID'] = notice.id
         except Exception as e:
-            await client.send_message(message.author, 'Could not send warning notification to the user.')
+            await client.send_message(message.author, 'Could not send warning notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send warning notification message to {}'.format(user.id))
-    elif nextPunishment == 'Kick':                                     
+        punishments.append(punishmentAdd)
+        Users.setUserPunishments(user.id, punishments)
+        if client.requestModule('usertracking'):
+            await client.requestModule('usertracking').on_member_warn(user, punishmentAdd)
+    elif nextPunishment == 'Kick' and not silent:                    
         try:
             notice = await client.send_message(user, 'Heyo, {}!\n\nThis is just to let you know you\'ve been kicked from the Toontown Rewritten ' \
                 'Discord server by a moderator, and this has been marked down officially. Here\'s the reason:\n```{}```\n' \
@@ -116,10 +131,15 @@ async def punishUser(client, module, message, *args, punishment=None):
                     user.mention, reason))
             punishmentAdd['noticeID'] = notice.id
         except Exception as e:
-            await client.send_message(message.author, 'Could not send kick notification to the user.')
+            await client.send_message(message.author, 'Could not send kick notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send kick notification message to {}'.format(user.id))
-        await user.kick()
-    elif nextPunishment == 'Temporary Ban':
+        try:
+            punishments.append(punishmentAdd)
+            Users.setUserPunishments(user.id, punishments)
+            await client.rTTR.kick(user, reason='On behalf of ' + str(message.author))
+        except discord.HTTPException:
+            await client.send_message(message.author, 'Could not kick the user. If the user was not on the server, this is expected.')
+    elif nextPunishment == 'Temporary Ban' and not silent:
         punishmentAdd['endTime'] = time.time() + length
         punishmentAdd['length'] = lengthText
         try:
@@ -130,42 +150,34 @@ async def punishUser(client, module, message, *args, punishment=None):
                 'as you stay Toony!'.format(user.mention, lengthText, reason))
             punishmentAdd['noticeID'] = notice.id
         except Exception as e:
-            await client.send_message(message.author, 'Could not send temporary ban notification to the user.')
+            await client.send_message(message.author, 'Could not send temporary ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send temporary ban notification message to {}'.format(user.id))
-        await user.ban()
-    elif nextPunishment == 'Permanent Ban':
+        try:
+            punishments.append(punishmentAdd)
+            Users.setUserPunishments(user.id, punishments)
+            await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
+        except discord.HTTPException:
+            await client.send_message(message.author, 'Could not ban the user. This is probably bad. ' \
+            'You should use Discord\'s built-in moderation tools to enforce the ban.')
+    elif nextPunishment == 'Permanent Ban' and not silent:
         try:
             notice = await client.send_message(user, 'Hey there, {}.\n\nThis is just to let you know you\'ve been permanently banned from the ' \
                 'Toontown Rewritten Discord server by a moderator. Here\'s the reason:\n```{}```\nIf you feel this is illegitimate, ' \
                 'please contact one of our mods. Thank you for chatting with us!'.format(user.mention, reason))
             punishmentAdd['noticeID'] = notice.id
         except Exception as e:
-            await client.send_message(message.author, 'Could not send permanent ban notification to the user.')
+            await client.send_message(message.author, 'Could not send permanent ban notification to the user (probably because they have DMs disabled for users/bots who don\'t share a server they\'re in).')
             print('Could not send permanent ban notification message to {}'.format(user.id))
-        await user.ban()
-    punishments.append(punishmentAdd)
-
-    Users.setUserPunishments(user.id, punishments)
+        try:
+            punishments.append(punishmentAdd)
+            Users.setUserPunishments(user.id, punishments)
+            await client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
+        except discord.HTTPException:
+            await client.send_message(message.author, 'Could not ban the user. This is probably bad. ' \
+            'You should use Discord\'s built-in moderation tools to enforce the ban.')
     await module.scheduleUnbans()
 
 class ModerationModule(Module):
-    class LookupCMD(Command):
-        NAME = 'lookup'
-        RANK = 300
-
-        @staticmethod
-        async def execute(client, module, message, *args):
-            if not message.mentions:
-                name = ' '.join(args)
-                user = discord.utils.get(message.guild.members, display_name=name)
-                if user:
-                    return Users.getUserEmbed(user)
-                else:
-                    return 'No known user'
-            else:
-                for mention in message.mentions:
-                    return Users.getUserEmbed(mention)
- 
     class AddBadWordCMD(Command):
         NAME = 'addBadWord'
         RANK = 300
@@ -250,6 +262,14 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args)
 
+    class SilentPunishCMD(Command):
+        NAME = 'silentPunish'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, silent=True)
+
     class WarnCMD(Command):
         NAME = 'warn'
         RANK = 300
@@ -257,6 +277,14 @@ class ModerationModule(Module):
         @classmethod
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args, punishment='Warning')
+
+    class SilentWarnCMD(Command):
+        NAME = 'silentWarn'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, punishment='Warning', silent=True)
 
     class KickCMD(Command):
         NAME = 'kick'
@@ -266,6 +294,14 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args, punishment='Kick')
 
+    class SilentKickCMD(Command):
+        NAME = 'silentKick'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, punishment='Kick', silent=True)
+
     class TmpBanCMD(Command):
         NAME = 'tb'
         RANK = 300
@@ -274,6 +310,18 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args, punishment='Temporary Ban')
 
+    class SilentTmpBanCMD(Command):
+        NAME = 'silentTB'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, punishment='Temporary Ban', silent=True)
+    class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
+        NAME = 'silentTb'
+    class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
+        NAME = 'silenttb'
+
     class PermBanCMD(Command):
         NAME = 'ban'
         RANK = 300
@@ -281,6 +329,14 @@ class ModerationModule(Module):
         @classmethod
         async def execute(cls, client, module, message, *args):
             return await punishUser(client, module, message, *args, punishment='Permanent Ban')
+
+    class SilentPermBanCMD(Command):
+        NAME = 'silentBan'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            return await punishUser(client, module, message, *args, punishment='Permanent Ban', silent=True)
 
     class EditPunishReasonCMD(Command):
         NAME = 'editReason'
@@ -351,31 +407,21 @@ class ModerationModule(Module):
 
     def __init__(self, client):
         Module.__init__(self, client)
-        self.commands = [
-            self.LookupCMD,
-            self.AddBadWordCMD,
-            self.RemoveBadWordCMD,
-            self.AddPluralExceptionCMD,
-            self.RemovePluralExceptionCMD,
-            self.PunishCMD,
-            self.WarnCMD,
-            self.KickCMD,
-            self.TmpBanCMD,
-            self.PermBanCMD,
-            self.EditPunishReasonCMD,
-            self.RemovePunishmentCMD
-        ]
 
-        self.badWordFilterOn = Config.getModuleSetting('moderation', 'badwordfilter')
-        self.badImageFilterOn = Config.getModuleSetting('moderation', 'badimagefilter')
+        self.badWordFilterOn = Config.getModuleSetting('moderation', 'badwordfilter', True)
+        self.badImageFilterOn = Config.getModuleSetting('moderation', 'badimagefilter', True)
         self.botspam = Config.getModuleSetting('moderation', 'announcements')
         self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
+        self.filterBots = Config.getModuleSetting('moderation', 'filter_bots', False)
+        self.filterMods = Config.getModuleSetting('moderation', 'filter_mods', True)
+        self.allowBotPunishments = Config.getModuleSetting('moderation', 'allow_bot_punishments', False)
+        self.allowModPunishments = Config.getModuleSetting('moderation', 'allow_mod_punishments', False)
 
         self.scheduledUnbans = []
         asyncio.get_event_loop().create_task(self.scheduleUnbans())
 
         if self.badWordFilterOn:
-            self.words = Config.getModuleSetting('moderation', 'badwords')
+            self.words = [word.lower() for word in Config.getModuleSetting('moderation', 'badwords')]
             self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
 
         if self.badImageFilterOn:
@@ -386,19 +432,6 @@ class ModerationModule(Module):
             self.generalImageFilter = self.imageFilterApp.models.get('moderation')
             self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
             self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
-
-    async def on_member_ban(self, guild, member):
-        botspam = Config.getSetting('botspam')
-        await self.client.send_message(botspam, "{} was banned.".format(member.display_name))
-
-    async def on_member_join(self, member):
-        botspam = Config.getSetting('botspam')
-        for channel in botspam:
-            await self.client.get_channel(channel).send(content='{} joined.'.format(member.mention), embed=Users.getUserEmbed(member))
-
-    async def on_member_remove(self, member):
-        botspam = Config.getSetting('botspam')
-        await self.client.send_message(botspam, "{} left.".format(member.display_name))
 
     async def scheduleUnbans(self):
         for userID, user in Users.getUsers().items():
@@ -412,34 +445,86 @@ class ModerationModule(Module):
         user = await self.client.get_user_info(userID)
         if endTime:
             await asyncio.sleep(endTime - time.time())
-        await self.client.rTTR.unban(user)
+        await self.client.rTTR.unban(user, reason='The user\'s temporary ban expired.')
         self.scheduledUnbans.remove(userID)
 
-    async def filterBadWords(self, message):
-        text = message.content
+    async def _testForBadWord(self, word, text):
+        if word.lower() == "he'll": return ('', '')  # I'll get rid of this someday.
+        elif word.lower() == "who're": return ('', '')  # This one too.
 
+        word = re.sub(r'\W+', '', word)
+        if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
+            return ('DIRECT', word)
+        for badword in self.words:
+            if ' ' in badword and (badword == text.lower() or badword.rstrip('s').rstrip('e') == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
+                return ('PHRASE', badword)
+        whole = text.replace(' ', '')
+        if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
+            return ('WHOLE', text)
+        return ('', '')
+
+    async def filterBadWords(self, message, edited=' ', silentFilter=False):
+        text = message.content.translate(FILTER_EVASION_CHAR_MAP)
         for word in text.split(' '):
-            if word.lower() == "he'll":
-                continue
-
-            word = re.sub(r'\W+', '', word)
-            if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
-                await self.client.delete_message(message)
-                if self.botspam:
-                    await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, message.content.replace(word, '**' + word + '**')))
-                    return True
-            for badword in self.words:
-                if ' ' in badword and (badword == text.lower() or badword.rstrip('s').rstrip('e') == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
+            badWord = await self._testForBadWord(word, text)
+            if badWord[1] and self.botspam:
+                usertracking = self.client.requestModule('usertracking')
+                if usertracking:
+                    usertracking.filtered.append(message)
                     await self.client.delete_message(message)
-                    if self.botspam:
-                        await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, message.content.replace(badword, '**' + badword + '**')))
+                    await usertracking.on_message_filter(message)
+                else:
+                    await self.client.delete_message(message)
+                    await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
+                try:
+                    if silentFilter:
                         return True
-            whole = text.replace(' ', '')
-            if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
-                await self.client.delete_message(message)
-                if self.botspam:
-                    await self.client.send_message(self.botspam, "Removed message from {} in {}: {}".format(message.author.mention, message.channel.mention, '**' + message.content + '**'))
-                    return True
+                    await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
+                        "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
+                        "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
+                            message.author.mention, badWord[1]))
+                except discord.HTTPException:
+                    pass
+                return True
+
+        for embed in message.embeds:
+            for attr in [(embed.title, 'title'), (embed.description, 'description'), (embed.footer, 'footer'), (embed.author, 'author')]:
+                if type(attr[0]) != str:
+                    continue
+                for word in attr[0].split(' '):
+                    badWord = await self._testForBadWord(word, attr[0])
+                    if badWord[1] and self.botspam:
+                        await self.client.delete_message(message)
+                        await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
+                            edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**')))
+                        try:
+                            if silentFilter:
+                                return True
+                            await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
+                                "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
+                                "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
+                                    message.author.mention, badWord[1]))
+                        except discord.HTTPException:
+                            pass
+                        return True
+            for field in embed.fields:
+                for fieldattr in [(field.name, 'field name'), (field.value, 'field value')]:
+                    for word in fieldattr[0].split(' '):
+                        badWord = await self._testForBadWord(word, fieldattr[0])
+                        if badWord[1] and self.botspam:
+                            await self.client.delete_message(message)
+                            await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
+                                edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**')))
+                            try:
+                                if silentFilter:
+                                    return True
+                                await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
+                                    "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
+                                    "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
+                                        message.author.mention, badWord[1]))
+                            except discord.HTTPException:
+                                pass
+                            return True
 
     async def filterBadImages(self, message):
         # Refreshes embed info from the API.
@@ -550,7 +635,9 @@ class ModerationModule(Module):
         #    await self.client.send_message(self.botspam, "Image posted was fine. **[Rating: {}]**".format(rating))
 
     async def handleMsg(self, message):
-        if message.channel.id in self.exceptions or message.author.id in self.exceptions:
+        if message.channel.id in self.exceptions or message.author.id in self.exceptions or \
+            (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
+            (message.author.bot and not self.filterBots) or ((Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])) and not self.filterMods):
             return
 
         timeStart = time.time()
@@ -572,5 +659,17 @@ class ModerationModule(Module):
             await asyncio.sleep(1)
         await self.filterBadImages(message)
 
+    async def on_message_edit(self, before, after):
+        message = after
+        if message.channel.id in self.exceptions or message.author.id in self.exceptions or (message.author.bot and not self.filterBots):
+            return
+
+        # We'll only check for edited-in bad words for right now.
+        try:
+            if self.badWordFilterOn:
+                await self.filterBadWords(message, edited=' edited ')
+        except discord.errors.NotFound:
+            print('Tried to remove edited message in bad word filter but message wasn\'t found.')
+            return
 
 module = ModerationModule

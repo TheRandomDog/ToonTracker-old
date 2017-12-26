@@ -28,6 +28,11 @@ def delegateEvent(func):
 class ToonTracker(discord.Client):
     # Evaluate Pythonic code.
     class EvalCMD(Command):
+        """~eval <python>
+
+            Evaluates Python code and returns the output. You shouldn't use this unless you know what you're doing.
+            To get to the client instance, use `TT`.
+        """
         NAME = 'eval'
         RANK = 500
 
@@ -41,6 +46,11 @@ class ToonTracker(discord.Client):
 
     # Execute Pythonic code.
     class ExecCMD(Command):
+        """~exec <python>
+
+            Executes Python code (doesn't return an output). You shouldn't use this unless you know what you're doing.
+            To get to the client instance, use `TT`.
+        """
         NAME = 'exec'
         RANK = 500
 
@@ -56,6 +66,10 @@ class ToonTracker(discord.Client):
     class QuitCMD(Command):
         NAME = 'quit'
         RANK = 500
+        """~quit
+
+            Logs out of the bot account, closes the client, and exits the program.
+        """
 
         @staticmethod
         async def execute(client, module, message, *args):
@@ -66,6 +80,10 @@ class ToonTracker(discord.Client):
     class ReloadCMD(Command):
         NAME = 'reload'
         RANK = 400
+        """~reload
+
+            Reloads all modules and the configuration file.
+        """
 
         @staticmethod
         async def execute(client, module, message, *args):
@@ -85,8 +103,16 @@ class ToonTracker(discord.Client):
             rank = max([Config.getRankOfUser(message.author.id), Config.getRankOfRole(message.author.top_role.id)])
 
             msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
+            for command in sorted(client.commands, key=lambda c: c.NAME):
+                if command.RANK <= rank and command.__doc__:
+                    if args and args[0].lower() == command.NAME.lower():
+                        doc = command.__doc__.split('\n')
+                        doc[0] = '`' + doc[0] + '`'
+                        doc = '\n'.join([line.strip() for line in doc])
+                        return doc
+                    msg += '\n\t' + client.commandPrefix + command.NAME
             for module in client.modules.values():
-                for command in module.commands:
+                for command in sorted(module.commands, key=lambda c: c.NAME):
                     if command.RANK <= rank and command.__doc__:
                         if args and args[0].lower() == command.NAME.lower():
                             doc = command.__doc__.split('\n')
@@ -111,7 +137,15 @@ class ToonTracker(discord.Client):
         self.restart = False
 
         self.prevUpdateTime = time.time()
-        self.updateDelay = assertTypeOrOtherwise(Config.getSetting('update_delay'), int, float, otherwise=10)
+        self.updateDelay = assertType(Config.getSetting('update_delay'), int, float, otherwise=10)
+
+    def isModuleAvailable(self, module):
+        if module in self.modules and self.modules[module].publicModule:
+            return True
+
+    def requestModule(self, module):
+        if self.isModuleAvailable(module):
+            return self.modules[module]
 
     async def connect(self):
         try:
@@ -133,7 +167,7 @@ class ToonTracker(discord.Client):
             return
 
         for command in self.commands:
-            if message.content.startswith(self.commandPrefix + command.NAME) and \
+            if message.content and message.content.split(' ')[0] == self.commandPrefix + command.NAME and \
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
                 try:
                     response = await command.execute(self, None, message, *message.content.split(' ')[1:])
@@ -179,7 +213,9 @@ class ToonTracker(discord.Client):
             return
 
         # Deliver message
-        if message.__class__ == discord.Embed:
+        if message.__class__ == discord.File:
+            msgObj = await target.send(content='', file=message)
+        elif message.__class__ == discord.Embed:
             msgObj = await target.send(content=None, embed=message)
         else:
             msgObj = await target.send(message)
@@ -207,17 +243,26 @@ class ToonTracker(discord.Client):
                 try:
                     await self.send_message(announcement[0], announcement[1])
                 except Exception as e:
-                    print('{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncement: {}\n\n{}'.format(
+                    e = format_exc()
+                    info = '{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncement: {}\n'.format(
                         announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', 
                         announcement[0],
-                        announcement[1],
-                        format_exc()
-                    ))
-                    await self.send_message(botspam, '**{}** tried to send an announcement to {}, but an exception was raised.\n```\n{}```'.format(
-                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module',
-                        self.get_channel(announcement[0]).mention,
-                        format_exc()
-                    ))
+                        announcement[1]
+                    )
+                    log = '```{}```'.format(e)
+
+                    print(info + log)
+                    info = info.replace('channel ID {}'.format(announcement[0]), self.get_channel(announcement[0]).mention)
+                    if len(info + log) > 2000:
+                        r = requests.post('https://hastebin.com/documents', data=e)
+                        try:
+                            json = r.json()
+                            key = json['key']
+                            log = 'https://hastebin.com/raw/' + key
+                        except (KeyError, ValueError):
+                            log = '*Unable to post long log to Discord or Hastebin. The log can be found in the console.*'
+
+                    await self.send_message(botspam, info + log)
 
             # A permanent message is only available as an embed.
             for update in module.pendingUpdates:
@@ -307,18 +352,29 @@ class ToonTracker(discord.Client):
     async def load_config(self, term='start', channel=None):
         if not channel:
             channel = Config.getSetting('botspam')
+            try:
+                if type(channel) == list:
+                    channel = [int(c) for c in channel]
+                else:
+                    channel = int(channel)
+            except ValueError:
+                channel = None
 
         warnings = []
         errors = []
 
         rTTR = Config.getSetting('rTTR')
         if not rTTR:
-            e = 'No guild ID was designated as rTTR in config.'
+            e = 'No guild ID was designated as rTTR in config, or it was malformed.'
             errors.append(e)
             print('[!!!] ' + e)
         self.rTTR = self.get_guild(rTTR)
         if not self.rTTR:
-            e = 'No known guild was designated as rTTR in config.'
+            e = 'No known guild was designated as rTTR in config, or it was malformed.'
+            errors.append(e)
+            print('[!!!] ' + e)
+        if not channel:
+            e = 'No known channel was designated as the bot output in the config, or it was malformed.'
             errors.append(e)
             print('[!!!] ' + e)
 
@@ -326,7 +382,8 @@ class ToonTracker(discord.Client):
             full = 'ToonTracker failed to {} with **{}** error(s).\n\n'.format(term, len(errors))
             print(full)
             full += '\n'.join([':exclamation: ' + e for e in errors])
-            await self.send_message(channel, full)
+            if channel:
+                await self.send_message(channel, full)
             await self.logout()
             await self.close()
 
@@ -347,6 +404,11 @@ class ToonTracker(discord.Client):
                 warnings.append(w)
                 print(w)
                 continue
+            except Exception as e:
+                w = 'Could not load Python module of ToonTracker module "{}"'.format(module)
+                warnings.append(w)
+                print(w + '\n\n{}'.format(format_exc()))
+                continue
             if not hasattr(modsmod, 'module'):
                 w = 'Could not locate module subclass for "{}"'.format(module)
                 warnings.append(w)
@@ -362,7 +424,14 @@ class ToonTracker(discord.Client):
 
             self.modules[module] = m
             if hasattr(m, 'restoreSession'):
-                await m.restoreSession()
+                try:
+                    await m.restoreSession()
+                except Exception as e:
+                    w = 'The **{}** modules encountered an exception while trying to restore its session.'.format(module)
+                    warnings.append(w)
+                    print(w + '\n\n{}'.format(format_exc()))
+                    if not m.runWithoutRestoredSession:
+                        continue
             m.startTracking()
 
         full = 'ToonTracker {}ed with {} warning(s).'.format(term, 'no' if len(warnings) == 0 else '**' + str(len(warnings)) + '**')

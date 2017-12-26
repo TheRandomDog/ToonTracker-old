@@ -25,7 +25,7 @@ class StatusModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.gameserverAddress = 'gameserver-us-east-1-prod.toontownrewritten.com'
+        self.gameserverAddress = '162.243.14.152'
         self.lastUpdated = time.time()
         self.account = None
         self.game = None
@@ -35,44 +35,17 @@ class StatusModule(Module):
         self.permaMsgs = [StatusPermaMsg]
 
     def checkAccountServer(self):
-        payloadState = self.PAYLOAD_CREDENTIALS
-        while True:
-            url = 'https://www.toontownrewritten.com/api/login?format=json'
-            if payloadState == self.PAYLOAD_QUEUE:
-                payload = {'queueToken': qt}
-            else:
-                payload = Config.getModuleSetting('status', 'ttr_credentials')
-            headers = {'content-type': 'application/x-www-form-urlencoded'}
-            headers.update(uaHeader)
-
-            try:
-                r = requests.post(url, data=payload, headers=headers)
-                jsonData = None
-                jsonData = r.json()
-                success = jsonData['success']
-            except (JSONDecodeError, requests.ConnectionError):
-                success = 'false'
-
-            if success == 'true':
-                if not self.account:
-                    self.account = True
-                self.gameserverAddress = jsonData['gameserver']
-                break
-            elif success == 'delayed':
-                payloadState = self.PAYLOAD_QUEUE
-                pos = jsonData['position']
-                eta = jsonData['eta']
-                qt = jsonData['queueToken']
-                if int(eta) < 60:
-                    time.sleep(max(5, int(eta)))
-                else:
-                    if self.account:
-                        pass
-                    self.account = False
-                    break
-            elif success == 'false':
-                self.account = False
-                break
+        url = 'https://www.toontownrewritten.com/api/status'
+        try:
+            r = requests.get(url, headers=uaHeader)
+            jsonData = r.json()
+        except (JSONDecodeError, requests.ConnectionError):
+            self.account = False
+            self.open = True
+            return
+        self.account = True
+        self.open = jsonData['open']
+        self.banner = jsonData.get('banner', False)
 
     def checkGameServer(self):
         address = self.gameserverAddress
@@ -91,29 +64,9 @@ class StatusModule(Module):
         finally:
             s.close()
 
-    def checkStatus(self):
-        url = 'https://www.toontownrewritten.com/api/status'
-        try:
-            r = requests.get(url, headers=uaHeader)
-            jsonData = r.json()
-        except (JSONDecodeError, requests.ConnectionError):
-            jsonData = {'open': True}
-        open = jsonData['open']
-        try:
-            banner = jsonData['banner']
-        except KeyError:
-            banner = False
-        if self.open == None:
-            self.open = open
-        elif open != self.open:
-            self.open = open
-        if banner != self.banner:
-            self.banner = banner
-
     def loopIteration(self):
         self.checkAccountServer()
         self.checkGameServer()
-        self.checkStatus()
         self.lastUpdated = time.time()
         self.updatePermaMsg(StatusPermaMsg)
 

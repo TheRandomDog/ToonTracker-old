@@ -1,9 +1,11 @@
 import os
+import re
 import json
 import logging
 from __init__ import __version__
 from discord import Embed, Color, Member
 from datetime import datetime
+from math import ceil
 
 # Create config file if it doesn't exist
 try:
@@ -17,18 +19,27 @@ except json.JSONDecodeError:
 finally:
     f.close()
 
-
 # ASSERTIONS
 
-def assertType(value, *types):
+def assertType(value, *types, otherwise=TypeError):
     if not type(value) in types:
-        raise TypeError("Expected {} when passed value '{}', found {} instead".format(
-            ", ".join([str(t) for t in types]), value, type(value))
-        )
+        if otherwise == TypeError:
+            raise TypeError("Expected {} when passed value '{}', found {} instead".format(
+                ", ".join([str(t) for t in types]), value, type(value))
+            )
+        else:
+            return otherwise
     return value
 
-def assertTypeOrOtherwise(value, *types, otherwise):
-    return value if type(value) in types else otherwise
+def assertClass(value, *classes, otherwise=TypeError):
+    if not value.__class__ in classes:
+        if otherwise == TypeError:
+            raise TypeError("Expected {} when passed value '{}', found {} instead".format(
+                ", ".join([str(c) for c in classes]), value, value.__class__)
+            )
+        else:
+            return otherwise
+    return value
 
 # CONFIG
 
@@ -63,7 +74,7 @@ class Config:
     @classmethod
     def getModuleSetting(cls, module, setting, otherwise=None):
         pss = cls.getSetting(module)
-        if not pss or not pss.get(setting, None):
+        if not pss or pss.get(setting, None) == None:
             return otherwise
         return pss[setting]
 
@@ -154,8 +165,8 @@ class Users:
             content = {int(userID): data for userID, data in json.loads(file.read()).items()}
             return content
         except json.JSONDecodeError:
-            print('[!!!] Tried to read user id "{}", but {} did not have valid JSON content.'.format(
-                userID, os.path.basename(file.name))
+            print('[!!!] Tried to read user data, but {} did not have valid JSON content.'.format(
+                os.path.basename(file.name))
             )
             return otherwise
         finally:
@@ -177,11 +188,11 @@ class Users:
             content = cls.getUsers()
         user = content[member.id]
 
-        embed = Embed(title='User Details', color=member.top_role.color if isinstance(member, Member) else Color.default())
+        embed = Embed(title='{} Details'.format('Bot' if member.bot else 'User'), color=member.top_role.color if isinstance(member, Member) else Color.default())
         embed.set_author(name=str(member), icon_url=member.avatar_url)
         embed.add_field(name='Account Creation Date', value=str(member.created_at.date()), inline=True)
-        embed.add_field(name='Join Date', value=str(member.joined_at.date()), inline=True)
-        embed.add_field(name='Level | XP', value='{} | {}'.format(user['level'], user['xp']), inline=True)
+        embed.add_field(name='Join Date', value=str(member.joined_at.date()) if isinstance(member, Member) else 'Not on the server.', inline=True)
+        embed.add_field(name='Level | XP', value='N/A' if member.bot else '{} | {}'.format(user['level'], user['xp']), inline=True)
         for punishment in user['punishments']:
             if punishment.get('length', None):
                 embed.add_field(
@@ -244,7 +255,7 @@ class Users:
         user = cls.getUserJSON(userID)
         channelHistory = user['channel_history']
         if channelID:
-            return channelHistory.get(channelID, {'messages': 0, 'attachments': 0})
+            return channelHistory.get(str(channelID), {'messages': 0, 'attachments': 0, 'embeds': 0})
         return channelHistory
 
     @classmethod
@@ -308,7 +319,7 @@ class Users:
         cls.setUserJSON(userID, userJSON)
 
     @classmethod
-    def setUserTimeDND(cls, userID, value):
+    def setUserTimeDND(cfls, userID, value):
         userJSON = cls.getUserJSON(userID)
         userJSON['time_DND'] = value
         cls.setUserJSON(userID, userJSON)
@@ -320,9 +331,9 @@ class Users:
         cls.setUserJSON(userID, userJSON)
 
     @classmethod
-    def setUserChannelHistory(cls, userID, channelID, **kwargs):
+    def setUserChannelHistory(cls, userID, channelID, channelHistory):
         userJSON = cls.getUserJSON(userID)
-        userJSON['channel_history'][channelID] = kwargs
+        userJSON['channel_history'][str(channelID)] = channelHistory
         cls.setUserJSON(userID, userJSON)
 
     @classmethod
@@ -331,9 +342,44 @@ class Users:
         userJSON['punishments'] = punishments
         cls.setUserJSON(userID, userJSON)
 
+SHORT_TIME = re.compile(r'(?P<num>[0-9]+)(?P<char>[smhdwMy])')
+LENGTHS = {
+    's': 1,
+    'm': 60,
+    'h': 3600,
+    'd': 86400,
+    'w': 604800,
+    'M': 2629743,
+    'y': 31556926
+}
+FULL = {
+    's': 'seconds',
+    'm': 'minutes',
+    'h': 'hours',
+    'd': 'days',
+    'w': 'weeks',
+    'M': 'months',
+    'y': 'years'
+}
+def getShortTimeLength(time):
+    match = SHORT_TIME.match(time)
+    if not match:
+        raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')
+    return LENGTHS[match.group('char')] * int(match.group('num'))
+def getShortTimeUnit(time):
+    match = SHORT_TIME.match(time)
+    if not match:
+        raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')
+    return FULL[match.group('char')]
+def getLongTime(time):
+    match = SHORT_TIME.match(time)
+    if not match:
+        raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')
+    return '{} {}'.format(match.group('num'), FULL[match.group('char')])
+
 def getTimeFromSeconds(seconds, oneUnitLimit=False):
-    if int(seconds <= 60):
-        if int(seconds == 60):
+    if int(seconds) <= 60:
+        if int(seconds) == 60:
             return '1 minute'
         else:
             return '{} seconds'.format(int(seconds))
@@ -378,3 +424,9 @@ def createDiscordEmbed(title, description=Embed.Empty, *, multipleFields=False, 
         #embed.set_thumbnail(url=TTR_ICON)
 
     return embed
+
+def getProgressBar(progress, outOf):
+    p = int((progress/outOf) * 10)
+    # Pray this never has to be debugged.
+    progress = '[{}{}]'.format('■' * p, ('  '*(10-p))+(' '*ceil((10-p)/2)))
+    return progress
