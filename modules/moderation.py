@@ -474,6 +474,7 @@ class ModerationModule(Module):
                     await self.client.delete_message(message)
                     await usertracking.on_message_filter(message)
                 else:
+                    await self.client.delete_message(message)
                     await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
                 try:
                     if silentFilter:
