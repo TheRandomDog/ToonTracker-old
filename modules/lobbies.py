@@ -68,6 +68,7 @@ KICK_FAILURE_MISSING_MENTION = 'I need a mention of the user you want to kick fr
 KICK_MESSAGE = "You've been kicked from the **{lobbyName}** lobby."
 KICK_SUCCESS = 'The mentioned user{plural} successfully kicked.'
 
+RSVP_FAILURE_MISSING_ID = 'Please reference the Lobby ID provided to you like this: `~acceptLobbyInvite lobbyid`'
 RSVP_FAILURE_ID = "Sorry, but I didn't recognize that Lobby ID. The Lobby may have been disbanded or the invite may have expired."
 RSVP_FAILURE_OWNER = 'Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~disbandLobby`.'
 RSVP_FAILURE_MEMBER = 'Sorry, but you cannot join another lobby until you have left your own lobby. You can do this by typing `~leaveLobby`.'
@@ -351,6 +352,9 @@ class LobbyManagement(Module):
         async def execute(client, module, message, *args):
             if message.channel.id != module.lobbyChannel and not module.channelIsDM(message.channel) and not module.channelInLobby(message.channel):
                 return
+
+            if not args:
+                return message.author.mention + ' ' + RSVP_FAILURE_MISSING_ID
 
             try:
                 lobby = int(args[0])
