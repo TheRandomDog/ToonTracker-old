@@ -262,14 +262,14 @@ class UserTrackingModule(Module):
         return response
 
     async def handleMsg(self, message):
+        # Definitely don't want to progress if it's a heckin' webhook.
+        if message.webhook_id:
+            return
         # You don't want to progress if there's an exception being made.
         if message.channel.id in self.levelingExceptions or message.author.id in self.levelingExceptions or \
             any([role.id in self.levelingExceptions for role in message.author.roles]):
             return
         if message.channel.id in self.trackingExceptions:
-            return
-        # Definitely don't want to progress if it's a heckin' webhook.
-        if message.webhook_id:
             return
 
         if self.trackMessages:
