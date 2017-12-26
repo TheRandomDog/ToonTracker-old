@@ -32,6 +32,7 @@ CREATION_FAILURE_OWNER = "You own a lobby right now. You'll have to `~disbandLob
 CREATION_FAILURE_MEMBER = "You are in a lobby right now. You'll have to `~leaveLobby` to create a new one."
 CREATION_FAILURE_NAME_LENGTH = 'Your lobby name must be 30 characters or less.'
 CREATION_FAILURE_NAME_MISSING = 'Give your lobby a name!'
+CREATION_FAILURE_NAME_GENERIC = 'Please choose a different name.'
 CREATION_SUCCESS = 'Your lobby has been created!'
 
 INVITATION_FAILURE_MISSING_LOBBY = "You're not in a lobby yourself -- create a lobby before you invite users."
@@ -77,7 +78,13 @@ LEAVE_FAILURE_OWNER = 'You own the **{name}** lobby, meaning you need to use `~d
 
 DISBAND_FAILURE_MEMBER = "You don't own the **{}** lobby, meaning you need to use `~leaveLobby` to part with the group."
 DISBAND_SUCCESS = "You've disbanded your lobby, everyone's free now!"
+DISBAND_SUCCESS_MEMBER = 'The **{}** lobby you were in was disbanded.'
 DISBAND_LOG_SAVE = "Alrighty, will do! I'm just saving you a copy of your chat logs in case you want them in the future, hang on a second..."
+
+FORCE_FAILURE_MISSING_NAME = "Please specify the name of the lobby you wish to disband forcefully. Be sure to use correct spelling."
+FORCE_FAILURE_MISSING_LOBBY = "I don't know any lobbies by the name **{name}**. Be sure to use correct spelling."
+FORCE_SUCCESS = 'The **{}** lobby was forcefully disbanded.'
+FORCE_SUCCESS_OWNER = 'Your **{}** was forcefully disbanded by a moderator. Please make sure your lobby follows all the server and Discord rules.'
 
 FILTER_ENABLE_FAILURE_MODULE = 'The lobby filter cannot be enabled because the `moderation` module has not been loaded.'
 FILTER_ENABLE_FAILURE_ENABLED = 'The lobby filter is already enabled.'
@@ -139,6 +146,7 @@ class LobbyManagement(Module):
 
             moderation = client.requestModule('moderation')
             name = ' '.join(args)
+            print(moderation)
             if moderation:
                 try:
                     filterActivated = await moderation.filterBadWords(message)
@@ -152,6 +160,8 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_LENGTH
             elif not name:
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_MISSING
+            elif module.getLobby(name=name):
+                return message.author.mention + ' ' + CREATION_FAILURE_NAME_GENERIC
 
             category = await client.rTTR.create_category(name='Lobby [{}]'.format(name), reason=auditLogReason)
 
@@ -472,12 +482,16 @@ class LobbyManagement(Module):
                 async with message.channel.typing():
                     chatlog = await module.getChatLog(lobby, savingMessage)
 
+            members = module.getLobbyMembers(lobby, withOwner=False)
+
             auditLogReason = 'User disbanded lobby via ~disbandLobby'
             await lobby.role.delete(reason=auditLogReason)
             await lobby.ownerRole.delete(reason=auditLogReason)
             for channel in lobby.category.channels:
                 await channel.delete(reason=auditLogReason)
             await lobby.category.delete(reason=auditLogReason)
+            for member in members:
+                await client.send_message(member, DISBAND_SUCCESS_MEMBER.format(lobby.customName))
             await client.send_message(module.lobbyChannel if message.channel.id == module.lobbyChannel else message.author, 
                 message.author.mention + ' ' + DISBAND_SUCCESS)
             del module.activeLobbies[lobby.id]
@@ -494,6 +508,53 @@ class LobbyManagement(Module):
                     await client.send_message(message.author, file)
                 await confirmationMessage.edit(content=LOG_CONFIRM_3)
     class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandlobby'
+
+
+    class LobbyForceDisbandCMD(Command):
+        """~forceDisband <lobby name>
+
+            This will disband a user's lobby forcefully.
+        """
+        NAME = 'forceDisband'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            name = ' '.join(args)
+            lobby = module.getLobby(name=name)
+            if not name:
+                return message.author.mention + ' ' + FORCE_FAILURE_MISSING_NAME
+            elif not lobby:
+                return message.author.mention + ' ' + FORCE_FAILURE_MISSING_LOBBY.format(name=name)
+            
+            if lobby.textChannel:
+                #savingMessage = DISBAND_LOG_SAVE
+                #savingMsgObj = await client.send_message(message.channel, savingMessage)
+                async with message.channel.typing():
+                    chatlog = await module.getChatLog(lobby)
+
+            members = module.getLobbyMembers(lobby, withOwner=False)
+            owner = module.getLobbyOwner(lobby)
+
+            auditLogReason = 'Mod disbanded lobby via ~forceDisband'
+            await lobby.role.delete(reason=auditLogReason)
+            await lobby.ownerRole.delete(reason=auditLogReason)
+            for channel in lobby.category.channels:
+                await channel.delete(reason=auditLogReason)
+            await lobby.category.delete(reason=auditLogReason)
+            for member in members:
+                await client.send_message(member, DISBAND_SUCCESS_MEMBER.format(lobby.customName))
+            await client.send_message(owner, FORCE_SUCCESS_OWNER.format(name))
+            await client.send_message(message.channel, message.author.mention + ' ' + FORCE_SUCCESS.format(name))
+            del module.activeLobbies[lobby.id]
+
+            if lobby.textChannel:
+                confirmationMessage = await client.send_message(owner, LOG_CONFIRM_5)
+                async with message.author.typing():
+                    file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
+                    await client.send_message(owner, file)
+                await confirmationMessage.edit(content=LOG_CONFIRM_6)
+    class LobbyForceDisbandCMD_Variant1(LobbyForceDisbandCMD): NAME = 'forcedisband'
 
     class LobbyFilterEnableCMD(Command):
         """~enableFilter
@@ -649,6 +710,10 @@ class LobbyManagement(Module):
             for lobby in self.activeLobbies.values():
                 if kwargs['role'] in (lobby.role, lobby.ownerRole):
                     return lobby
+        elif kwargs.get('name', None):
+            for lobby in self.activeLobbies.values():
+                if lobby.customName.lower() == kwargs['name'].lower():
+                    return lobby
         user = kwargs.get('member', None) or kwargs.get('owner', None)
         if user:
             role = discord.utils.find(lambda r: 'lobby-' in r.name, user.roles)
@@ -657,8 +722,11 @@ class LobbyManagement(Module):
     def getLobbyOwner(self, lobby):
         return discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members)
 
-    def getLobbyMembers(self, lobby):
-        return [member for member in filter(lambda m: lobby.role in m.roles, self.client.rTTR.members)] + [self.getLobbyOwner(lobby)]
+    def getLobbyMembers(self, lobby, withOwner=True):
+        members = [member for member in filter(lambda m: lobby.role in m.roles, self.client.rTTR.members)]
+        if withOwner:
+            members += [self.getLobbyOwner(lobby)]
+        return members
 
     async def handleMsg(self, message):
         if self.channelInLobby(message.channel):
@@ -765,13 +833,13 @@ class LobbyManagement(Module):
             if not lobby.lastVisited and not lobby.expiryWarning and time.mktime(time.gmtime()) - lobby.created >= self.unvisitedExpiryWarningTime:
                 lobby.expiryWarning = time.mktime(time.gmtime())
                 target = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members) if not lobby.textChannel else lobby.textChannel
-                await self.client.send_message(target, BUMP_WARNING_UNVISITED.format(time=getTimeFromSeconds(self.unvisitedExpiryTime))
+                await self.client.send_message(target, BUMP_WARNING_UNVISITED.format(time=getTimeFromSeconds(self.unvisitedExpiryTime, oneUnitLimit=True))
                 )
             # If the lobby was last visited...
             elif lobby.lastVisited and not lobby.expiryWarning and time.mktime(time.gmtime()) - lobby.lastVisited >= self.visitedExpiryWarningTime:
                 lobby.expiryWarning = time.mktime(time.gmtime())
                 target = discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members) if not lobby.textChannel else lobby.textChannel
-                await self.client.send_message(target, BUMP_WARNING_VISITED.format(time=getTimeFromSeconds(self.visitedExpiryTime))
+                await self.client.send_message(target, BUMP_WARNING_VISITED.format(time=getTimeFromSeconds(self.visitedExpiryTime, oneUnitLimit=True))
                 )
             # If the lobby was visited and an expiry warning was sent...
             # OR
@@ -789,7 +857,7 @@ class LobbyManagement(Module):
                         chatlog = await self.getChatLog(lobby, savingMessage)
 
                 auditLogReason = 'Lobby hit expiration date of {}'.format(
-                    getTimeFromSeconds(self.visitedExpiryTime if lobby.lastVisited else self.unvisitedExpiryTime))
+                    getTimeFromSeconds(self.visitedExpiryTime if lobby.lastVisited else self.unvisitedExpiryTime, oneUnitLimit=True))
                 if lobby.textChannel: await lobby.textChannel.delete(reason=auditLogReason)
                 if lobby.voiceChannel: await lobby.voiceChannel.delete(reason=auditLogReason)
                 await lobby.category.delete(reason=auditLogReason)
@@ -815,7 +883,9 @@ class LobbyManagement(Module):
         chatlog = ""
         participants = []
         creator = self.getLobbyOwner(lobby)
-        async for m in lobby.textChannel.history(limit=10000, reverse=True):
+        messages = await lobby.textChannel.history(limit=None).flatten()
+        messages.reverse()
+        for m in messages:
             if savingMessage and m.content == savingMessage:
                 continue
             participant = m.author.name + '#' + m.author.discriminator + (' [BOT]' if m.author.bot else '')

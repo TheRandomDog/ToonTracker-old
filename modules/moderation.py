@@ -178,31 +178,6 @@ async def punishUser(client, module, message, *args, punishment=None, silent=Fal
     await module.scheduleUnbans()
 
 class ModerationModule(Module):
-    class LookupCMD(Command):
-        NAME = 'lookup'
-        RANK = 300
-
-        @staticmethod
-        async def execute(client, module, message, *args):
-            if not message.mentions:
-                if not message.raw_mentions:
-                    try:
-                        user = await client.get_user_info(int(args[0]))
-                    except (ValueError, IndexError, discord.NotFound):
-                        name = ' '.join(args)
-                        user = discord.utils.get(message.guild.members, display_name=name)
-                        user = discord.utils.get(message.guild.members, name=name) if not user else user
-                        if not user:
-                            return 'No known user'
-                else:
-                    try:
-                        user = await client.get_user_info(message.raw_mentions[0])
-                    except discord.NotFound:
-                        return 'No known user'
-            else:
-                user = message.mentions[0]
-            return Users.getUserEmbed(user)
- 
     class AddBadWordCMD(Command):
         NAME = 'addBadWord'
         RANK = 300
@@ -493,9 +468,11 @@ class ModerationModule(Module):
         for word in text.split(' '):
             badWord = await self._testForBadWord(word, text)
             if badWord[1] and self.botspam:
-                await self.client.delete_message(message)
-                if self.client.requestModule('usertracking'):
-                    await self.client.requestModule('usertracking').on_message_filter(message)
+                usertracking = self.client.requestModule('usertracking')
+                if usertracking:
+                    usertracking.filtered.append(message)
+                    await self.client.delete_message(message)
+                    await usertracking.on_message_filter(message)
                 else:
                     await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
                 try:

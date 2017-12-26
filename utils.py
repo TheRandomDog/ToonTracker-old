@@ -5,6 +5,7 @@ import logging
 from __init__ import __version__
 from discord import Embed, Color, Member
 from datetime import datetime
+from math import ceil
 
 # Create config file if it doesn't exist
 try:
@@ -17,7 +18,6 @@ except json.JSONDecodeError:
     f.write('{}')
 finally:
     f.close()
-
 
 # ASSERTIONS
 
@@ -319,7 +319,7 @@ class Users:
         cls.setUserJSON(userID, userJSON)
 
     @classmethod
-    def setUserTimeDND(cls, userID, value):
+    def setUserTimeDND(cfls, userID, value):
         userJSON = cls.getUserJSON(userID)
         userJSON['time_DND'] = value
         cls.setUserJSON(userID, userJSON)
@@ -378,8 +378,8 @@ def getLongTime(time):
     return '{} {}'.format(match.group('num'), FULL[match.group('char')])
 
 def getTimeFromSeconds(seconds, oneUnitLimit=False):
-    if int(seconds <= 60):
-        if int(seconds == 60):
+    if int(seconds) <= 60:
+        if int(seconds) == 60:
             return '1 minute'
         else:
             return '{} seconds'.format(int(seconds))
@@ -424,3 +424,9 @@ def createDiscordEmbed(title, description=Embed.Empty, *, multipleFields=False, 
         #embed.set_thumbnail(url=TTR_ICON)
 
     return embed
+
+def getProgressBar(progress, outOf):
+    p = int((progress/outOf) * 10)
+    # Pray this never has to be debugged.
+    progress = '[{}{}]'.format('■' * p, ('  '*(10-p))+(' '*ceil((10-p)/2)))
+    return progress
