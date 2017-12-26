@@ -394,6 +394,8 @@ class UserTrackingModule(Module):
                 #footer="You can use a punishment's edit ID to ~editReason or ~removePunishment" if Users.getUserPunishments(member.id) else ''
             )
         )
+        self.memberStatusTimeStart[member.id] = time.time()
+
 
     async def on_member_remove(self, member):
         punishments = Users.getUserPunishments(member.id)
