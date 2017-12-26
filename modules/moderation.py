@@ -493,11 +493,11 @@ class ModerationModule(Module):
         for word in text.split(' '):
             badWord = await self._testForBadWord(word, text)
             if badWord[1] and self.botspam:
+                await self.client.delete_message(message)
                 if self.client.requestModule('usertracking'):
                     await self.client.requestModule('usertracking').on_message_filter(message)
                 else:
                     await self.client.send_message(self.botspam, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
-                await self.client.delete_message(message)
                 try:
                     if silentFilter:
                         return True
