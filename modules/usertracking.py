@@ -264,7 +264,7 @@ class UserTrackingModule(Module):
         if message.webhook_id:
             return
         # You don't want to progress if there's an exception being made.
-        if message.channel.id in self.levelingExceptions or message.author.id in self.levelingExceptions or \
+        if message.channel.__class__ == discord.DMChannel or message.channel.id in self.levelingExceptions or message.author.id in self.levelingExceptions or \
             any([role.id in self.levelingExceptions for role in message.author.roles]):
             return
         if message.channel.id in self.trackingExceptions:
