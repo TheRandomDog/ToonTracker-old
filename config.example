@@ -50,6 +50,9 @@
                 ua: The user agent to submit to Reddit.
                 username: Reddit account username.
                 password: Reddit acconut password.
+            React Module (react):
+                interaction: Channel ID where mod interaction is allowed.
+                emotes: Emote IDs that are to be used when reacting to messages.
 
     ",
 

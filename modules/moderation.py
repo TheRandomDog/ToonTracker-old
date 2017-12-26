@@ -184,7 +184,7 @@ class ModerationModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            word = ' '.join(args).strip()
+            word = ' '.join(args).strip().lower()
             if not word:
                 return
 
