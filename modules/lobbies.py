@@ -512,16 +512,21 @@ class LobbyManagement(Module):
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
                 # Ironic, since it shouldn't get here.
+
+            # The number of filter votes needed is the number of users
+            lobby.filterVotesNeeded = int(len(module.getLobbyMembers(lobby)) / 2)
+
             moderation = client.requestModule('moderation')
             if not moderation:
                 return message.author.mention + ' ' + FILTER_ENABLE_FAILURE_MODULE
             elif lobby.filter:
                 return message.author.mention + ' ' + FILTER_ENABLE_FAILURE_ENABLED
+            if len(lobby.filterVotes) >= lobby.filterVotesNeeded:
+                # Just in case users leave the server or lobby, and their votes were the last ones required.
+                pass
             elif message.author in lobby.filterVotes:
                 return message.author.mention + ' ' + FILTER_FAILURE_VOTED
 
-            # The number of filter votes needed is the number of users
-            lobby.filterVotesNeeded = int(len(module.getLobbyMembers(lobby)) / 2)
             lobby.filterVotes.append(message.author)
 
             if len(lobby.filterVotes) >= lobby.filterVotesNeeded:
@@ -531,8 +536,8 @@ class LobbyManagement(Module):
                 return FILTER_ENABLE_SUCCESS
             else:
                 return message.author.mention + ' ' + FILTER_ENABLE_VOTED.format(
-                    count=lobby.filterVotesNeeded - lobby.filterVotes,
-                    plural='** is' if lobby.filterVotesNeeded - lobby.filterVotes == 1 else 's** are'
+                    count=lobby.filterVotesNeeded - len(lobby.filterVotes),
+                    plural='** is' if lobby.filterVotesNeeded - len(lobby.filterVotes) == 1 else 's** are'
                 )
     class LobbyFilterEnableCMD_Variant1(LobbyFilterEnableCMD): NAME = 'enablefilter'
 
@@ -554,8 +559,15 @@ class LobbyManagement(Module):
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
                 # Ironic, since it shouldn't get here.
+
+            # The number of filter votes needed is the number of users
+            lobby.filterVotesNeeded = len(module.getLobbyMembers(lobby))
+
             if not lobby.filter:
                 return message.author.mention + ' ' + FILTER_DISABLE_FAILURE_DISABLED
+            if len(lobby.filterVotes) >= lobby.filterVotesNeeded:
+                # Just in case users leave the server or lobby, and their votes were the last ones required.
+                pass
             elif message.author in lobby.filterVotes:
                 return message.author.mention + ' ' + FILTER_FAILURE_VOTED
 
@@ -595,15 +607,15 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + LOG_NO_TEXT
 
             confirmationMessage = LOG_CONFIRM_1
-            await client.send_message(message.channel, confirmationMessage)
+            confMsgObj = await client.send_message(message.channel, confirmationMessage)
             async with message.channel.typing():
                 chatlog = await module.getChatLog(lobby, confirmationMessage)
 
-            await confirmationMessage.edit(content=LOG_CONFIRM_2)
+            await confMsgObj.edit(content=LOG_CONFIRM_2)
             async with message.author.typing():
                 file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(message.created_at.timestamp())))
                 await client.send_message(message.channel, file)
-            await confirmationMessage.edit(content=LOG_CONFIRM_3)
+            await confMsgObj.edit(content=LOG_CONFIRM_3)
     class LobbyChatLogCMD_Variant1(LobbyChatLogCMD): NAME = 'getchatlog'
     class LobbyChatLogCMD_Variant2(LobbyChatLogCMD): NAME = 'chatlog'
 

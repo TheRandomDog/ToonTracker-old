@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import discord
 import asyncio
 import time
@@ -6,6 +8,11 @@ from clarifai.rest import ClarifaiApp, Image, Video
 from extra.commands import Command, CommandResponse
 from modules.module import Module
 from utils import Config, Users, getShortTimeLength, getLongTime
+
+FILTER_EVASION_CHAR_MAP = str.maketrans(
+    u'ªᵃÀΆΛΑÁɅλАÂÃᴀÄдȺÅĀĂƛĄǍǺǻȀȂȦӐӒӑӓɐɑɒȧȁȃάǎāаăąàáâαãäåǞǠДǟǡßƁɃБВΒҌҌҍҍƀЪЬՅᵇԵѢѣҔҕβʙʚɮɞɓƂϦƃъեыьϐбвƄƅƆƇƈȻȼĆĈСĊČϹʗÇҪҫҀҁϽϾϿͻͼͽćĉᴄċčᶜϲçсς¢ɔɕ©ðƉƊƋƌԀᴅԁժԂԃȡĎĐÐďɖɗđƎЭƏǝεƐᴇƷƸǮǯȜȝƹƺӬӭĒĔЕЗĖĘĚÈɆÉÊΕËȄξȆЀЁԐԑʒʓȨɆΈӖӗӘәᵉӚӛӞӠӟӡɇѐёȩєȅȇēĕэըėҼҽҾҿеęϧěèέЄéêëɘəɚɛɜɝ€ϵ϶£ƒƑƒᶠϜϝʃҒғӺӻʄƓĜĞĠĢǤǦǴԌᵍԍǵǥǧĝɠɡɢפğġģʛցʜʮμʯʰʱĤԊԋԦԧĦʜҢңҤҥȞӴӵНΉнΗћЧЊЋȟцʰчĥђӇӈӉӊӋӌҶիҷҸҹҺһɦɧħЂƖƗĨĪĬĮӏіїİÌΪɪÍӀίϊΙÎΊÏĩᶦȈȊІЇȉȋīſǏǐįıìɨɩɪíîȷʲմïĴᴊʲʝЈԺјɟǰϳĵɈɉĶķĸϏǨǩкӃӄƘκƙᴋќᵏКЌΚҚқҜԞԟҝҞҟҠҡʞʟĹլȽԸԼˡĻʟĽιɬɭĿʅʆŁȴĺļľŀłƚɯᵐΜϺмҦҧМՊӍӎщԠᴍԡϻЩɰɱɲήԮԯɳΝոռИѝЙՌɴԤԥԒԓŃŅŇΏŊƝӢӣӤӥпийлͶͷƞńņňŉמηπŋՈȠחПñⁿҊҋȵÑЛҊҋǸЍϞϟǹƟƠơǾǿÒÓΌÔÕφΘÖŌסŎӦᴏӧӨөӪӫΦθŐǑǪоǬȪȬʘΟϵȮȰОѲѳϘѺѻᵒϙȫϬϭфȭȯδȱόǫǭǒōФϕŏőòóοôσõöՓøØȌȎɵȍȏƤբƥÞþρᴘᵖΡƿԲǷРҎҏϷрϸɊɋԚԛգզԳʠϤϥ®ŔŖҐրґŘгѓЯʳʴʵʶʳɹɺɻɼɽӶӷԻɾɿʀՐՒʁяŕŗřƦȐɌɍȒȑȓƻƼƽƧƨŠʂϨЅϩˢšՏ§ŚŜŞŠȘȿșśŝşѕš†ŢТԎԏҬҭŤᴛтϮϯɫŦţᵗťτŧƫʇʈƬƭƮΤͲͳȾȚȶțƯưƱƲÙÚÛÜŨŪŬŮŰŲǓטɄǕǗǙǛȔȖȕȗǔᴜᵘǖϋՍύǘǚυǜũսūŭՄůűЦΰųùԱúûüʉЏʊƔᴠѴᵛѵѶѷνʋʌʍʷᴡѠѡѿŴԜԝшΨψϢϣωŵШώƜϗϰх×ҲҳχХӼӽΧƳƴӮӯӰӱӲӳÝΫŶŸϒҮүҰұϓϔȲץצУŷýÿγʸɎΎΥЎўʎʏɏɣɤ¥ȳуƵƶŽŹŻŽźżžȤΖʐʑɀȥžՀ',
+    u'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccccccccccccccccccccccccccdddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffgggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiijjjjjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkkkkklllllllllllllllllllllllllmmmmmmmmmmmmmmmmmmmnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooppppppppppppppppppqqqqqqqqqqqrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrssssssssssssssssssssssssssttttttttttttttttttttttttttttttttuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuvvvvvvvvvvwwwwwwwwwwwwwwwwwwwxxxxxxxxxxxyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyzzzzzzzzzzzzzzzzz'
+)
 
 MOD_LOG = Config.getModuleSetting('moderation', 'mod_log', None)
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
@@ -478,11 +485,11 @@ class ModerationModule(Module):
                 return ('PHRASE', badword)
         whole = text.replace(' ', '')
         if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
-            return ('WHOLE', message.content)
+            return ('WHOLE', text)
         return ('', '')
 
     async def filterBadWords(self, message, edited=' ', silentFilter=False):
-        text = message.content
+        text = message.content.translate(FILTER_EVASION_CHAR_MAP)
         for word in text.split(' '):
             badWord = await self._testForBadWord(word, text)
             if badWord[1] and self.botspam:
@@ -504,6 +511,8 @@ class ModerationModule(Module):
 
         for embed in message.embeds:
             for attr in [(embed.title, 'title'), (embed.description, 'description'), (embed.footer, 'footer'), (embed.author, 'author')]:
+                if type(attr[0]) != str:
+                    continue
                 for word in attr[0].split(' '):
                     badWord = await self._testForBadWord(word, attr[0])
                     if badWord[1] and self.botspam:
