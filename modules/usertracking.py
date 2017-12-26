@@ -240,7 +240,6 @@ class UserTrackingModule(Module):
         xp *= multiplier
         print(prevXP, xp, min(25, max(0, xp)))
         Users.setUserXP(member.id, prevXP + min(25, max(0, xp)))
-        await self.client.send_message(message.channel, '[DEBUG] **{} XP** earned'.format(xp))
         self.levelCooldowns[member] = time.time() + self.levelCooldown
 
     def xpNeededForLevel(self, level):
