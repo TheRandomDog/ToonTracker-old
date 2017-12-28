@@ -15,6 +15,7 @@ class Lobby:
         self.voiceChannel = None                    # The voice channel object.
         self.role = None                            # The member role object.
         self.ownerRole = None                       # The owner role object.
+        self.modRole = None                         # The lobby mod role object.
         self.created = time.mktime(time.gmtime())   # The time when the lobby was created, in UTC.
         self.customName = ""                        # The name of the lobby.
         self.invited = []                           # The members that have been invited to the lobby. It is not persistent.
@@ -166,6 +167,9 @@ class LobbyManagement(Module):
 
             category = await client.rTTR.create_category(name='Lobby [{}]'.format(name), reason=auditLogReason)
 
+            discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
+            dmrPos = discordModRole.position
+
             lobby = Lobby()
             lobby.category = category
             lobby.customName = name
@@ -180,12 +184,17 @@ class LobbyManagement(Module):
                 name='lobby-{}'.format(lobby.id),
                 reason=auditLogReason
             )
+            lobby.modRole = await client.rTTR.create_role(
+                name='lobby-{}-mod'.format(lobby.id),
+                reason=auditLogReason
+            )
             await message.author.add_roles(lobby.ownerRole, reason=auditLogReason)
 
             discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
             await category.set_permissions(client.rTTR.default_role, read_messages=False)
-            await category.set_permissions(lobby.ownerRole, read_messages=True)
-            await category.set_permissions(lobby.role, read_messages=True)
+            await category.set_permissions(lobby.ownerRole, read_messages=True, embed_links=True)
+            await category.set_permissions(lobby.role, read_messages=True, embed_links=True)
+            await category.set_permissions(lobby.modRole, send_messages=True, add_reactions=True, speak=True)
             if discordModRole:
                 await category.set_permissions(
                     discordModRole,
@@ -198,6 +207,8 @@ class LobbyManagement(Module):
                     connect=True,
                     speak=False
                 )
+                print('trying to move to position {}'.format(dmrPos + 3))
+                await lobby.modRole.edit(position=dmrPos + 3)
 
             if not voiceChannelOnly:
                 lobby.textChannel = await client.rTTR.create_text_channel(
@@ -379,7 +390,11 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + RSVP_FAILURE_UNINVITED
 
             lobby.invited.remove(message.author.id)
-            await message.author.add_roles(lobby.role, reason='Accepted invite to lobby')
+            discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
+            if discordModRole and discordModRole in message.author.roles:
+                await message.author.add_roles(lobby.modRole, reason='Accepted invite to lobby')
+            else:
+                await message.author.add_roles(lobby.role, reason='Accepted invite to lobby')
             if lobby.textChannel:
                 await lobby.textChannel.send('{} has joined the lobby!'.format(message.author.mention))
 
@@ -420,7 +435,8 @@ class LobbyManagement(Module):
                     failedNotMember.append(user.mention)
                     continue
 
-                await user.remove_roles(lobby.role, reason='Kicked by lobby owner')
+                role = lobby.modRole if lobby.modRole in user.roles else lobby.role
+                await user.remove_roles(role, reason='Kicked by lobby owner')
                 if lobby.textChannel:
                     await lobby.textChannel.send('{} has left the lobby.'.format(user.mention))
                 try:
@@ -458,7 +474,8 @@ class LobbyManagement(Module):
             elif not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
 
-            await message.author.remove_roles(lobby.role, reason='User left lobby via ~leaveLobby')
+            role = lobby.modRole if lobby.modRole in message.author.roles else lobby.role
+            await message.author.remove_roles(role, reason='User left lobby via ~leaveLobby')
             if lobby.textChannel:
                 await lobby.textChannel.send('{} has left the lobby.'.format(message.author.mention))
     class LobbyLeaveCMD_Variant1(LobbyLeaveCMD): NAME = 'leavelobby'
@@ -495,6 +512,7 @@ class LobbyManagement(Module):
             auditLogReason = 'User disbanded lobby via ~disbandLobby'
             await lobby.role.delete(reason=auditLogReason)
             await lobby.ownerRole.delete(reason=auditLogReason)
+            await lobby.modRole.delete(reason=auditLogReason)
             for channel in lobby.category.channels:
                 await channel.delete(reason=auditLogReason)
             await lobby.category.delete(reason=auditLogReason)
@@ -547,6 +565,7 @@ class LobbyManagement(Module):
             auditLogReason = 'Mod disbanded lobby via ~forceDisband'
             await lobby.role.delete(reason=auditLogReason)
             await lobby.ownerRole.delete(reason=auditLogReason)
+            await lobby.modRole.delete(reason=auditLogReason)
             for channel in lobby.category.channels:
                 await channel.delete(reason=auditLogReason)
             await lobby.category.delete(reason=auditLogReason)
@@ -716,7 +735,7 @@ class LobbyManagement(Module):
                     return lobby
         elif kwargs.get('role', None):
             for lobby in self.activeLobbies.values():
-                if kwargs['role'] in (lobby.role, lobby.ownerRole):
+                if kwargs['role'] in (lobby.role, lobby.ownerRole, lobby.modRole):
                     return lobby
         elif kwargs.get('name', None):
             for lobby in self.activeLobbies.values():
@@ -731,7 +750,7 @@ class LobbyManagement(Module):
         return discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members)
 
     def getLobbyMembers(self, lobby, withOwner=True):
-        members = [member for member in filter(lambda m: lobby.role in m.roles, self.client.rTTR.members)]
+        members = [member for member in filter(lambda m: lobby.role in m.roles or lobby.modRole in m.roles, self.client.rTTR.members)]
         if withOwner:
             members += [self.getLobbyOwner(lobby)]
         return members
@@ -771,10 +790,14 @@ class LobbyManagement(Module):
                         lobby.voiceChannel = channel
                 lobby.role = discord.utils.get(self.client.rTTR.roles, name='lobby-{}'.format(category.id))
                 lobby.ownerRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-owner'.format(category.id))
+                lobby.modRole = discord.utils.get(self.client.rTTR.roles, name='lobby-{}-mod'.format(category.id))
                 lobby.created = category.created_at.timestamp()
                 match = re.match(r'Lobby \[(.+)\]', category.name)
                 if match:
                     lobby.customName = match.group(1)
+
+                discordModRole = discord.utils.get(self.client.rTTR.roles, name='Discord Mods')
+                dmrPos = discordModRole.position
 
                 if lobby.textChannel:
                     # Get the last three messages sent in the text channel.
@@ -809,6 +832,7 @@ class LobbyManagement(Module):
                     if lobby.textChannel: await lobby.textChannel.delete(reason=auditLogReason)
                     if lobby.voiceChannel: await lobby.voiceChannel.delete(reason=auditLogReason)
                     if lobby.role: await lobby.role.delete(reason=auditLogReason)
+                    if lobby.modRole: await lobby.modRole.delete(reason=auditLogReason)
                     continue
                 if not lobby.textChannel and not lobby.voiceChannel:
                     print('Lobby {} has no channels assigned to it. Assigning both a text channel and a voice channel...'.format(lobby.id))
@@ -825,11 +849,20 @@ class LobbyManagement(Module):
                     await self.client.send_message(self.getLobbyOwner(lobby), CORRUPTED_CHANNELS)
                 if not lobby.role:
                     print('Lobby {} has no member role assigned to it. One is being created...'.format(lobby.id))
-                    lobby.textChannel = await self.client.rTTR.create_role(
+                    lobby.role = await self.client.rTTR.create_role(
                         name='lobby-{}'.format(lobby.id),
                         reason='Lobby had no member role, so a restore was performed.'
                     )
                     await self.client.send_message(self.getLobbyOwner(lobby), CORRUPTED_ROLE_MEMBER)
+                    dmrPos += 1
+                if not lobby.modRole:
+                    print('Lobby {} has no mod role assigned to it. One is being created...'.format(lobby.id))
+                    lobby.modRole = await self.client.rTTR.create_role(
+                        name='lobby-{}-mod'.format(lobby.id),
+                        reason='Lobby had no mod role, so a restore was performed.'
+                    )
+                    if discordModRole:
+                        await lobby.modRole.edit(position=dmrPos + 1)
 
                 self.activeLobbies[lobby.id] = lobby
         await self.bumpInactiveLobbies()
@@ -870,6 +903,7 @@ class LobbyManagement(Module):
                 if lobby.voiceChannel: await lobby.voiceChannel.delete(reason=auditLogReason)
                 await lobby.category.delete(reason=auditLogReason)
                 await lobby.role.delete(reason=auditLogReason)
+                await lobby.modRole.delete(reason=auditLogReason)
                 await lobby.ownerRole.delete(reason=auditLogReason)
                 inactiveLobbies.append(lobby)
 
