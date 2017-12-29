@@ -536,7 +536,7 @@ class LobbyManagement(Module):
                     await client.send_message(message.author, file)
                 await confirmationMessage.edit(content=LOG_CONFIRM_3)
     class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandlobby'
-
+    class LobbyDisbandCMD_Variant2(LobbyDisbandCMD): NAME = 'disband'
 
     class LobbyForceDisbandCMD(Command):
         """~forceDisband <lobby name>
