@@ -209,6 +209,8 @@ class LobbyManagement(Module):
                 )
                 print('trying to move to position {}'.format(dmrPos + 3))
                 await lobby.modRole.edit(position=dmrPos + 3)
+                if discordModRole in message.author.roles:
+                    await message.author.add_roles(lobby.modRole, reason=auditLogReason)
 
             if not voiceChannelOnly:
                 lobby.textChannel = await client.rTTR.create_text_channel(
@@ -750,7 +752,10 @@ class LobbyManagement(Module):
         return discord.utils.find(lambda m: lobby.ownerRole in m.roles, self.client.rTTR.members)
 
     def getLobbyMembers(self, lobby, withOwner=True):
-        members = [member for member in filter(lambda m: lobby.role in m.roles or lobby.modRole in m.roles, self.client.rTTR.members)]
+        members = [member for member in filter(
+            lambda m: (lobby.role in m.roles or lobby.modRole in m.roles) and not lobby.ownerRole in m.roles, 
+            self.client.rTTR.members
+        )]
         if withOwner:
             members += [self.getLobbyOwner(lobby)]
         return members
