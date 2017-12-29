@@ -48,7 +48,7 @@ INVITATION_FAILURE_PENDING = 'An invite is already pending for these users: '
 INVITATION_FAILURE_JOINED = 'These users are already in the lobby: '
 INVITATION_MESSAGE_1 = "Hey there, {invitee}! {author} has invited you to join their private lobby on the Toontown Rewritten Discord. {filterStatus}" \
                         "\n\nIf you're not interested, you can ignore this message. To accept, {inLobbyInstructions}copy & paste the following:"
-INVITATION_MESSAGE_2 = '`~acceptLobbyInvite {}`'
+INVITATION_MESSAGE_2 = '~acceptLobbyInvite {}'
 INVITATION_MESSAGE_FILTER = 'Note that the bad word filter in this lobby is **disabled**, and you should not accept this invite if you are of a younger age. Anything 18+ will still be moderated.'
 INVITATION_MESSAGE_LEAVE_LOBBY = 'first leave your current lobby with `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* and then '
 INVITATION_SUCCESS = 'Invite{plural} sent!'
