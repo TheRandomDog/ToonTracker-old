@@ -778,6 +778,8 @@ class LobbyManagement(Module):
             lobby.expiryWarning = None
 
     async def restoreSession(self):
+        discordModRole = discord.utils.get(self.client.rTTR.roles, name='Discord Mods')
+        dmrPos = discordModRole.position
         for category in self.client.rTTR.categories:
             if category.name.startswith('Lobby'):
                 lobby = Lobby()
@@ -795,9 +797,6 @@ class LobbyManagement(Module):
                 match = re.match(r'Lobby \[(.+)\]', category.name)
                 if match:
                     lobby.customName = match.group(1)
-
-                discordModRole = discord.utils.get(self.client.rTTR.roles, name='Discord Mods')
-                dmrPos = discordModRole.position
 
                 if lobby.textChannel:
                     # Get the last three messages sent in the text channel.
