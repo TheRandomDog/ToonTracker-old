@@ -853,6 +853,7 @@ class LobbyManagement(Module):
                         reason='Lobby had no member role, so a restore was performed.'
                     )
                     await self.client.send_message(self.getLobbyOwner(lobby), CORRUPTED_ROLE_MEMBER)
+                    await lobby.category.set_permissions(lobby.role, read_messages=True, embed_links=True)
                     dmrPos += 1
                 if not lobby.modRole:
                     print('Lobby {} has no mod role assigned to it. One is being created...'.format(lobby.id))
@@ -860,6 +861,7 @@ class LobbyManagement(Module):
                         name='lobby-{}-mod'.format(lobby.id),
                         reason='Lobby had no mod role, so a restore was performed.'
                     )
+                    await lobby.category.set_permissions(lobby.modRole, send_messages=True, add_reactions=True, speak=True)
                     if discordModRole:
                         await lobby.modRole.edit(position=dmrPos + 1)
 
