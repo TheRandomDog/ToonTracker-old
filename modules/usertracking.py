@@ -157,7 +157,7 @@ class UserTrackingModule(Module):
                 else:
                     namedRoles = ['¯\_(ツ)_/¯']
             else:
-                namedRoles ['¯\_(ツ)_/¯']
+                namedRoles = ['¯\_(ツ)_/¯']
 
             embed = module.createDiscordEmbed(
                 action='Lookup',
