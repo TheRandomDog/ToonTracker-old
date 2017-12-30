@@ -148,13 +148,17 @@ class UserTrackingModule(Module):
                 getProgressBar(xp, module.xpNeededForLevel(level))
             )
             # Get all of the user's roles, highlighting their top role
-            roles = user.roles[1:]
-            roles.reverse()
-            namedRoles = [role.name for role in roles]
-            if namedRoles:
-                namedRoles[0] = '**' + namedRoles[0] + '**'
+            if hasattr(user, 'roles'):
+                roles = user.roles[1:]
+                roles.reverse()
+                namedRoles = [role.name for role in roles]
+                if namedRoles:
+                    namedRoles[0] = '**' + namedRoles[0] + '**'
+                else:
+                    namedRoles = ['¯\_(ツ)_/¯']
             else:
-                namedRoles = ['¯\_(ツ)_/¯']
+                namedRoles ['¯\_(ツ)_/¯']
+
             embed = module.createDiscordEmbed(
                 action='Lookup',
                 primaryInfo=str(user),
