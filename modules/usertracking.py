@@ -148,13 +148,18 @@ class UserTrackingModule(Module):
                 getProgressBar(xp, module.xpNeededForLevel(level))
             )
             # Get all of the user's roles, highlighting their top role
-            roles = user.roles[1:]
-            roles.reverse()
-            namedRoles = [role.name for role in roles]
-            if namedRoles:
-                namedRoles[0] = '**' + namedRoles[0] + '**'
+            if hasattr(user, 'roles'):
+                roles = user.roles[1:]
+                roles.reverse()
+                namedRoles = [role.name for role in roles]
+                if namedRoles:
+                    namedRoles[0] = '**' + namedRoles[0] + '**'
+                else:
+                    namedRoles = ['¯\_(ツ)_/¯']
             else:
+                roles = []
                 namedRoles = ['¯\_(ツ)_/¯']
+
             embed = module.createDiscordEmbed(
                 action='Lookup',
                 primaryInfo=str(user),
@@ -162,7 +167,7 @@ class UserTrackingModule(Module):
                 thumbnail=user.avatar_url,
                 fields=[
                     {'name': 'Account Creation Date', 'value': str(user.created_at.date()), 'inline': True},
-                    {'name': 'Join Date', 'value': str(user.joined_at.date()), 'inline': True},
+                    {'name': 'Join Date', 'value': str(user.joined_at.date()) if hasattr(user, 'joined_at') else 'Not on the server.', 'inline': True},
                     {'name': 'Level / XP', 'value': levelxp, 'inline': True},
                     {
                         'name': 'Roles', 
@@ -238,9 +243,7 @@ class UserTrackingModule(Module):
         prevXP = Users.getUserXP(member.id)
         xp += len(words)
         xp *= multiplier
-        print(prevXP, xp, min(25, max(0, xp)))
         Users.setUserXP(member.id, prevXP + min(25, max(0, xp)))
-        await self.client.send_message(message.channel, '[DEBUG] **{} XP** earned'.format(xp))
         self.levelCooldowns[member] = time.time() + self.levelCooldown
 
     def xpNeededForLevel(self, level):
@@ -266,7 +269,7 @@ class UserTrackingModule(Module):
         if message.webhook_id:
             return
         # You don't want to progress if there's an exception being made.
-        if message.channel.id in self.levelingExceptions or message.author.id in self.levelingExceptions or \
+        if message.channel.__class__ == discord.DMChannel or message.channel.id in self.levelingExceptions or message.author.id in self.levelingExceptions or \
             any([role.id in self.levelingExceptions for role in message.author.roles]):
             return
         if message.channel.id in self.trackingExceptions:
@@ -396,6 +399,8 @@ class UserTrackingModule(Module):
                 #footer="You can use a punishment's edit ID to ~editReason or ~removePunishment" if Users.getUserPunishments(member.id) else ''
             )
         )
+        self.memberStatusTimeStart[member.id] = time.time()
+
 
     async def on_member_remove(self, member):
         punishments = Users.getUserPunishments(member.id)
@@ -456,7 +461,12 @@ class UserTrackingModule(Module):
             self.createDiscordEmbed(
                 action='Filter',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel.mention, message.content),
+                secondaryInfo='{} in {}{}:\n\n{}'.format(
+                    message.author.mention,
+                    '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
+                    message.channel.mention,
+                    message.content
+                ),
                 thumbnail=message.author.avatar_url
            )
         )
@@ -469,13 +479,17 @@ class UserTrackingModule(Module):
             self.createDiscordEmbed(
                 action='Delete',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}:\n\n{}'.format(message.author.mention, message.channel.mention, message.content),
+                secondaryInfo='{} in {}{}:\n\n{}'.format(
+                    message.author.mention,
+                    '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
+                    message.channel.mention,
+                    message.content
+                ),
                 thumbnail=message.author.avatar_url
            )
         )
 
     async def on_member_update(self, before, after):
-        print(self.memberStatusTimeStart)
         if self.trackStatuses and before.status != after.status:
             if before.status == discord.Status.online:
                 Users.setUserTimeOnline(before.id, Users.getUserTimeOnline(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))

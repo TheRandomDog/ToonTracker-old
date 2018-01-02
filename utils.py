@@ -319,7 +319,7 @@ class Users:
         cls.setUserJSON(userID, userJSON)
 
     @classmethod
-    def setUserTimeDND(cfls, userID, value):
+    def setUserTimeDND(cls, userID, value):
         userJSON = cls.getUserJSON(userID)
         userJSON['time_DND'] = value
         cls.setUserJSON(userID, userJSON)
