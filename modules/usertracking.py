@@ -157,6 +157,7 @@ class UserTrackingModule(Module):
                 else:
                     namedRoles = ['¯\_(ツ)_/¯']
             else:
+                roles = []
                 namedRoles = ['¯\_(ツ)_/¯']
 
             embed = module.createDiscordEmbed(
@@ -166,7 +167,7 @@ class UserTrackingModule(Module):
                 thumbnail=user.avatar_url,
                 fields=[
                     {'name': 'Account Creation Date', 'value': str(user.created_at.date()), 'inline': True},
-                    {'name': 'Join Date', 'value': str(user.joined_at.date()), 'inline': True},
+                    {'name': 'Join Date', 'value': str(user.joined_at.date()) if hasattr(user, 'joined_at') else 'Not on the server.', 'inline': True},
                     {'name': 'Level / XP', 'value': levelxp, 'inline': True},
                     {
                         'name': 'Roles', 
