@@ -3,6 +3,7 @@ import asyncio
 import time
 import sys
 from extra.commands import Command, CommandResponse
+from extra.startmessages import Info, Warning, Error
 from importlib import import_module, reload
 from traceback import format_exc
 from inspect import isclass
@@ -360,6 +361,7 @@ class ToonTracker(discord.Client):
             except ValueError:
                 channel = None
 
+        info = []
         warnings = []
         errors = []
 
@@ -414,6 +416,12 @@ class ToonTracker(discord.Client):
                 warnings.append(w)
                 print(w)
                 continue
+            if hasattr(modsmod, 'messages'):
+                for message in modsmod.messages:
+                    if message.__class__ == Info:
+                        info.append('**{} module:**'.format(module) + str(message))
+                    else:
+                        warnings.append('**{} module:** '.format(module) + str(message))
             try:
                 m = modsmod.module(self)
             except Exception as e:
