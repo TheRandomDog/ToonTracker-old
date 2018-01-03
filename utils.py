@@ -95,6 +95,18 @@ class Config:
                 users.append(u)
         return users
 
+    # Convenience method that gets top rank between
+    # both the individual user and their roles.
+    # This takes a Member object, unlike the other Config methods.
+    @classmethod
+    def getRankOfMember(cls, member):
+        if member.__class__ == discord.Member:
+            return max([cls.getRankOfUser(member.id)] + [cls.getRankOfRole(role.id) for role in member.roles])
+        elif member.__class__ == discord.User:
+            return cls.getRankOfUser(member.id)
+        else:
+            raise TypeError('"member" argument should be discord.Member or discord.User')
+
     @classmethod
     def getRoleRanks(cls):
         roleRanks = {int(roleID): rank for roleID, rank in cls.getSetting('role_ranks').items()}
