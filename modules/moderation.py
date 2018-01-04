@@ -396,6 +396,7 @@ class ModerationModule(Module):
         # The user tracking module makes things prettier and consistent for displaying
         # information about users (embeds <3). We can fallback to text, though.
         usertracking = self.client.requestModule('usertracking')
+        modLogEntry = None
         if self.logChannel:
             if not usertracking:
                 modLogEntry = await self.client.send_message(self.logChannel, MOD_LOG_ENTRY.format(
@@ -416,52 +417,56 @@ class ModerationModule(Module):
             'created': time.time(),
             'noticeID': None
         }
-        if nextPunishment == self.WARNING and not silent:
-            try:
-                notice = await self.client.send_message(user, WARNING_MESSAGE.format(user.mention, reason))
-                punishmentEntry['noticeID'] = notice.id
-            except Exception as e:
-                await self.client.send_message(message.author, WARNING_MESSAGE_FAILURE)
-                print('Could not send warning notification message to {}'.format(user.id))
+        if nextPunishment == self.WARNING:
+            if not silent:
+                try:
+                    notice = await self.client.send_message(user, WARNING_MESSAGE.format(user.mention, reason))
+                    punishmentEntry['noticeID'] = notice.id
+                except Exception as e:
+                    await self.client.send_message(message.author, WARNING_MESSAGE_FAILURE)
+                    print('Could not send warning notification message to {}'.format(user.id))
             punishments.append(punishmentEntry)
             Users.setUserPunishments(user.id, punishments)
             if usertracking:
                 await usertracking.on_member_warn(user, punishmentEntry)
-        elif nextPunishment == self.KICK and not silent:                    
-            try:
-                notice = await self.client.send_message(user, KICK_MESSAGE.format(user.mention, reason))
-                punishmentEntry['noticeID'] = notice.id
-            except Exception as e:
-                await self.client.send_message(message.author, KICK_MESSAGE_FAILURE)
-                print('Could not send kick notification message to {}'.format(user.id))
+        elif nextPunishment == self.KICK:
+            if not silent:                   
+                try:
+                    notice = await self.client.send_message(user, KICK_MESSAGE.format(user.mention, reason))
+                    punishmentEntry['noticeID'] = notice.id
+                except Exception as e:
+                    await self.client.send_message(message.author, KICK_MESSAGE_FAILURE)
+                    print('Could not send kick notification message to {}'.format(user.id))
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
                 await self.client.rTTR.kick(user, reason='On behalf of ' + str(message.author))
             except discord.HTTPException:
                 await self.client.send_message(message.author, KICK_FAILURE)
-        elif nextPunishment == 'Temporary Ban' and not silent:
+        elif nextPunishment == self.TEMPORARY_BAN:
             punishmentEntry['endTime'] = time.time() + length
             punishmentEntry['length'] = lengthText
-            try:
-                notice = await self.client.send_message(user, TEMPORARY_BAN_MESSAGE.format(user.mention, lengthText, reason))
-                punishmentEntry['noticeID'] = notice.id
-            except Exception as e:
-                await self.client.send_message(message.author, TEMPORARY_BAN_MESSAGE_FAILURE)
-                print('Could not send temporary ban notification message to {}'.format(user.id))
+            if not silent:
+                try:
+                    notice = await self.client.send_message(user, TEMPORARY_BAN_MESSAGE.format(user.mention, lengthText, reason))
+                    punishmentEntry['noticeID'] = notice.id
+                except Exception as e:
+                    await self.client.send_message(message.author, TEMPORARY_BAN_MESSAGE_FAILURE)
+                    print('Could not send temporary ban notification message to {}'.format(user.id))
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
                 await self.client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
             except discord.HTTPException:
                 await self.client.send_message(message.author, BAN_FAILURE)
-        elif nextPunishment == 'Permanent Ban' and not silent:
-            try:
-                notice = await self.client.send_message(user, PERMANENT_BAN_MESSAGE.format(user.mention, reason))
-                punishmentEntry['noticeID'] = notice.id
-            except Exception as e:
-                await self.client.send_message(message.author, PERMANENT_BAN_MESSAGE_FAILURE)
-                print('Could not send permanent ban notification message to {}'.format(user.id))
+        elif nextPunishment == self.PERMANENT_BAN:
+            if not silent:
+                try:
+                    notice = await self.client.send_message(user, PERMANENT_BAN_MESSAGE.format(user.mention, reason))
+                    punishmentEntry['noticeID'] = notice.id
+                except Exception as e:
+                    await self.client.send_message(message.author, PERMANENT_BAN_MESSAGE_FAILURE)
+                    print('Could not send permanent ban notification message to {}'.format(user.id))
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
