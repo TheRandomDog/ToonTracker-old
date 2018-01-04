@@ -190,8 +190,6 @@ class UserTrackingModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.filtered = []
-
         self.trackMessages = Config.getModuleSetting('usertracking', 'track_messages', True)
         self.trackingExceptions = Config.getModuleSetting('usertracking', 'tracking_exceptions', [])
 
@@ -495,7 +493,7 @@ class UserTrackingModule(Module):
         )
 
     async def on_message_delete(self, message):
-        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message in self.filtered:
+        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or getattr(message, filtered, False):
             return
         await self.client.send_message(
             self.botOutput,

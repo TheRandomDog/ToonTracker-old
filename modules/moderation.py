@@ -530,16 +530,15 @@ class ModerationModule(Module):
 
     async def filterBadWords(self, message, edited=' ', silentFilter=False):
         text = message.content.translate(FILTER_EVASION_CHAR_MAP)
+        usertracking = self.client.requestModule('usertracking')
         for word in text.split(' '):
             badWord = await self._testForBadWord(word, text)
             if badWord[1] and self.spamChannel:
-                usertracking = self.client.requestModule('usertracking')
+                message.filtered = True
+                await self.client.delete_message(message)
                 if usertracking:
-                    usertracking.filtered.append(message)
-                    await self.client.delete_message(message)
                     await usertracking.on_message_filter(message)
                 else:
-                    await self.client.delete_message(message)
                     await self.client.send_message(self.spamChannel, WORD_FILTER_ENTRY.format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
                 try:
                     if silentFilter:
