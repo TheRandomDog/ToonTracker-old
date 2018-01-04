@@ -776,6 +776,23 @@ class LobbyManagement(Module):
                         message.author.mention + ' ' + FILTER_WARNING
                     )
 
+    async def on_message_edit(self, before, after):
+        message = after
+        if self.channelInLobby(message.channel):
+            lobby = self.getLobby(id=message.channel.category.id)
+            lobby.lastVisited = time.mktime(time.gmtime())
+            lobby.expiryWarning = None
+
+            moderation = self.client.requestModule('moderation')
+            if lobby.filter and moderation:
+                filterActivated = await moderation.filterBadWords(message, edited=' edited ', silentFilter=True)
+                if filterActivated and not lobby.filterWarning:
+                    lobby.filterWarning = True
+                    await self.client.send_message(
+                        message.channel, 
+                        message.author.mention + ' ' + FILTER_WARNING
+                    )
+
     async def on_voice_state_update(self, member, before, after):
         if after.channel and self.channelInLobby(after.channel):
             lobby = self.getLobby(id=after.channel.category.id)
