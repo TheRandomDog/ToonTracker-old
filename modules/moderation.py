@@ -167,7 +167,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment='Warning')
+            return await punishUser(client, module, message, *args, punishment=module.WARNING)
 
     class SilentWarnCMD(Command):
         NAME = 'silentWarn'
@@ -175,7 +175,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment='Warning', silent=True)
+            return await punishUser(client, module, message, *args, punishment=module.WARNING, silent=True)
 
     class KickCMD(Command):
         NAME = 'kick'
@@ -183,7 +183,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment='Kick')
+            return await punishUser(client, module, message, *args, punishment=module.KICK)
 
     class SilentKickCMD(Command):
         NAME = 'silentKick'
@@ -191,7 +191,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment='Kick', silent=True)
+            return await punishUser(client, module, message, *args, punishment=module.KICK, silent=True)
 
     class TmpBanCMD(Command):
         NAME = 'tb'
@@ -199,7 +199,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment='Temporary Ban')
+            return await punishUser(client, module, message, *args, punishment=module.TEMPORARY_BAN)
 
     class SilentTmpBanCMD(Command):
         NAME = 'silentTB'
@@ -207,7 +207,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment='Temporary Ban', silent=True)
+            return await punishUser(client, module, message, *args, punishment=module.TEMPORARY_BAN, silent=True)
     class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
         NAME = 'silentTb'
     class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
@@ -219,7 +219,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment='Permanent Ban')
+            return await punishUser(client, module, message, *args, punishment=module.PERMANENT_BAN)
 
     class SilentPermBanCMD(Command):
         NAME = 'silentBan'
@@ -227,7 +227,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment='Permanent Ban', silent=True)
+            return await punishUser(client, module, message, *args, punishment=module.PERMANENT_BAN, silent=True)
 
     class EditPunishReasonCMD(Command):
         NAME = 'editReason'
@@ -501,7 +501,7 @@ class ModerationModule(Module):
     async def scheduleUnbans(self):
         for userID, user in Users.getUsers().items():
             for punishment in user['punishments']:
-                if punishment['type'] == 'Temporary Ban':
+                if punishment['type'] == self.TEMPORARY_BAN:
                     if userID not in self.scheduledUnbans and punishment['endTime'] > time.time():
                         self.scheduledUnbans.append(userID)
                         await self.scheduledUnban(userID, punishment['endTime'])
