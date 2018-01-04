@@ -307,7 +307,7 @@ class LobbyManagement(Module):
                 response += '\n\t' + INVITATION_FAILURE_JOINED + ' '.join(failedJoined)
             if len(failedMessages + failedBot + failedPendingInvite + failedJoined) == len(message.mentions):
                 response = response.replace(INVITATION_FAILURE_PARTIAL, INVITATION_FAILURE_FULL)
-            if response == INVITATION_FAILURE_PARTIAL:
+            elif response == INVITATION_FAILURE_PARTIAL:
                 response = INVITATION_SUCCESS.format(plural='s' if len(message.mentions) > 1 else '')
             else:
                 response += '\n' + INVITATION_SUCCESS_PARTIAL
