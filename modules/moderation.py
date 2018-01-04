@@ -73,12 +73,12 @@ class ModerationModule(Module):
 
             badwords = Config.getModuleSetting('moderation', 'badwords')
             if word in badwords:
-                return '**{}** is already classified as a bad word'.format(word)
+                return module.createDiscordEmbed(info='**{}** is already classified as a bad word'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
             Config.setModuleSetting('moderation', 'badwords', badwords)
             module.words = badwords
 
-            return '**{}** was added as a bad word.'.format(word)
+            return module.createDiscordEmbed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
 
     class RemoveBadWordCMD(Command):
         NAME = 'removeBadWord'
@@ -92,12 +92,12 @@ class ModerationModule(Module):
 
             badwords = Config.getModuleSetting('moderation', 'badwords')
             if word not in badwords:
-                return '**{}** was never a bad word.'.format(word)
+                return module.createDiscordEmbed(info='**{}** was never a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
             Config.setModuleSetting('moderation', 'badwords', badwords)
             module.words = badwords
 
-            return '**{}** was removed from the bad word list.'.format(word)
+            return module.createDiscordEmbed(info='**{}** was removed from the bad word list.'.format(word), color=discord.Color.green())
 
     class AddPluralExceptionCMD(Command):
         NAME = 'addPluralException'
@@ -111,12 +111,12 @@ class ModerationModule(Module):
 
             exc = Config.getModuleSetting('moderation', 'plural_exceptions')
             if word in exc:
-                return '**{}** is already classified as a plural exception.'.format(word)
+                return module.createDiscordEmbed(info='**{}** is already classified as a plural exception.'.format(word), color=discord.Color.dark_orange())
             exc.append(word)
             Config.setModuleSetting('moderation', 'plural_exceptions', exc)
             module.pluralExceptions = exc
 
-            return '**{}** was added as a plural exception.'.format(word)
+            return module.createDiscordEmbed(info='**{}** was added as a plural exception.'.format(word), color=discord.Color.green())
 
     class RemovePluralExceptionCMD(Command):
         NAME = 'removePluralException'
@@ -130,12 +130,12 @@ class ModerationModule(Module):
 
             exc = Config.getModuleSetting('moderation', 'plural_exceptions')
             if word not in exc:
-                return '**{}** was never a plural exception.'.format(word)
+                return module.createDiscordEmbed(info='**{}** was never a plural exception.'.format(word), color=discord.Color.dark_orange())
             exc.remove(word)
             Config.setModuleSetting('moderation', 'plural_exceptions', exc)
             module.pluralExceptions = exc
             
-            return '**{}** was removed from the plural exception list.'.format(word)
+            return module.createDiscordEmbed(info='**{}** was removed from the plural exception list.'.format(word), color=discord.Color.green())
 
     class PunishCMD(Command):
         NAME = 'punish'
