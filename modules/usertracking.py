@@ -43,6 +43,11 @@ class UserTrackingModule(Module):
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
             'title': 'Message Filtered'
         },
+        'Review': {
+            'color': discord.Color.dark_red(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
+            'title': 'Image Review Required'
+        },
         'Delete': {
             'color': discord.Color.blue(),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394684550531383306/deleted3.png',
@@ -467,6 +472,24 @@ class UserTrackingModule(Module):
                     message.channel.mention,
                     message.content
                 ),
+                thumbnail=message.author.avatar_url
+           )
+        )
+
+    # Specifically built for moderation module.
+    async def on_message_review_filter(self, message, rating, url):
+        await self.client.send_message(
+            self.botOutput,
+            self.createDiscordEmbed(
+                action='Review',
+                primaryInfo=str(message.author),
+                secondaryInfo='{} in {}{} **[Rating: {}]**:'.format(
+                    message.author.mention,
+                    '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
+                    message.channel.mention,
+                    rating
+                ),
+                image=url,
                 thumbnail=message.author.avatar_url
            )
         )

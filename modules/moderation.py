@@ -59,7 +59,9 @@ WORD_FILTER_EMBED_ENTRY = "Removed{}message from {} in {}: {}\nThe embed {} cont
 WORD_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
                     "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
                     "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
-
+IMAGE_FILTER_REASON = 'Posting Inappropriate Content [Rating: {}]'
+IMAGE_FILTER_REVIEW = '{} posted an image in {} that has been registered as possibly bad. **[Rating: {}]**\n' \
+                    '*If the image has bad content in it, please act accordingly.*\n{}'
 
 class ModerationModule(Module):
     WARNING = 'Warning'
@@ -323,7 +325,7 @@ class ModerationModule(Module):
             self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
             self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
 
-    async def punishUser(self, user, punishment=None, silent=False):
+    async def punishUser(self, user, punishment=None, length=None, reason=NO_REASON, silent=False):
         member = self.client.rTTR.get_member(user.id)
 
         if user.bot and not self.allowBotPunishments:
@@ -372,7 +374,25 @@ class ModerationModule(Module):
                 priorMessage=message
             )
 
-        try:
+        if length:
+            length = getShortTimeLength(length)
+            lengthText = getLongTime(length)
+            nextPunishment = self.TEMPORARY_BAN  # Just asserts this if we have a time.
+            if not 15 <= length <= 63113852:
+                return CommandResponse(
+                    message.channel,
+                    message.author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
+                    deleteIn=5,
+                    priorMessage=message
+                )
+        else:
+            if nextPunishment == self.TEMPORARY_BAN:
+                lengthText = '24 hours'
+                length = 86400
+            else:
+                lengthText = None
+
+        """try:
             # So, if we're given a time period, regardless of what punish command was used, we'll make it a temporary ban.
             # If there's not a time period provided at the correct argument, it will error out into the except command block.
             length = getShortTimeLength(args[1] if len(args) > 1 else '')
@@ -394,10 +414,7 @@ class ModerationModule(Module):
                 length = 86400
             else:
                 lengthText = None
-            reason = ' '.join(args[1:])
-
-        if not reason:
-            reason = NO_REASON
+            reason = ' '.join(args[1:])"""
 
         # The user tracking module makes things prettier and consistent for displaying
         # information about users (embeds <3). We can fallback to text, though.
@@ -645,30 +662,29 @@ class ModerationModule(Module):
         return rating
 
     async def determineImageRatingAction(self, message, rating, url):
+        usertracking = self.client.requestModule('usertracking')
+
         print(rating)
         if rating > 1.5:
             rating = round(rating, 2)
-            await self.client.ban(message.author)
-            await self.client.send_message(self.nsfwspam, "Banned and removed message with bad image from {} in {}. **[Rating: {}]**" \
-                "\n*If this was a mistake, please unban the user, apologize, and provide a Discord link back to the server.*\n{}".format(
-                    message.author.display_name, message.channel.mention, rating, url))
-            await self.client.send_message(self.spamChannel, "Banned and removed message with bad image from {} in {}. **[Rating: {}]**" \
-                "\nDue to its high rating, the image is located in {}.".format(
-                    message.author.display_name, message.channel.mention, rating, self.client.get_channel(self.nsfwspam).mention))
+            message.filtered = True
+            await self.client.delete_message(message)
+            if usertracking:
+                await usertracking.on_message_filter(message)
+            await self.punishUser(message.author, punishment=self.PERMANENT_BAN, reason=IMAGE_FILTER_REASON.format(rating))
         elif rating > 1:
             rating = round(rating, 2)
+            message.filtered = True
             await self.client.delete_message(message)
-            await self.client.kick(message.author)
-            await self.client.send_message(self.nsfwspam, "Kicked and removed message with bad image from {} in {}. **[Rating: {}]**" \
-                "\n*If this was a mistake, please apologize to the user and provide a Discord link back to the server.*\n{}".format(
-                    message.author.display_name, message.channel.mention, rating, url))
-            await self.client.send_message(self.spamChannel, "Kicked and removed message with bad image from {} in {}. **[Rating: {}]**" \
-                "\nDue to its high rating, the image is located in {}.".format(
-                    message.author.display_name, message.channel.mention, rating, self.client.get_channel(self.nsfwspam).mention))
+            if usertracking:
+                await usertracking.on_message_filter(message)
+            await self.punishUser(message.author, punishment=self.KICK, reason=IMAGE_FILTER_REASON.format(rating))
         elif rating > .5:
             rating = round(rating, 2)
-            await self.client.send_message(self.spamChannel, "{} posted an image in {} that has been registered as possibly bad. " \
-                "**[Rating: {}]**\n*If the image has bad content in it, please act accordingly.*\n{}".format(
+            if usertracking:
+                await usertracking.on_message_review_filter(message, rating, url)
+            else:
+                await self.client.send_message(self.spamChannel, IMAGE_FILTER_REVIEW.format(
                     message.author.mention, message.channel.mention, rating, url))
         # For debug.
         #else:
@@ -678,7 +694,7 @@ class ModerationModule(Module):
     async def handleMsg(self, message):
         if message.channel.id in self.exceptions or message.author.id in self.exceptions or \
             (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
-            (message.author.bot and not self.filterBots) or ((Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])) and not self.filterMods):
+            (message.author.bot and not self.filterBots) or (Config.getRankOfMember(message.author) >= 300 and not self.filterMods):
             return
 
         timeStart = time.time()
