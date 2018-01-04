@@ -458,14 +458,15 @@ class UserTrackingModule(Module):
         )
 
     # Specifically built for moderation module.
-    async def on_message_filter(self, message):
+    async def on_message_filter(self, message, embed=None):
         await self.client.send_message(
             self.botOutput,
             self.createDiscordEmbed(
                 action='Filter',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}{}:\n\n{}'.format(
+                secondaryInfo='{} in{} {}{}:\n\n{}'.format(
                     message.author.mention,
+                    " the {} of an embed in".format(embed) if embed else '',
                     '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
                     message.channel.mention,
                     message.content
