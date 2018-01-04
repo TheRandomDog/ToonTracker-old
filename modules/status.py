@@ -78,7 +78,7 @@ class StatusPermaMsg(PermaMsg):
         title = 'Server Status'
 
         if module.isFirstLoop:
-            msg = module.createDiscordEmbed(title=title, description='Collecting the latest information...', color=Color.light_grey())
+            msg = module.createDiscordEmbed(subtitle=title, info='Collecting the latest information...', color=Color.light_grey())
             return msg
 
         gameMsg = (module.GOOD if module.game else module.UNREACHABLE).format('game server')
@@ -97,7 +97,7 @@ class StatusPermaMsg(PermaMsg):
         color = Color.gold() if (not module.open and not module.banner) or not module.account else color
         color = Color.red() if not module.game else color
 
-        return module.createDiscordEmbed(title=title, description='\n\n'.join(statuses), color=color)
+        return module.createDiscordEmbed(subtitle=title, info='\n\n'.join(statuses), color=color)
 
 # ---------------------------------------------- Module ----------------------------------------------
 

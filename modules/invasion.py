@@ -240,7 +240,7 @@ class InvPermaMsg(PermaMsg):
         title = 'Invasions'
 
         if module.isFirstLoop:
-            msg = module.createDiscordEmbed(title=title, description='Collecting the latest information...', color=Color.light_grey())
+            msg = module.createDiscordEmbed(title=title, info='Collecting the latest information...', color=Color.light_grey())
             return msg
 
         megainvs = []
@@ -257,10 +257,9 @@ class InvPermaMsg(PermaMsg):
 
         if time.time() >= (assertType(module.lastUpdated, int, otherwise=0) + 300):
             desc = 'We\'re experiencing some technical difficulties.\nInvasion tracking will be made reavailable as soon as possible.'
-            msg = module.createDiscordEmbed(title=title, description=desc, color=Color.light_grey())
+            msg = module.createDiscordEmbed(title=title, info=desc, color=Color.light_grey())
             msg.set_footer(text='We apologize for the inconvenience.')
         elif len(invs) > 0:
-            msg = module.createDiscordEmbed(title=title, url=module.route[1], multipleFields=True, color=Color.light_grey())
             cogs = []
             districts = []
             etrs = []
@@ -278,16 +277,16 @@ class InvPermaMsg(PermaMsg):
                     progress.append('[{}{}]'.format('■' * p, ('  '*(10-p))+(' '*ceil((10-p)/2))))
                 cogs.append(inv.cog.plural())
                 districts.append(inv.district)
-            msg.add_field(name="Cog", value='\n'.join(cogs))
-            msg.add_field(name="District", value='\n'.join(districts))
-            if etrs:
-                msg.add_field(name="Time Remaining", value='\n'.join(etrs))
-            else:
-                msg.add_field(name="Progress", value='\n'.join(progress))
+            fields = [
+                {'name': 'Cog', 'value': '\n'.join(cogs)},
+                {'name': 'District', 'value': '\n'.join(districts)},
+                {'name': 'Time Remaining', 'value': '\n'.join(etrs)} if etrs else {'name': 'Progress', 'value': '\n'.join(progress)}
+            ]
+            msg = module.createDiscordEmbed(title=title, titleUrl=module.route[1], color=Color.light_grey(), fields=fields)
         else:
             desc = 'No invasions to report.\nThe last invasion seen was __{} ago__.'.format(
                 getTimeFromSeconds(int(time.time()) - module.droughtStart))
-            msg = module.createDiscordEmbed(title=title, description=desc, color=Color.light_grey())
+            msg = module.createDiscordEmbed(title=title, info=desc, color=Color.light_grey())
         return msg
 
 module = InvasionModule
