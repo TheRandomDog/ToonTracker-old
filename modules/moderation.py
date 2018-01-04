@@ -555,10 +555,14 @@ class ModerationModule(Module):
                 for word in attr[0].split(' '):
                     badWord = await self._testForBadWord(word, attr[0])
                     if badWord[1] and self.spamChannel:
+                        message.filtered = True
                         await self.client.delete_message(message)
-                        await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
-                            edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**'))
-                        )
+                        if usertracking:
+                            await usertracking.on_message_filter(message, embed=attr[1])
+                        else:
+                            await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
+                                edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**'))
+                            )
                         try:
                             if silentFilter:
                                 return True
@@ -571,10 +575,14 @@ class ModerationModule(Module):
                     for word in fieldattr[0].split(' '):
                         badWord = await self._testForBadWord(word, fieldattr[0])
                         if badWord[1] and self.spamChannel:
+                            message.filtered = True
                             await self.client.delete_message(message)
-                            await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
-                                edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**'))
-                            )
+                            if usertracking:
+                                await usertracking.on_message_filter(message, embed=attr[1])
+                            else:
+                                await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
+                                    edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**'))
+                                )
                             try:
                                 if silentFilter:
                                     return True
