@@ -537,7 +537,7 @@ class ModerationModule(Module):
                 message.filtered = True
                 await self.client.delete_message(message)
                 if usertracking:
-                    await usertracking.on_message_filter(message)
+                    await usertracking.on_message_filter(message, word=badWord[1])
                 else:
                     await self.client.send_message(self.spamChannel, WORD_FILTER_ENTRY.format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
                 try:
@@ -558,7 +558,7 @@ class ModerationModule(Module):
                         message.filtered = True
                         await self.client.delete_message(message)
                         if usertracking:
-                            await usertracking.on_message_filter(message, embed=attr[1])
+                            await usertracking.on_message_filter(message, word=badWord[1], embed=attr[1])
                         else:
                             await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
                                 edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**'))
