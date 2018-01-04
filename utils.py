@@ -3,7 +3,7 @@ import re
 import json
 import logging
 from __init__ import __version__
-from discord import Embed, Color, Member
+from discord import Embed, Color, Member, User
 from datetime import datetime
 from math import ceil
 
@@ -100,9 +100,9 @@ class Config:
     # This takes a Member object, unlike the other Config methods.
     @classmethod
     def getRankOfMember(cls, member):
-        if member.__class__ == discord.Member:
+        if member.__class__ == Member:
             return max([cls.getRankOfUser(member.id)] + [cls.getRankOfRole(role.id) for role in member.roles])
-        elif member.__class__ == discord.User:
+        elif member.__class__ == User:
             return cls.getRankOfUser(member.id)
         else:
             raise TypeError('"member" argument should be discord.Member or discord.User')
