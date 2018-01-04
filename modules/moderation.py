@@ -725,7 +725,9 @@ class ModerationModule(Module):
 
     async def on_message_edit(self, before, after):
         message = after
-        if message.channel.id in self.exceptions or message.author.id in self.exceptions or (message.author.bot and not self.filterBots):
+        if message.channel.id in self.exceptions or message.author.id in self.exceptions or \
+            (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
+            (message.author.bot and not self.filterBots) or (Config.getRankOfMember(message.author) >= 300 and not self.filterMods):
             return
 
         # We'll only check for edited-in bad words for right now.
