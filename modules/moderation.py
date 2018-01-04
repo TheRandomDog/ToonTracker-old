@@ -54,6 +54,12 @@ PERMANENT_BAN_MESSAGE = "Hey there, {}.\n\nThis is just to let you know you've b
 TEMPORARY_BAN_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('permanent ban')
 BAN_FAILURE = "Could not ban the user. This is probably bad. You should use Discord's built-in moderation tools to enforce the ban."
 
+WORD_FILTER_ENTRY = 'Removed{}message from {} in {}: {}'
+WORD_FILTER_EMBED_ENTRY = "Removed{}message from {} in {}: {}\nThe embed {} contained: {}"
+WORD_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
+                    "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
+                    "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
+
 
 class ModerationModule(Module):
     WARNING = 'Warning'
@@ -517,14 +523,11 @@ class ModerationModule(Module):
                     await usertracking.on_message_filter(message)
                 else:
                     await self.client.delete_message(message)
-                    await self.client.send_message(self.spamChannel, "Removed{}message from {} in {}: {}".format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
+                    await self.client.send_message(self.spamChannel, WORD_FILTER_ENTRY.format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
                 try:
                     if silentFilter:
                         return True
-                    await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
-                        "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
-                        "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
-                            message.author.mention, badWord[1]))
+                    await self.client.send_message(message.author, WORD_FILTER_MESSAGE.format(message.author.mention, badWord[1]))
                 except discord.HTTPException:
                     pass
                 return True
@@ -537,15 +540,13 @@ class ModerationModule(Module):
                     badWord = await self._testForBadWord(word, attr[0])
                     if badWord[1] and self.spamChannel:
                         await self.client.delete_message(message)
-                        await self.client.send_message(self.spamChannel, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
-                            edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**')))
+                        await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
+                            edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**'))
+                        )
                         try:
                             if silentFilter:
                                 return True
-                            await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
-                                "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
-                                "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
-                                    message.author.mention, badWord[1]))
+                            await self.client.send_message(message.author, WORD_FILTER_MESSAGE.format(message.author.mention, badWord[1]))
                         except discord.HTTPException:
                             pass
                         return True
@@ -555,15 +556,13 @@ class ModerationModule(Module):
                         badWord = await self._testForBadWord(word, fieldattr[0])
                         if badWord[1] and self.spamChannel:
                             await self.client.delete_message(message)
-                            await self.client.send_message(self.spamChannel, "Removed{}message from {} in {}: {}\nThe embed {} contained: {}".format(
-                                edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**')))
+                            await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
+                                edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**'))
+                            )
                             try:
                                 if silentFilter:
                                     return True
-                                await self.client.send_message(message.author, "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
-                                    "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
-                                    "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!".format(
-                                        message.author.mention, badWord[1]))
+                                await self.client.send_message(message.author, WORD_FILTER_ENTRY.format(message.author.mention, badWord[1]))
                             except discord.HTTPException:
                                 pass
                             return True
