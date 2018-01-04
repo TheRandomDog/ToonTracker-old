@@ -154,7 +154,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, reason=' '.join(args[1:]))
+            return await module.punishUser(message.author, reason=' '.join(args[1:]))
 
     class SilentPunishCMD(Command):
         NAME = 'silentPunish'
@@ -162,7 +162,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, reason=' '.join(args[1:]), silent=True)
+            return await module.punishUser(message.author, reason=' '.join(args[1:]), silent=True)
 
     class WarnCMD(Command):
         NAME = 'warn'
@@ -170,7 +170,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.WARNING)
+            return await module.punishUser(message.author, reason=' '.join(args[1:]), punishment=module.WARNING)
 
     class SilentWarnCMD(Command):
         NAME = 'silentWarn'
@@ -178,7 +178,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True)
+            return await module.punishUser(message.author, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True)
 
     class KickCMD(Command):
         NAME = 'kick'
@@ -186,7 +186,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.KICK)
+            return await module.punishUser(message.author, reason=' '.join(args[1:]), punishment=module.KICK)
 
     class SilentKickCMD(Command):
         NAME = 'silentKick'
@@ -194,7 +194,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.KICK, silent=True)
+            return await module.punishUser(message.author, reason=' '.join(args[1:]), punishment=module.KICK, silent=True)
 
     class TmpBanCMD(Command):
         NAME = 'tb'
@@ -202,7 +202,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN)
+            return await module.punishUser(message.author, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN)
 
     class SilentTmpBanCMD(Command):
         NAME = 'silentTB'
@@ -210,7 +210,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, silent=True)
+            return await module.punishUser(message.author, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, silent=True)
     class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
         NAME = 'silentTb'
     class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
@@ -328,22 +328,35 @@ class ModerationModule(Module):
             self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
             self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
 
-    async def punishUser(self, user, punishment=None, length=None, reason=NO_REASON, silent=False):
+    async def punishUser(self, user, punishment=None, length=None, reason=NO_REASON, silent=False, message=None, snowflake=None):
         member = self.client.rTTR.get_member(user.id)
+
+        if message:
+            channel = message.channel
+            author = message.author
+            feedback = message.author.mention
+            priorMessage = message
+            snowflake = message.id
+        else:
+            channel = self.logChannel
+            author = self.client.rTTR.me
+            feedback = self.logChannel
+            priorMessage = None
+            snowflake = snowflake
 
         if user.bot and not self.allowBotPunishments:
             return CommandResponse(
-                message.channel,
-                message.author.mention + ' ' + PUNISH_FAILURE_BOT,
+                channel,
+                author.mention + ' ' + PUNISH_FAILURE_BOT,
                 deleteIn=5,
-                priorMessage=message
+                priorMessage=priorMessage
             )
         if Config.getRankOfMember(user) >= 300 and not self.allowModPunishments:
             return CommandResponse(
-                message.channel,
-                message.author.mention + ' ' + PUNISH_FAILURE_MOD,
+                channel,
+                author.mention + ' ' + PUNISH_FAILURE_MOD,
                 deleteIn=5,
-                priorMessage=message
+                priorMessage=priorMessage
             )
 
         # If a specific punishment isn't provided, use the next level of punishment
@@ -371,10 +384,10 @@ class ModerationModule(Module):
         # nor can we kick them if they aren't on the server.
         if not member and nextPunishment in (self.WARNING, self.KICK):
             return CommandResponse(
-                message.channel, 
-                message.author.mention + ' ' + PUNISH_FAILURE_NONMEMBER,
+                channel, 
+                author.mention + ' ' + PUNISH_FAILURE_NONMEMBER,
                 deleteIn=5,
-                priorMessage=message
+                priorMessage=priorMessage
             )
 
         # In case the reason provided by a command returns an empty string,
@@ -388,10 +401,10 @@ class ModerationModule(Module):
             nextPunishment = self.TEMPORARY_BAN  # Just asserts this if we have a time.
             if not 15 <= length <= 63113852:
                 return CommandResponse(
-                    message.channel,
-                    message.author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
+                    channel,
+                    author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
                     deleteIn=5,
-                    priorMessage=message
+                    priorMessage=priorMessage
                 )
         else:
             try:
@@ -400,10 +413,10 @@ class ModerationModule(Module):
                 nextPunishment = self.TEMPORARY_BAN
                 if not 15 <= length <= 63113852:
                     return CommandResponse(
-                        message.channel,
-                        message.author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
+                        channel,
+                        author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
                         deleteIn=5,
-                        priorMessage=message
+                        priorMessage=priorMessage
                     )
             except ValueError:
                 length = 86400
@@ -417,19 +430,19 @@ class ModerationModule(Module):
             if not usertracking:
                 modLogEntry = await self.client.send_message(self.logChannel, MOD_LOG_ENTRY.format(
                     str(user),
-                    message.author.mention,
+                    author.mention,
                     nextPunishment + (' ({})'.format(lengthText) if lengthText else ''),
-                    NO_REASON_ENTRY.format(self.client.commandPrefix, message.id) if reason == NO_REASON else reason,
-                    message.id
+                    NO_REASON_ENTRY.format(self.client.commandPrefix, snowflake) if reason == NO_REASON else reason,
+                    snowflake
                     )
                 )
 
         punishmentEntry = {
             'type': nextPunishment,
-            'mod': message.author.id,
+            'mod': author.id,
             'reason': reason,
             'modLogEntryID': modLogEntry.id if modLogEntry else None,
-            'editID': message.id,
+            'editID': snowflake,
             'created': time.time(),
             'noticeID': None
         }
@@ -439,7 +452,7 @@ class ModerationModule(Module):
                     notice = await self.client.send_message(user, WARNING_MESSAGE.format(user.mention, reason))
                     punishmentEntry['noticeID'] = notice.id
                 except Exception as e:
-                    await self.client.send_message(message.author, WARNING_MESSAGE_FAILURE)
+                    await self.client.send_message(author, WARNING_MESSAGE_FAILURE)
                     print('Could not send warning notification message to {}'.format(user.id))
             punishments.append(punishmentEntry)
             Users.setUserPunishments(user.id, punishments)
@@ -451,14 +464,14 @@ class ModerationModule(Module):
                     notice = await self.client.send_message(user, KICK_MESSAGE.format(user.mention, reason))
                     punishmentEntry['noticeID'] = notice.id
                 except Exception as e:
-                    await self.client.send_message(message.author, KICK_MESSAGE_FAILURE)
+                    await self.client.send_message(author, KICK_MESSAGE_FAILURE)
                     print('Could not send kick notification message to {}'.format(user.id))
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.kick(user, reason='On behalf of ' + str(message.author))
+                await self.client.rTTR.kick(user, reason='On behalf of ' + str(author))
             except discord.HTTPException:
-                await self.client.send_message(message.author, KICK_FAILURE)
+                await self.client.send_message(author, KICK_FAILURE)
         elif nextPunishment == self.TEMPORARY_BAN:
             punishmentEntry['endTime'] = time.time() + length
             punishmentEntry['length'] = lengthText
@@ -467,28 +480,28 @@ class ModerationModule(Module):
                     notice = await self.client.send_message(user, TEMPORARY_BAN_MESSAGE.format(user.mention, lengthText, reason))
                     punishmentEntry['noticeID'] = notice.id
                 except Exception as e:
-                    await self.client.send_message(message.author, TEMPORARY_BAN_MESSAGE_FAILURE)
+                    await self.client.send_message(author, TEMPORARY_BAN_MESSAGE_FAILURE)
                     print('Could not send temporary ban notification message to {}'.format(user.id))
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
+                await self.client.rTTR.ban(user, reason='On behalf of ' + str(author))
             except discord.HTTPException:
-                await self.client.send_message(message.author, BAN_FAILURE)
+                await self.client.send_message(author, BAN_FAILURE)
         elif nextPunishment == self.PERMANENT_BAN:
             if not silent:
                 try:
                     notice = await self.client.send_message(user, PERMANENT_BAN_MESSAGE.format(user.mention, reason))
                     punishmentEntry['noticeID'] = notice.id
                 except Exception as e:
-                    await self.client.send_message(message.author, PERMANENT_BAN_MESSAGE_FAILURE)
+                    await self.client.send_message(author, PERMANENT_BAN_MESSAGE_FAILURE)
                     print('Could not send permanent ban notification message to {}'.format(user.id))
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.ban(user, reason='On behalf of ' + str(message.author))
+                await self.client.rTTR.ban(user, reason='On behalf of ' + str(author))
             except discord.HTTPException:
-                await self.client.send_message(message.author, BAN_FAILURE)
+                await self.client.send_message(author, BAN_FAILURE)
         await module.scheduleUnbans()
 
     async def scheduleUnbans(self):
