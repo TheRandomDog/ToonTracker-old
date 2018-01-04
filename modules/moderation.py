@@ -154,7 +154,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args)
+            return await punishUser(message.author, reason=' '.join(args[1:]))
 
     class SilentPunishCMD(Command):
         NAME = 'silentPunish'
@@ -162,7 +162,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, silent=True)
+            return await punishUser(message.author, reason=' '.join(args[1:]), silent=True)
 
     class WarnCMD(Command):
         NAME = 'warn'
@@ -170,7 +170,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment=module.WARNING)
+            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.WARNING)
 
     class SilentWarnCMD(Command):
         NAME = 'silentWarn'
@@ -178,7 +178,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment=module.WARNING, silent=True)
+            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True)
 
     class KickCMD(Command):
         NAME = 'kick'
@@ -186,7 +186,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment=module.KICK)
+            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.KICK)
 
     class SilentKickCMD(Command):
         NAME = 'silentKick'
@@ -194,7 +194,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment=module.KICK, silent=True)
+            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.KICK, silent=True)
 
     class TmpBanCMD(Command):
         NAME = 'tb'
@@ -202,7 +202,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment=module.TEMPORARY_BAN)
+            return await punishUser(message.author, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN)
 
     class SilentTmpBanCMD(Command):
         NAME = 'silentTB'
@@ -210,7 +210,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment=module.TEMPORARY_BAN, silent=True)
+            return await punishUser(message.author, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, silent=True)
     class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
         NAME = 'silentTb'
     class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
@@ -222,7 +222,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment=module.PERMANENT_BAN)
+            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN)
 
     class SilentPermBanCMD(Command):
         NAME = 'silentBan'
@@ -230,7 +230,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(client, module, message, *args, punishment=module.PERMANENT_BAN, silent=True)
+            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True)
 
     class EditPunishReasonCMD(Command):
         NAME = 'editReason'
@@ -377,6 +377,11 @@ class ModerationModule(Module):
                 priorMessage=message
             )
 
+        # In case the reason provided by a command returns an empty string,
+        # rather than the method argument default of NO_REASON.
+        if not reason:
+            reason = NO_REASON
+
         if length:
             length = getShortTimeLength(length)
             lengthText = getLongTime(length)
@@ -389,35 +394,20 @@ class ModerationModule(Module):
                     priorMessage=message
                 )
         else:
-            if nextPunishment == self.TEMPORARY_BAN:
-                lengthText = '24 hours'
+            try:
+                length = getShortTimeLength(reason.split(' ')[0])
+                lengthText = getLongTime(reason.split(' ')[0])
+                nextPunishment = self.TEMPORARY_BAN
+                if not 15 <= length <= 63113852:
+                    return CommandResponse(
+                        message.channel,
+                        message.author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
+                        deleteIn=5,
+                        priorMessage=message
+                    )
+            except ValueError:
                 length = 86400
-            else:
-                lengthText = None
-
-        """try:
-            # So, if we're given a time period, regardless of what punish command was used, we'll make it a temporary ban.
-            # If there's not a time period provided at the correct argument, it will error out into the except command block.
-            length = getShortTimeLength(args[1] if len(args) > 1 else '')
-            lengthText = getLongTime(args[1] if len(args) > 1 else '')
-            nextPunishment = self.TEMPORARY_BAN
-            if not 15 <= length <= 63113852:
-                return CommandResponse(
-                    message.channel,
-                    message.author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
-                    deleteIn=5,
-                    priorMessage=message
-                )
-            reason = ' '.join(args[2:])
-        except ValueError:
-            # If the command provided to us was for a temporary ban and we didn't get a length, we'll default to 24 hours.
-            # If it's not a temporary ban it doesn't matter.
-            if nextPunishment == self.TEMPORARY_BAN:
                 lengthText = '24 hours'
-                length = 86400
-            else:
-                lengthText = None
-            reason = ' '.join(args[1:])"""
 
         # The user tracking module makes things prettier and consistent for displaying
         # information about users (embeds <3). We can fallback to text, though.
