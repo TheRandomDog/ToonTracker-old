@@ -26,6 +26,7 @@ FILTER_EVASION_CHAR_MAP = str.maketrans(
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
 NO_REASON_MOD = 'No reason yet.'
 NO_REASON_ENTRY = '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'
+NO_REASON_ENTRY_REGEX = r'\*No reason yet\. Please add one with `.+` as soon as possible\.\*'
 MOD_LOG_ENTRY = '**User:** {}\n**Mod:** {}\n**Punishment:** {}\n**Reason:** {}\n**Edit ID:** {}'
 
 PUNISH_FAILURE_BOT = "You cannot punish a bot user. Please use Discord's built-in moderation tools."
@@ -257,7 +258,7 @@ class ModerationModule(Module):
                                 editedMessage = modLogEntryMessage.content
                                 if mod.id != message.author.id:
                                     editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(mod.id), '**Mod:** <@!{}> (edited by <@!{}>)'.format(mod.id, message.author.id))
-                                editedMessage = re.sub(r'\*No reason yet\. Please add one with `.+` as soon as possible\.\*', newReason, editedMessage)
+                                editedMessage = re.sub(NO_REASON_ENTRY_REGEX, newReason, editedMessage)
                                 await modLogEntryMessage.edit(content=editedMessage)
                         if punishment['noticeID']:
                             user = await client.get_user_info(userID)
