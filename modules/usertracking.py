@@ -196,6 +196,7 @@ class UserTrackingModule(Module):
         self.memberStatusTimeStart = {member.id: time.time() for member in client.rTTR.members}
         self.trackStatuses = Config.getModuleSetting('usertracking', 'track_statuses', True)
 
+        self.auditLogEntries = {}
         self.levelCooldowns = {}
         self.levelCooldown = assertType(Config.getModuleSetting('usertracking', 'level_cooldown'), int, otherwise=5)
         self.levelCap = assertType(Config.getModuleSetting('usertracking', 'level_cap'), int, otherwise=-1)
@@ -422,8 +423,7 @@ class UserTrackingModule(Module):
                     )
                 }]
         async for entry in self.client.rTTR.audit_logs(limit=1, action=discord.AuditLogAction.kick):
-            print(entry.created_at, datetime.utcnow(), datetime.utcnow() - timedelta(seconds=10))
-            if entry.target.id == member.id and entry.created_at >= datetime.utcnow() - timedelta(seconds=10):
+            if entry.target.id == member.id and entry.created_at >= datetime.utcnow() - timedelta(seconds=2):
                 action = 'Kick'
                 footer={'text': 'Kick performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
         modLogEntry = await self.client.send_message(
@@ -506,6 +506,19 @@ class UserTrackingModule(Module):
     async def on_message_delete(self, message):
         if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce == 'filter':
             return
+        footer = {}
+        async for entry in self.client.rTTR.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
+            # Discord Audit Logs will clump together deleted messages, saying "MOD deleted X message(s) from USER in TARGET"
+            # It will still keep the creation date of the entry though, which could be as stale as a few minutes.
+            #
+            # So if it's not an entry made within 2 seconds, just verify the message being deleted is in the same channel
+            # and by the same user and we can assume that if the count is more than 1 that it was deleted by someone else.
+            # The best we can do right now.
+            prevDeletionCount = self.auditLogEntries.get(entry.id, 0)
+            if entry.created_at >= datetime.utcnow() - timedelta(seconds=2) or \
+              (entry.extra.channel == message.channel and entry.target == message.author and entry.extra.count > prevDeletionCount):
+                footer={'text': 'Message deleted by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
+            self.auditLogEntries[entry.id] = entry.extra.count
         await self.client.send_message(
             self.botOutput,
             self.createDiscordEmbed(
@@ -517,7 +530,8 @@ class UserTrackingModule(Module):
                     message.channel.mention,
                     message.content
                 ),
-                thumbnail=message.author.avatar_url
+                thumbnail=message.author.avatar_url,
+                footer=footer
            )
         )
 
