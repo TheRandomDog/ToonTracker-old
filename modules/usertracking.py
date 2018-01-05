@@ -504,7 +504,7 @@ class UserTrackingModule(Module):
         )
 
     async def on_message_delete(self, message):
-        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or getattr(message, 'filtered', False):
+        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce == 'filter':
             return
         await self.client.send_message(
             self.botOutput,

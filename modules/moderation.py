@@ -604,7 +604,7 @@ class ModerationModule(Module):
         for word in text.split(' '):
             badWord = await self._testForBadWord(word, text)
             if badWord[1] and self.spamChannel:
-                message.filtered = True
+                message.nonce = 'filter'  # We're taking this variable because discord.py said it was nonimportant and it won't let me add any more custom attributes.
                 await self.client.delete_message(message)
                 if usertracking:
                     await usertracking.on_message_filter(message, word=badWord[1])
@@ -625,7 +625,7 @@ class ModerationModule(Module):
                 for word in attr[0].split(' '):
                     badWord = await self._testForBadWord(word, attr[0])
                     if badWord[1] and self.spamChannel:
-                        message.filtered = True
+                        message.nonce = 'filter'
                         await self.client.delete_message(message)
                         if usertracking:
                             await usertracking.on_message_filter(message, word=badWord[1], embed=attr[1])
@@ -645,7 +645,7 @@ class ModerationModule(Module):
                     for word in fieldattr[0].split(' '):
                         badWord = await self._testForBadWord(word, fieldattr[0])
                         if badWord[1] and self.spamChannel:
-                            message.filtered = True
+                            message.nonce = 'filter'
                             await self.client.delete_message(message)
                             if usertracking:
                                 await usertracking.on_message_filter(message, embed=attr[1])
