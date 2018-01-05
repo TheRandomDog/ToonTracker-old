@@ -26,7 +26,6 @@ FILTER_EVASION_CHAR_MAP = str.maketrans(
 )
 
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
-NO_REASON_MOD = 'No reason yet.'
 NO_REASON_ENTRY = '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'
 NO_REASON_ENTRY_REGEX = r'\*No reason yet\. Please add one with `.+` as soon as possible\.\*'
 MOD_LOG_ENTRY = '**User:** {}\n**Mod:** {}\n**Punishment:** {}\n**Reason:** {}\n**Edit ID:** {}'
@@ -154,83 +153,132 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await module.punishUser(message.author, reason=' '.join(args[1:]))
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await module.punishUser(user, reason=' '.join(args[1:]), message=message)
 
-    class SilentPunishCMD(Command):
+        @classmethod
+        async def getUserInPunishCMD(cls, client, message):
+            if not message.mentions:
+                if not message.raw_mentions:
+                    try:
+                        user = await client.get_user_info(int(args[0]))
+                    except (ValueError, IndexError):
+                        return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                    except discord.NotFound:
+                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, args[0]), deleteIn=5, priorMessage=message)
+                else:
+                    try:
+                        user = await client.get_user_info(message.raw_mentions[0])
+                    except discord.NotFound:
+                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)   
+            else:
+                user = message.mentions[0]
+            return user
+
+    class SilentPunishCMD(PunishCMD):
         NAME = 'silentPunish'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await module.punishUser(message.author, reason=' '.join(args[1:]), silent=True)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await module.punishUser(user, reason=' '.join(args[1:]), silent=True, message=message)
 
-    class WarnCMD(Command):
+    class WarnCMD(PunishCMD):
         NAME = 'warn'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await module.punishUser(message.author, reason=' '.join(args[1:]), punishment=module.WARNING)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
 
-    class SilentWarnCMD(Command):
+    class SilentWarnCMD(PunishCMD):
         NAME = 'silentWarn'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await module.punishUser(message.author, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
 
-    class KickCMD(Command):
+    class KickCMD(PunishCMD):
         NAME = 'kick'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await module.punishUser(message.author, reason=' '.join(args[1:]), punishment=module.KICK)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
 
-    class SilentKickCMD(Command):
+    class SilentKickCMD(PunishCMD):
         NAME = 'silentKick'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await module.punishUser(message.author, reason=' '.join(args[1:]), punishment=module.KICK, silent=True)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
 
-    class TmpBanCMD(Command):
+    class TmpBanCMD(PunishCMD):
         NAME = 'tb'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await module.punishUser(message.author, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await module.punishUser(user, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, message=message)
 
-    class SilentTmpBanCMD(Command):
+    class SilentTmpBanCMD(PunishCMD):
         NAME = 'silentTB'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await module.punishUser(message.author, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, silent=True)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await module.punishUser(user, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, silent=True, message=message)
     class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
         NAME = 'silentTb'
     class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
         NAME = 'silenttb'
 
-    class PermBanCMD(Command):
+    class PermBanCMD(PunishCMD):
         NAME = 'ban'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, message=message)
 
-    class SilentPermBanCMD(Command):
+    class SilentPermBanCMD(PunishCMD):
         NAME = 'silentBan'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            return await punishUser(message.author, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True)
+            user = await cls.getUserInPunishCMD(client, message)
+            if user.__class__ == CommandResponse:
+                return user
+            return await punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
 
     class EditPunishReasonCMD(Command):
         NAME = 'editReason'
@@ -253,15 +301,31 @@ class ModerationModule(Module):
                 for punishment in userData['punishments']:
                     if punishment['editID'] == int(args[0]):
                         somethingChanged = True
+                        print(punishment)
                         if punishment['modLogEntryID']:
-                            modLogEntryMessage = await client.get_channel(MOD_LOG).get_message(punishment['modLogEntryID'])
+                            modLogEntryMessage = await client.get_channel(module.logChannel).get_message(punishment['modLogEntryID'])
+                            print(modLogEntryMessage)
+
+                            # User Tracking
                             if modLogEntryMessage:
-                                mod = modLogEntryMessage.mentions[0]
-                                editedMessage = modLogEntryMessage.content
-                                if mod.id != message.author.id:
-                                    editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(mod.id), '**Mod:** <@!{}> (edited by <@!{}>)'.format(mod.id, message.author.id))
-                                editedMessage = re.sub(NO_REASON_ENTRY_REGEX, newReason, editedMessage)
-                                await modLogEntryMessage.edit(content=editedMessage)
+                                if modLogEntryMessage.embeds:
+                                    modLogEntryEmbed = modLogEntryMessage.embeds[0]
+                                    print(modLogEntryEmbed)
+                                    editedMessage = modLogEntryEmbed.fields[0].value
+                                    print(editedMessage)
+                                    if str(message.author.id) not in editedMessage:
+                                        editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(mod.id), '**Mod:** <@!{}> (edited by <@!{}>)'.format(mod.id, message.author.id))
+                                    editedMessage = re.sub(NO_REASON_ENTRY_REGEX, newReason, editedMessage)
+                                    print(editedMessage)
+                                    modLogEntryEmbed.set_field_at(0, name=modLogEntryEmbed.fields[0].name, value=editedMessage)
+                                    await modLogEntryMessage.edit(embed=modLogEntryEmbed)
+                                else:
+                                    mod = modLogEntryMessage.mentions[0]
+                                    editedMessage = modLogEntryMessage.content
+                                    if mod.id != message.author.id:
+                                        editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(mod.id), '**Mod:** <@!{}> (edited by <@!{}>)'.format(mod.id, message.author.id))
+                                    editedMessage = re.sub(NO_REASON_ENTRY_REGEX, newReason, editedMessage)
+                                    await modLogEntryMessage.edit(content=editedMessage)
                         if punishment['noticeID']:
                             user = await client.get_user_info(userID)
                             if not user.dm_channel:
@@ -502,7 +566,7 @@ class ModerationModule(Module):
                 await self.client.rTTR.ban(user, reason='On behalf of ' + str(author))
             except discord.HTTPException:
                 await self.client.send_message(author, BAN_FAILURE)
-        await module.scheduleUnbans()
+        await self.scheduleUnbans()
 
     async def scheduleUnbans(self):
         for userID, user in Users.getUsers().items():
@@ -684,14 +748,14 @@ class ModerationModule(Module):
             await self.client.delete_message(message)
             if usertracking:
                 await usertracking.on_message_filter(message)
-            await self.punishUser(message.author, punishment=self.PERMANENT_BAN, reason=IMAGE_FILTER_REASON.format(rating))
+            await self.punishUser(message.author, punishment=self.PERMANENT_BAN, reason=IMAGE_FILTER_REASON.format(rating), snowflake=message.id)
         elif rating > 1:
             rating = round(rating, 2)
             message.filtered = True
             await self.client.delete_message(message)
             if usertracking:
                 await usertracking.on_message_filter(message)
-            await self.punishUser(message.author, punishment=self.KICK, reason=IMAGE_FILTER_REASON.format(rating))
+            await self.punishUser(message.author, punishment=self.KICK, reason=IMAGE_FILTER_REASON.format(rating), snowflake=message.id)
         elif rating > .5:
             rating = round(rating, 2)
             if usertracking:

@@ -9,7 +9,7 @@ from modules.module import Module
 from utils import Config, Users, assertType, getTimeFromSeconds, getProgressBar
 
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
-NO_REASON_MOD = 'No reason yet.'
+NO_REASON_ENTRY = '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'
 
 class UserTrackingModule(Module):
     ACTIONS = {
@@ -344,7 +344,7 @@ class UserTrackingModule(Module):
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['editID'])),
                         punishment['editID']
                     )
                 }]
@@ -404,11 +404,11 @@ class UserTrackingModule(Module):
         )
         self.memberStatusTimeStart[member.id] = time.time()
 
-
     async def on_member_remove(self, member):
         punishments = Users.getUserPunishments(member.id)
         action = 'Leave'
         fields = []
+        punishment = None
         if punishments:
             punishment = punishments[-1]
             if time.time() - punishment['created'] < 10:
@@ -417,7 +417,7 @@ class UserTrackingModule(Module):
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['editID'])),
                         punishment['editID']
                     )
                 }]
@@ -426,7 +426,7 @@ class UserTrackingModule(Module):
             if entry.target.id == member.id and entry.created_at >= datetime.utcnow() - timedelta(seconds=10):
                 action = 'Kick'
                 footer={'text': 'Kick performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
-        await self.client.send_message(
+        modLogEntry = await self.client.send_message(
             self.botOutput,
             self.createDiscordEmbed(
                 action=action,
@@ -436,10 +436,15 @@ class UserTrackingModule(Module):
                 footer=footer if action == 'Kick' else ''
            )
         )
+        if punishment:
+            punishment['modLogEntryID'] = modLogEntry.id
+        punishments[-1] = punishment
+        print(punishment)
+        Users.setUserPunishments(member.id, punishments)
 
     # Specifically built for moderation module.
     async def on_member_warn(self, member, punishment):
-        await self.client.send_message(
+        modLogEntry = await self.client.send_message(
             self.botOutput,
             self.createDiscordEmbed(
                 action='Warn',
@@ -450,12 +455,17 @@ class UserTrackingModule(Module):
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['editID'])),
                         punishment['editID']
                     )
                 }]
            )
         )
+        print(modLogEntry)
+        punishment['modLogEntryID'] = modLogEntry.id
+        punishments = Users.getUserPunishments(member.id)
+        punishments[-1] = punishment
+        Users.setUserPunishments(member.id, punishments)
 
     # Specifically built for moderation module.
     async def on_message_filter(self, message, word=None, embed=None):
@@ -494,7 +504,7 @@ class UserTrackingModule(Module):
         )
 
     async def on_message_delete(self, message):
-        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or getattr(message, filtered, False):
+        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or getattr(message, 'filtered', False):
             return
         await self.client.send_message(
             self.botOutput,

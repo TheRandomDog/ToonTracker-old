@@ -35,7 +35,7 @@ class ToonTracker(discord.Client):
             To get to the client instance, use `TT`.
         """
         NAME = 'eval'
-        RANK = 500
+        RANK = 450
 
         @staticmethod
         async def execute(client, module, message, *args):
