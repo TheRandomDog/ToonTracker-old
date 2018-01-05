@@ -583,23 +583,26 @@ class ModerationModule(Module):
         await self.client.rTTR.unban(user, reason='The user\'s temporary ban expired.')
         self.scheduledUnbans.remove(userID)
 
-    async def _testForBadWord(self, word, text):
-        if word.lower() == "he'll": return ('', '')  # I'll get rid of this someday.
-        elif word.lower() == "who're": return ('', '')  # This one too.
+    async def _testForBadWord(self, evadedWord, text):
+        word = evadedWord.translate(FILTER_EVASION_CHAR_MAP)
+        if word.lower() == "he'll": return ('', '', '')  # I'll get rid of this someday.
+        elif word.lower() == "who're": return ('', '', '')  # This one too.
 
         word = re.sub(r'\W+', '', word)
         if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
-            return ('DIRECT', word)
+            return ('DIRECT', word, evadedWord)
+        whole = text.translate(FILTER_EVASION_CHAR_MAP)
         for badword in self.words:
-            if ' ' in badword and (badword == text.lower() or badword.rstrip('s').rstrip('e') == text.lower() or (text.lower().startswith(badword) and badword + ' ' in text.lower()) or (text.lower().endswith(badword) and ' ' + badword in text.lower()) or ' ' + badword + ' ' in text.lower()):
-                return ('PHRASE', badword)
-        whole = text.replace(' ', '')
+            if ' ' in badword and (badword == whole.lower() or badword.rstrip('s').rstrip('e') == whole.lower() or (whole.lower().startswith(badword) and badword + ' ' in whoe.lower()) or (whole.lower().endswith(badword) and ' ' + badword in whole.lower()) or ' ' + badword + ' ' in whole.lower()):
+                return ('PHRASE', badword, '')
+        whole = text.translate(FILTER_EVASION_CHAR_MAP).replace(' ', '')
         if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
-            return ('WHOLE', text)
-        return ('', '')
+            return ('WHOLE', whole, text)
+        return ('', '', '')
 
     async def filterBadWords(self, message, edited=' ', silentFilter=False):
-        text = message.content.translate(FILTER_EVASION_CHAR_MAP)
+        text = message.content
+        #text = message.content.translate(FILTER_EVASION_CHAR_MAP)
         usertracking = self.client.requestModule('usertracking')
         for word in text.split(' '):
             badWord = await self._testForBadWord(word, text)
@@ -607,9 +610,9 @@ class ModerationModule(Module):
                 message.nonce = 'filter'  # We're taking this variable because discord.py said it was nonimportant and it won't let me add any more custom attributes.
                 await self.client.delete_message(message)
                 if usertracking:
-                    await usertracking.on_message_filter(message, word=badWord[1])
+                    await usertracking.on_message_filter(message, word=badWord[2])
                 else:
-                    await self.client.send_message(self.spamChannel, WORD_FILTER_ENTRY.format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[1] + '**')))
+                    await self.client.send_message(self.spamChannel, WORD_FILTER_ENTRY.format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[2] + '**')))
                 try:
                     if silentFilter:
                         return True
@@ -628,10 +631,10 @@ class ModerationModule(Module):
                         message.nonce = 'filter'
                         await self.client.delete_message(message)
                         if usertracking:
-                            await usertracking.on_message_filter(message, word=badWord[1], embed=attr[1])
+                            await usertracking.on_message_filter(message, word=badWord[2], embed=attr[1])
                         else:
                             await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
-                                edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[1] + '**'))
+                                edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[2] + '**'))
                             )
                         try:
                             if silentFilter:
@@ -651,7 +654,7 @@ class ModerationModule(Module):
                                 await usertracking.on_message_filter(message, embed=attr[1])
                             else:
                                 await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
-                                    edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[1] + '**'))
+                                    edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[2] + '**'))
                                 )
                             try:
                                 if silentFilter:
