@@ -268,7 +268,7 @@ class ModerationModule(Module):
             user = await cls.getUserInPunishCMD(client, message)
             if user.__class__ == CommandResponse:
                 return user
-            return await punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, message=message)
+            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, message=message)
 
     class SilentPermBanCMD(PunishCMD):
         NAME = 'silentBan'
@@ -279,7 +279,7 @@ class ModerationModule(Module):
             user = await cls.getUserInPunishCMD(client, message)
             if user.__class__ == CommandResponse:
                 return user
-            return await punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
+            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
 
     class EditPunishReasonCMD(Command):
         NAME = 'editReason'
