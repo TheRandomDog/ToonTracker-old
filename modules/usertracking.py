@@ -468,7 +468,8 @@ class UserTrackingModule(Module):
         Users.setUserPunishments(member.id, punishments)
 
     # Specifically built for moderation module.
-    async def on_message_filter(self, message, word=None, embed=None):
+    async def on_message_filter(self, message, word=None, text=None, embed=None):
+        replaceFrom = text if text else message.content
         await self.client.send_message(
             self.botOutput,
             self.createDiscordEmbed(
@@ -479,7 +480,7 @@ class UserTrackingModule(Module):
                     " the {} of an embed in".format(embed) if embed else '',
                     '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
                     message.channel.mention,
-                    message.content.replace(word, '**' + word + '**') if word else message.content
+                    replaceFrom.replace(word, '**' + word + '**') if word else replaceFrom
                 ),
                 thumbnail=message.author.avatar_url
            )

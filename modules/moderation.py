@@ -8,6 +8,7 @@ from extra.commands import Command, CommandResponse
 from extra.startmessages import Warning
 from modules.module import Module
 from utils import Config, Users, getShortTimeLength, getLongTime
+from traceback import format_exc
 
 messages = []
 
@@ -81,11 +82,11 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = Config.getModuleSetting('moderation', 'badwords')
+            badwords = Config.getModuleSetting('moderation', 'bad_words')
             if word in badwords:
                 return module.createDiscordEmbed(info='**{}** is already classified as a bad word'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
-            Config.setModuleSetting('moderation', 'badwords', badwords)
+            Config.setModuleSetting('moderation', 'bad_words', badwords)
             module.words = badwords
 
             return module.createDiscordEmbed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
@@ -100,11 +101,11 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = Config.getModuleSetting('moderation', 'badwords')
+            badwords = Config.getModuleSetting('moderation', 'bad_words')
             if word not in badwords:
                 return module.createDiscordEmbed(info='**{}** was never a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
-            Config.setModuleSetting('moderation', 'badwords', badwords)
+            Config.setModuleSetting('moderation', 'bad_words', badwords)
             module.words = badwords
 
             return module.createDiscordEmbed(info='**{}** was removed from the bad word list.'.format(word), color=discord.Color.green())
@@ -370,7 +371,6 @@ class ModerationModule(Module):
         self.badImageFilterOn = Config.getModuleSetting('moderation', 'bad_image_filter', True) and ClarifaiApp
         self.spamChannel = Config.getModuleSetting('moderation', 'spam_channel')
         self.logChannel = Config.getModuleSetting('moderation', 'log_channel')
-        self.exceptions = Config.getModuleSetting('moderation', 'exceptions')
         self.filterBots = Config.getModuleSetting('moderation', 'filter_bots', False)
         self.filterMods = Config.getModuleSetting('moderation', 'filter_mods', True)
         self.allowBotPunishments = Config.getModuleSetting('moderation', 'allow_bot_punishments', False)
@@ -380,8 +380,10 @@ class ModerationModule(Module):
         asyncio.get_event_loop().create_task(self.scheduleUnbans())
 
         if self.badWordFilterOn:
-            self.words = [word.lower() for word in Config.getModuleSetting('moderation', 'badwords')]
+            self.words = [word.lower() for word in Config.getModuleSetting('moderation', 'bad_words')]
+            self.filterExceptions = Config.getModuleSetting('moderation', 'filter_exceptions')
             self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
+            self.wordExceptions = Config.getModuleSetting('moderation', 'word_exceptions')
 
         if self.badImageFilterOn:
             gifKey = Config.getModuleSetting('moderation', 'clarifai_mod_key')
@@ -583,86 +585,100 @@ class ModerationModule(Module):
         await self.client.rTTR.unban(user, reason='The user\'s temporary ban expired.')
         self.scheduledUnbans.remove(userID)
 
-    async def _testForBadWord(self, evadedWord, text):
-        word = evadedWord.translate(FILTER_EVASION_CHAR_MAP)
-        if word.lower() == "he'll": return ('', '', '')  # I'll get rid of this someday.
-        elif word.lower() == "who're": return ('', '', '')  # This one too.
+    def _testForBadWord(self, evadedWord):
+        # Tests for a bad word against the provided word.
+        # Runs through the config list after taking out unicode and non-alphabetic characters.
+        response = {'word': None, 'evadedWord': evadedWord}
+
+        word = evadedWord.translate(FILTER_EVASION_CHAR_MAP).lower()
+        if word in self.wordExceptions:  # For example, "he'll" or "who're"
+            return
 
         word = re.sub(r'\W+', '', word)
-        if word.lower() in self.words or (word.lower().rstrip('s').rstrip('e') in self.words and word.lower() not in self.pluralExceptions):
-            return ('DIRECT', word, evadedWord)
-        whole = text.translate(FILTER_EVASION_CHAR_MAP)
-        for badword in self.words:
-            if ' ' in badword and (badword == whole.lower() or badword.rstrip('s').rstrip('e') == whole.lower() or (whole.lower().startswith(badword) and badword + ' ' in whoe.lower()) or (whole.lower().endswith(badword) and ' ' + badword in whole.lower()) or ' ' + badword + ' ' in whole.lower()):
-                return ('PHRASE', badword, '')
-        whole = text.translate(FILTER_EVASION_CHAR_MAP).replace(' ', '')
-        if whole.lower() in self.words or (whole.lower().rstrip('s').rstrip('e') in self.words and whole.lower() not in self.pluralExceptions):
-            return ('WHOLE', whole, text)
-        return ('', '', '')
+        wordNoPlural = word.rstrip('s').rstrip('e')
+        if word in self.words or (wordNoPlural in self.words and word not in self.pluralExceptions):
+            response['word'] = word
+        return response
+
+    def _testForBadPhrase(self, evadedText):
+        # This tests the text for bad phrases.
+        # Bad phrases are essentially bad words with spaces in them.
+        response = {'word': None, 'evadedWord': None}
+
+        text = evadedText.translate(FILTER_EVASION_CHAR_MAP).lower()
+        #textLower = text.lower()
+        for phrase in filter(lambda word: ' ' in word, self.words):
+            phrase = phrase.lower()  # Sanity check, you never know if a mod'll add caps to a bad word entry.
+            phraseNoPlural = phrase.rstrip('s').rstrip('e')
+            if (phrase == text or phraseNoPlural == text                                    # If the message is literally the phrase.
+              or text.startswith(phrase + ' ') or text.startswith(phraseNoPlural + ' ')     # If the message starts with the phrase.
+              or text.endswith(' ' + phrase) or text.endswith(' ' + phraseNoPlural)         # If the message ends in the phrase.
+              or ' ' + phrase + ' ' in text or ' ' + phraseNoPlural + ' ' in text):         # If the message contains the phrase.
+                textIndex = text.find(phrase)
+                response['word'] = phrase
+                response['evadedWord'] = evadedText[textIndex:textIndex + len(phrase)]
+        return response
+
+    def _testForBadWhole(self, evadedText):
+        # This smooshes the whole message together (no spaces) and tests if it matches a bad word.
+        text = evadedText.replace(' ', '')
+        return self._testForBadWord(evadedText)
+
+    async def _filterBadWords(self, message, evadedText, edited=' ', silentFilter=False, embed=None):
+        response = {}
+        for word in evadedText.split(' '):
+            wordResponse = self._testForBadWord(word)
+            if wordResponse['word']:
+                response = wordResponse
+        phraseResponse = self._testForBadPhrase(evadedText)
+        if not response and phraseResponse['word']:
+            response = phraseResponse
+        wholeResponse = self._testForBadWhole(evadedText)
+        if not response and wholeResponse['word']:
+            response = wholeResponse
+        if not response:
+            return False
+
+        await self.client.delete_message(message)
+        if self.spamChannel:
+            message.nonce = 'filter'  # We're taking this variable because discord.py said it was nonimportant and it won't let me add any more custom attributes.
+            usertracking = self.client.requestModule('usertracking')
+            if usertracking:
+                await usertracking.on_message_filter(message, word=response['evadedWord'], text=evadedText, embed=embed)
+            else:
+                wordFilterFormat = WORD_FILTER_EMBED_ENTRY if embed else WORD_FILTER_ENTRY
+                await self.client.send_message(self.spamChannel, wordFilterFormat.format(
+                    edited,
+                    message.author.mention,
+                    message.channel.mention,
+                    message.content.replace(response['evadedWord'], '**' + response['evadedWord'] + '**'),
+                    embed,
+                    '**' + response['evadedWord'] + '**' if embed else ''
+                ))
+        try:
+            if silentFilter:
+                return True
+            await self.client.send_message(message.author, WORD_FILTER_MESSAGE.format(message.author.mention, response['word']))
+        except discord.HTTPException:
+            print('Tried to send bad word filter notification message to a user, but Discord threw an HTTP Error:\n\n{}'.format(format_exc()))
+        return True
 
     async def filterBadWords(self, message, edited=' ', silentFilter=False):
-        text = message.content
-        #text = message.content.translate(FILTER_EVASION_CHAR_MAP)
-        usertracking = self.client.requestModule('usertracking')
-        for word in text.split(' '):
-            badWord = await self._testForBadWord(word, text)
-            if badWord[1] and self.spamChannel:
-                message.nonce = 'filter'  # We're taking this variable because discord.py said it was nonimportant and it won't let me add any more custom attributes.
-                await self.client.delete_message(message)
-                if usertracking:
-                    await usertracking.on_message_filter(message, word=badWord[2])
-                else:
-                    await self.client.send_message(self.spamChannel, WORD_FILTER_ENTRY.format(edited, message.author.mention, message.channel.mention, message.content.replace(word, '**' + badWord[2] + '**')))
-                try:
-                    if silentFilter:
-                        return True
-                    await self.client.send_message(message.author, WORD_FILTER_MESSAGE.format(message.author.mention, badWord[1]))
-                except discord.HTTPException:
-                    pass
-                return True
-
+        if await self._filterBadWords(message, message.content, edited, silentFilter):
+            return True
         for embed in message.embeds:
             for attr in [(embed.title, 'title'), (embed.description, 'description'), (embed.footer, 'footer'), (embed.author, 'author')]:
                 if type(attr[0]) != str:
                     continue
-                for word in attr[0].split(' '):
-                    badWord = await self._testForBadWord(word, attr[0])
-                    if badWord[1] and self.spamChannel:
-                        message.nonce = 'filter'
-                        await self.client.delete_message(message)
-                        if usertracking:
-                            await usertracking.on_message_filter(message, word=badWord[2], embed=attr[1])
-                        else:
-                            await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
-                                edited, message.author.mention, message.channel.mention, message.content, attr[1], attr[0].replace(word, '**' + badWord[2] + '**'))
-                            )
-                        try:
-                            if silentFilter:
-                                return True
-                            await self.client.send_message(message.author, WORD_FILTER_MESSAGE.format(message.author.mention, badWord[1]))
-                        except discord.HTTPException:
-                            pass
-                        return True
+                if await self._filterBadWords(message, attr[0], edited, silentFilter, embed=attr[1]):
+                    return True
             for field in embed.fields:
                 for fieldattr in [(field.name, 'field name'), (field.value, 'field value')]:
-                    for word in fieldattr[0].split(' '):
-                        badWord = await self._testForBadWord(word, fieldattr[0])
-                        if badWord[1] and self.spamChannel:
-                            message.nonce = 'filter'
-                            await self.client.delete_message(message)
-                            if usertracking:
-                                await usertracking.on_message_filter(message, embed=attr[1])
-                            else:
-                                await self.client.send_message(self.spamChannel, WORD_FILTER_EMBED_ENTRY.format(
-                                    edited, message.author.mention, message.channel.mention, message.content, fieldattr[1], fieldattr[0].replace(word, '**' + badWord[2] + '**'))
-                                )
-                            try:
-                                if silentFilter:
-                                    return True
-                                await self.client.send_message(message.author, WORD_FILTER_ENTRY.format(message.author.mention, badWord[1]))
-                            except discord.HTTPException:
-                                pass
-                            return True
+                    if type(fieldattr[0]) != str:
+                        continue
+                    if await self._filterBadWords(message, fieldattr[0], edited, silentFilter, embed=fieldattr[1]):
+                        return True
+        return False
 
     async def filterBadImages(self, message):
         # Refreshes embed info from the API.
@@ -772,7 +788,7 @@ class ModerationModule(Module):
         #    await self.client.send_message(self.spamChannel, "Image posted was fine. **[Rating: {}]**".format(rating))
 
     async def handleMsg(self, message):
-        if message.channel.id in self.exceptions or message.author.id in self.exceptions or \
+        if message.channel.id in self.filterExceptions or message.author.id in self.filterExceptions or \
             (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
             (message.author.bot and not self.filterBots) or (Config.getRankOfMember(message.author) >= 300 and not self.filterMods):
             return
@@ -798,7 +814,7 @@ class ModerationModule(Module):
 
     async def on_message_edit(self, before, after):
         message = after
-        if message.channel.id in self.exceptions or message.author.id in self.exceptions or \
+        if message.channel.id in self.filterExceptions or message.author.id in self.filterExceptions or \
             (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
             (message.author.bot and not self.filterBots) or (Config.getRankOfMember(message.author) >= 300 and not self.filterMods):
             return
