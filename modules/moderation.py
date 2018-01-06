@@ -587,7 +587,7 @@ class ModerationModule(Module):
 
         word = evadedWord.translate(FILTER_EVASION_CHAR_MAP).lower()
         if word in self.wordExceptions:  # For example, "he'll" or "who're"
-            return
+            return response
 
         word = re.sub(r'\W+', '', word)
         wordNoPlural = word.rstrip('s').rstrip('e')
