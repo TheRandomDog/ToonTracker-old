@@ -209,7 +209,8 @@ class UserTrackingModule(Module):
         self.allowModRewards = Config.getModuleSetting('usertracking', 'allow_mod_rewards', False)
         self.regularRole = discord.utils.get(client.rTTR.roles, id=Config.getModuleSetting('usertracking', 'regular_role_id'))
 
-        self.botOutput = Config.getSetting('botspam')
+        self.spamChannel = Config.getModuleSetting('usertracking', 'spam_channel')
+        self.logChannel = Config.getModuleSetting('usertracking', 'log_channel')
 
     async def addXP(self, message):
         member = message.author
@@ -349,10 +350,13 @@ class UserTrackingModule(Module):
                         punishment['editID']
                     )
                 }]
+        for message in self.client._connection._messages:
+            if message.author == member:
+                message.nonce = 'banned'  # Read other comments editing `nonce`.
         async for entry in self.client.rTTR.audit_logs(limit=1, action=discord.AuditLogAction.ban):
             footer={'text': 'Ban performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
         await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Ban',
                 primaryInfo=str(member),
@@ -388,7 +392,7 @@ class UserTrackingModule(Module):
                     'inline': False
                 })
         await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Join',
                 primaryInfo=str(member),
@@ -427,7 +431,7 @@ class UserTrackingModule(Module):
                 action = 'Kick'
                 footer={'text': 'Kick performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
         modLogEntry = await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action=action,
                 primaryInfo=str(member),
@@ -445,7 +449,7 @@ class UserTrackingModule(Module):
     # Specifically built for moderation module.
     async def on_member_warn(self, member, punishment):
         modLogEntry = await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Warn',
                 primaryInfo=str(member),
@@ -471,7 +475,7 @@ class UserTrackingModule(Module):
     async def on_message_filter(self, message, word=None, text=None, embed=None):
         replaceFrom = text if text else message.content
         await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Filter',
                 primaryInfo=str(message.author),
@@ -489,7 +493,7 @@ class UserTrackingModule(Module):
     # Specifically built for moderation module.
     async def on_message_review_filter(self, message, rating, url):
         await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Review',
                 primaryInfo=str(message.author),
@@ -505,7 +509,9 @@ class UserTrackingModule(Module):
         )
 
     async def on_message_delete(self, message):
-        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce == 'filter':
+        if (message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel
+          or message.author.id in self.exceptions or message.channel.id in self.exceptions
+          or message.channel.category.id in self.exceptions or message.nonce in ['filter', 'silence']):
             return
         footer = {}
         async for entry in self.client.rTTR.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
@@ -516,12 +522,14 @@ class UserTrackingModule(Module):
             # and by the same user and we can assume that if the count is more than 1 that it was deleted by someone else.
             # The best we can do right now.
             prevDeletionCount = self.auditLogEntries.get(entry.id, 0)
-            if entry.created_at >= datetime.utcnow() - timedelta(seconds=2) or \
+            if message.nonce == 'banned':
+                footer={'text': 'Message deleted due to a ban', 'icon_url': self.ACTIONS['Ban']['icon']}
+            elif entry.created_at >= datetime.utcnow() - timedelta(seconds=2) or \
               (entry.extra.channel == message.channel and entry.target == message.author and entry.extra.count > prevDeletionCount):
                 footer={'text': 'Message deleted by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
             self.auditLogEntries[entry.id] = entry.extra.count
         await self.client.send_message(
-            self.botOutput,
+            self.spamChannel if message.nonce in ['banned'] else self.logChannel,
             self.createDiscordEmbed(
                 action='Delete',
                 primaryInfo=str(message.author),

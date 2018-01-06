@@ -223,8 +223,10 @@ class ToonTracker(discord.Client):
 
         # Delete message (and optional trigger message)
         if deleteIn:
+            msgObj.nonce = 'silent'  # Mainly unused Message attribute that we can use, discord.Message implements __slots__
             self.loop.create_task(self.delete_message(msgObj, deleteIn))
             if priorMessage:
+                priorMessage.nonce = 'silent'
                 self.loop.create_task(self.delete_message(priorMessage, deleteIn))
 
         return msgObj

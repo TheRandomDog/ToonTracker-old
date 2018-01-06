@@ -530,7 +530,7 @@ class ModerationModule(Module):
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.kick(user, reason='On behalf of ' + str(author))
+                await self.client.rTTR.kick(user, reason=punishmentEntry['editID'])
             except discord.HTTPException:
                 await self.client.send_message(author, KICK_FAILURE)
         elif nextPunishment == self.TEMPORARY_BAN:
@@ -546,7 +546,7 @@ class ModerationModule(Module):
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.ban(user, reason='On behalf of ' + str(author))
+                await self.client.rTTR.ban(user, reason=punishmentEntry['editID'])
             except discord.HTTPException:
                 await self.client.send_message(author, BAN_FAILURE)
         elif nextPunishment == self.PERMANENT_BAN:
@@ -560,7 +560,7 @@ class ModerationModule(Module):
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.ban(user, reason='On behalf of ' + str(author))
+                await self.client.rTTR.ban(user, reason=punishmentEntry['editID'])
             except discord.HTTPException:
                 await self.client.send_message(author, BAN_FAILURE)
         await self.scheduleUnbans()
