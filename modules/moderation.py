@@ -289,7 +289,7 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             try:
                 int(args[0])
-            except ValueError as e:
+            except (ValueError, IndexError) as e:
                 return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
             if not args[1:]:
@@ -302,22 +302,17 @@ class ModerationModule(Module):
                 for punishment in userData['punishments']:
                     if punishment['editID'] == int(args[0]):
                         somethingChanged = True
-                        print(punishment)
                         if punishment['modLogEntryID']:
                             modLogEntryMessage = await client.get_channel(module.logChannel).get_message(punishment['modLogEntryID'])
-                            print(modLogEntryMessage)
 
                             # User Tracking
                             if modLogEntryMessage:
                                 if modLogEntryMessage.embeds:
                                     modLogEntryEmbed = modLogEntryMessage.embeds[0]
-                                    print(modLogEntryEmbed)
                                     editedMessage = modLogEntryEmbed.fields[0].value
-                                    print(editedMessage)
                                     if str(message.author.id) not in editedMessage:
                                         editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(mod.id), '**Mod:** <@!{}> (edited by <@!{}>)'.format(mod.id, message.author.id))
                                     editedMessage = re.sub(NO_REASON_ENTRY_REGEX, newReason, editedMessage)
-                                    print(editedMessage)
                                     modLogEntryEmbed.set_field_at(0, name=modLogEntryEmbed.fields[0].name, value=editedMessage)
                                     await modLogEntryMessage.edit(embed=modLogEntryEmbed)
                                 else:
@@ -351,7 +346,7 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             try:
                 int(args[0])
-            except ValueError as e:
+            except (ValueError, IndexError) as e:
                 return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
             for userID, userData in Users.getUsers().items():
@@ -606,7 +601,6 @@ class ModerationModule(Module):
         response = {'word': None, 'evadedWord': None}
 
         text = evadedText.translate(FILTER_EVASION_CHAR_MAP).lower()
-        #textLower = text.lower()
         for phrase in filter(lambda word: ' ' in word, self.words):
             phrase = phrase.lower()  # Sanity check, you never know if a mod'll add caps to a bad word entry.
             phraseNoPlural = phrase.rstrip('s').rstrip('e')
@@ -760,7 +754,6 @@ class ModerationModule(Module):
     async def determineImageRatingAction(self, message, rating, url):
         usertracking = self.client.requestModule('usertracking')
 
-        print(rating)
         if rating > 1.5:
             rating = round(rating, 2)
             message.filtered = True
