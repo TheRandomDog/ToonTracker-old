@@ -3,21 +3,11 @@ import re
 import json
 import logging
 from __init__ import __version__
-from discord import Embed, Color, Member
+from discord import Embed, Color, Member, User
 from datetime import datetime
 from math import ceil
 
-# Create config file if it doesn't exist
-try:
-    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    f = open(os.path.join(__location__, 'config.json'), 'r+')
-    c = f.read()
-    if c == '':
-        f.write('{}')
-except json.JSONDecodeError:
-    f.write('{}')
-finally:
-    f.close()
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 # ASSERTIONS
 
@@ -46,8 +36,15 @@ def assertClass(value, *classes, otherwise=TypeError):
 class Config:
     @staticmethod
     def openFile(mode):
-        file = open(os.path.join(__location__, 'config.json'), mode)
-        content = json.loads(file.read())
+        try:
+            file = open(os.path.join(__location__, 'config.json'), mode)
+        except FileNotFoundError:
+            createdFile = open(os.path.join(__location__, 'config.json'), 'w+')
+            createdFile.write('{}')
+            createdFile.close()
+            file = open(os.path.join(__location__, 'config.json'), mode)
+            print('config.json was not found, so the file was created.')
+        content = json.loads(file.read().decode('utf-8'))
         file.close()
         try:
             file = open(os.path.join(__location__, 'profiles', content['profile']), mode)
@@ -60,8 +57,8 @@ class Config:
     @classmethod
     def getSetting(cls, setting, otherwise=None):
         try:
-            file = cls.openFile('r')
-            content = json.loads(file.read())
+            file = cls.openFile('rb')
+            content = json.loads(file.read().decode('utf-8'))
             return content.get(setting, otherwise)
         except json.JSONDecodeError:
             print('[!!!] Tried to read setting "{}", but {} did not have valid JSON content.'.format(
@@ -95,6 +92,18 @@ class Config:
                 users.append(u)
         return users
 
+    # Convenience method that gets top rank between
+    # both the individual user and their roles.
+    # This takes a Member object, unlike the other Config methods.
+    @classmethod
+    def getRankOfMember(cls, member):
+        if member.__class__ == Member:
+            return max([cls.getRankOfUser(member.id)] + [cls.getRankOfRole(role.id) for role in member.roles])
+        elif member.__class__ == User:
+            return cls.getRankOfUser(member.id)
+        else:
+            raise TypeError('"member" argument should be discord.Member or discord.User')
+
     @classmethod
     def getRoleRanks(cls):
         roleRanks = {int(roleID): rank for roleID, rank in cls.getSetting('role_ranks').items()}
@@ -115,11 +124,11 @@ class Config:
     @classmethod
     def setSetting(cls, setting, value):
         try:
-            file = cls.openFile('r+')
-            content = json.loads(file.read())
+            file = cls.openFile('r+b')
+            content = json.loads(file.read().decode('utf-8'))
             content[setting] = value
             file.seek(0, 0)
-            file.write(json.dumps(content, indent=4, sort_keys=True))
+            file.write(json.dumps(content, indent=4, sort_keys=True).encode('utf-8'))
             file.truncate()
         except json.JSONDecodeError:
             print('[!!!] Tried to write value "{}" to setting "{}", but {} did not have valid JSON content.'.format(
@@ -155,14 +164,21 @@ class Users:
 
     @staticmethod
     def openFile(mode):
-        file = open(os.path.join(__location__, 'users.json'), mode)
+        try:
+            file = open(os.path.join(__location__, 'users.json'), mode)
+        except FileNotFoundError:
+            createdFile = open(os.path.join(__location__, 'users.json'), 'w+')
+            createdFile.write('{}')
+            createdFile.close()
+            file = open(os.path.join(__location__, 'users.json'), mode)
+            print('users.json was not found, so the file was created.')
         return file
 
     @classmethod
     def getUsers(cls):
         try:
-            file = cls.openFile('r')
-            content = {int(userID): data for userID, data in json.loads(file.read()).items()}
+            file = cls.openFile('rb')
+            content = {int(userID): data for userID, data in json.loads(file.read().decode('utf-8')).items()}
             return content
         except json.JSONDecodeError:
             print('[!!!] Tried to read user data, but {} did not have valid JSON content.'.format(
@@ -281,11 +297,11 @@ class Users:
     def setUserJSON(cls, userID, value):
         userID = str(userID)
         try:
-            file = cls.openFile('r+')
-            content = json.loads(file.read())
+            file = cls.openFile('r+b')
+            content = json.loads(file.read().decode('utf-8'))
             content[str(userID)] = value
             file.seek(0, 0)
-            file.write(json.dumps(content, indent=4, sort_keys=True))
+            file.write(json.dumps(content, indent=4, sort_keys=True).encode('utf-8'))
             file.truncate()
         except json.JSONDecodeError:
             print('[!!!] Tried to write value "{}" to user "{}", but {} did not have valid JSON content.'.format(
@@ -408,22 +424,6 @@ def getAttributeFromMatch(iterable, match):
 
 def getVersion():
     return __version__
-
-def createDiscordEmbed(title, description=Embed.Empty, *, multipleFields=False, color=None, url=None, **kwargs):
-    if multipleFields:
-        embed = Embed(color=color if color else Color.green(), **kwargs)
-        # If we have multiple inline fields, the thumbnail might push them off.
-        # Therefore, we'll use the author space to include the icon url.
-        embed.set_author(name=title)#, icon_url=TTR_ICON)
-    elif url:
-        embed = Embed(title=title, description=description, url=url, color=color if color else Color.default(), **kwargs)
-        #embed.set_thumbnail(url=TTR_ICON)
-    else:
-        embed = Embed(color=color if color else Color.green(), **kwargs)
-        embed.add_field(name=title, value=description)
-        #embed.set_thumbnail(url=TTR_ICON)
-
-    return embed
 
 def getProgressBar(progress, outOf):
     p = int((progress/outOf) * 10)

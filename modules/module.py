@@ -154,15 +154,32 @@ class Module:
             self.restartTime = time.time()
             self.startTracking()
 
-    def createDiscordEmbed(self, title, description=Embed.Empty, *, multipleFields=False, color=None, url=None, **kwargs):
-        if multipleFields:
-            embed = Embed(color=color if color else Color.green(), **kwargs)
-            embed.set_author(name=title)
-        elif url:
-            embed = Embed(title=title, description=description, url=url, color=color if color else Color.default(), **kwargs)
-        else:
-            embed = Embed(color=color if color else Color.green(), **kwargs)
-            embed.add_field(name=title, value=description)
+    # Creates a Discord Embed.
+    # This is preferred over simply creating a new instance of discord.Embed because there 
+    # are some properties that require method input due to containing multiple sub-values.
+    def createDiscordEmbed(self, **kwargs):
+        title = kwargs.get('title', Embed.Empty)
+        subtitle = kwargs.get('subtitle', Embed.Empty)
+        info = kwargs.get('info', Embed.Empty)
+        titleUrl = kwargs.get('titleUrl', Embed.Empty)
+        subtitleUrl = kwargs.get('subtitleUrl', Embed.Empty)
+        image = kwargs.get('image', Embed.Empty)
+        icon = kwargs.get('icon', Embed.Empty)
+        thumbnail = kwargs.get('thumbnail', Embed.Empty)
+        fields = kwargs.get('fields', [])
+        footer = kwargs.get('footer', Embed.Empty)
+        footerIcon = kwargs.get('footerIcon', Embed.Empty)
+        color = kwargs.get('color', Embed.Empty)
+
+        embed = Embed(title=subtitle, description=info, url=subtitleUrl, color=color)
+        embed.set_author(name=title, url=titleUrl, icon_url=icon)
+        embed.set_footer(text=footer, icon_url=footerIcon)
+        if thumbnail != Embed.Empty:
+            embed.set_thumbnail(url=thumbnail)
+        if image != Embed.Empty:
+            embed.set_image(url=image)
+        for field in fields:
+            embed.add_field(**field)
 
         return embed
 

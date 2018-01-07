@@ -2,7 +2,7 @@ import sys
 import time
 import praw
 import threading
-from discord import Color
+from discord import Color, Embed
 from modules.module import Module, Announcer
 from traceback import format_exception, format_exc
 from utils import Config, assertType
@@ -108,7 +108,7 @@ class NewPostAnnouncement(Announcer):
 
         flair = submission.author_flair_css_class
         color = Color.default()
-        authorIcon = None
+        authorIcon = Embed.Empty
         if not flair:
             pass
         elif 'team' in flair:
@@ -120,19 +120,18 @@ class NewPostAnnouncement(Announcer):
 
         thumbnail = submission.thumbnail
         if 'http' not in thumbnail:
-            thumbnail = None
+            thumbnail = Embed.Empty
 
-        embed = module.createDiscordEmbed(title=submission.title, description=desc, url=submission.url, color=color)
-        if authorIcon:
-            embed.set_author(name=submission.author, icon_url=authorIcon)
-        else:
-            embed.set_author(name=submission.author)
-        if thumbnail:
-            embed.set_thumbnail(url=thumbnail)
-
-        embed.set_footer(text='/r/{} - New Post'.format(module.subredditName))
-        #embed.add_field(name='Actions', value='')
-
+        embed = module.createDiscordEmbed(
+            title=submission.author,
+            icon=authorIcon,
+            subtitle=submission.title,
+            info=desc,
+            subtitleUrl=submission.url,
+            color=color,
+            thumbnail=thumbnail,
+            footer='/r/{} - New Post'.format(module.subredditName)
+        )
         return embed
 
 class NewCommentAnnouncement(Announcer):
@@ -151,7 +150,7 @@ class NewCommentAnnouncement(Announcer):
             desc = descList[0]
 
         color = Color.default()
-        authorIcon = None
+        authorIcon = Embed.Empty
 
         flair = comment.author_flair_css_class
         if flair and 'team' in flair:
@@ -162,17 +161,14 @@ class NewCommentAnnouncement(Announcer):
             authorIcon = 'https://cdn.discordapp.com/emojis/338254475674255361.png'
 
         embed = module.createDiscordEmbed(
-            title='Reply to ' + comment.submission.title,
-            description=desc,
-            url="https://www.reddit.com" + (comment.permalink if type(comment.permalink) == str else comment.permalink()),
-            color=color)
-        if authorIcon:
-            embed.set_author(name=comment.author, icon_url=authorIcon)
-        else:
-            embed.set_author(name=comment.author)
-
-        embed.set_footer(text='/r/{} - New Comment'.format(module.subredditName))
-
+            title=comment.author,
+            icon=authorIcon,
+            subtitle='Reply to ' + comment.submission.title,
+            info=desc,
+            subtitleUrl="https://www.reddit.com" + (comment.permalink if type(comment.permalink) == str else comment.permalink()),
+            color=color,
+            footer='/r/{} - New Comment'.format(module.subredditName)
+        )
         return embed
 
 class NewUpdateAnnouncement(Announcer):

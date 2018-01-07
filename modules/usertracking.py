@@ -9,7 +9,7 @@ from modules.module import Module
 from utils import Config, Users, assertType, getTimeFromSeconds, getProgressBar
 
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
-NO_REASON_MOD = 'No reason yet.'
+NO_REASON_ENTRY = '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'
 
 class UserTrackingModule(Module):
     ACTIONS = {
@@ -42,6 +42,11 @@ class UserTrackingModule(Module):
             'color': discord.Color.dark_red(),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
             'title': 'Message Filtered'
+        },
+        'Review': {
+            'color': discord.Color.dark_red(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
+            'title': 'Image Review Required'
         },
         'Delete': {
             'color': discord.Color.blue(),
@@ -185,14 +190,13 @@ class UserTrackingModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.filtered = []
-
         self.trackMessages = Config.getModuleSetting('usertracking', 'track_messages', True)
         self.trackingExceptions = Config.getModuleSetting('usertracking', 'tracking_exceptions', [])
 
         self.memberStatusTimeStart = {member.id: time.time() for member in client.rTTR.members}
         self.trackStatuses = Config.getModuleSetting('usertracking', 'track_statuses', True)
 
+        self.auditLogEntries = {}
         self.levelCooldowns = {}
         self.levelCooldown = assertType(Config.getModuleSetting('usertracking', 'level_cooldown'), int, otherwise=5)
         self.levelCap = assertType(Config.getModuleSetting('usertracking', 'level_cap'), int, otherwise=-1)
@@ -205,7 +209,8 @@ class UserTrackingModule(Module):
         self.allowModRewards = Config.getModuleSetting('usertracking', 'allow_mod_rewards', False)
         self.regularRole = discord.utils.get(client.rTTR.roles, id=Config.getModuleSetting('usertracking', 'regular_role_id'))
 
-        self.botOutput = Config.getSetting('botspam')
+        self.spamChannel = Config.getModuleSetting('usertracking', 'spam_channel')
+        self.logChannel = Config.getModuleSetting('usertracking', 'log_channel')
 
     async def addXP(self, message):
         member = message.author
@@ -318,7 +323,7 @@ class UserTrackingModule(Module):
                 )
                 await self.client.send_message(member, embed)
 
-    def createDiscordEmbed(self, action, primaryInfo=discord.Embed.Empty, secondaryInfo=discord.Embed.Empty, thumbnail='', fields=[], footer={}, color=None):
+    def createDiscordEmbed(self, action, primaryInfo=discord.Embed.Empty, secondaryInfo=discord.Embed.Empty, thumbnail='', fields=[], footer={}, image=None, color=None):
         action = self.ACTIONS[action]
         embed = discord.Embed(title=primaryInfo, description=secondaryInfo, color=color if color else action['color'])
         embed.set_author(name=action['title'], icon_url=action['icon'])
@@ -326,8 +331,11 @@ class UserTrackingModule(Module):
             embed.set_thumbnail(url=thumbnail)
         if footer:
             embed.set_footer(**footer)
+        if image:
+            embed.set_image(url=image)
         for field in fields:
             embed.add_field(**field)
+
         return embed
 
     async def on_member_ban(self, guild, member):
@@ -341,14 +349,17 @@ class UserTrackingModule(Module):
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['editID'])),
                         punishment['editID']
                     )
                 }]
+        for message in self.client._connection._messages:
+            if message.author == member:
+                message.nonce = 'banned'  # Read other comments editing `nonce`.
         async for entry in self.client.rTTR.audit_logs(limit=1, action=discord.AuditLogAction.ban):
             footer={'text': 'Ban performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
         await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Ban',
                 primaryInfo=str(member),
@@ -383,8 +394,17 @@ class UserTrackingModule(Module):
                     ),
                     'inline': False
                 })
+        xp = Users.getUserXP(member.id)
+        level = Users.getUserLevel(member.id)
+        # Show off user's level / xp 
+        levelxp = '**Level {}**   {} / {} XP\n{}'.format(
+            level,
+            xp,
+            self.xpNeededForLevel(level),
+            getProgressBar(xp, self.xpNeededForLevel(level))
+        )
         await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Join',
                 primaryInfo=str(member),
@@ -393,19 +413,18 @@ class UserTrackingModule(Module):
                 fields=[
                     {'name': 'Account Creation Date', 'value': str(member.created_at.date()), 'inline': True},
                     {'name': 'Join Date', 'value': str(member.joined_at.date()), 'inline': True},
-                    {'name': 'Level', 'value': str(Users.getUserLevel(member.id)), 'inline': True},
-                    {'name': 'XP', 'value': str(Users.getUserXP(member.id)), 'inline': True}
+                    {'name': 'Level / XP', 'value': levelxp, 'inline': True}
                 ] + punishmentFields,
                 #footer="You can use a punishment's edit ID to ~editReason or ~removePunishment" if Users.getUserPunishments(member.id) else ''
             )
         )
         self.memberStatusTimeStart[member.id] = time.time()
 
-
     async def on_member_remove(self, member):
         punishments = Users.getUserPunishments(member.id)
         action = 'Leave'
         fields = []
+        punishment = None
         if punishments:
             punishment = punishments[-1]
             if time.time() - punishment['created'] < 10:
@@ -414,17 +433,16 @@ class UserTrackingModule(Module):
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['editID'])),
                         punishment['editID']
                     )
                 }]
         async for entry in self.client.rTTR.audit_logs(limit=1, action=discord.AuditLogAction.kick):
-            print(entry.created_at, datetime.utcnow(), datetime.utcnow() - timedelta(seconds=10))
-            if entry.target.id == member.id and entry.created_at >= datetime.utcnow() - timedelta(seconds=10):
+            if entry.target.id == member.id and entry.created_at >= datetime.utcnow() - timedelta(seconds=2):
                 action = 'Kick'
                 footer={'text': 'Kick performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
-        await self.client.send_message(
-            self.botOutput,
+        modLogEntry = await self.client.send_message(
+            self.logChannel,
             self.createDiscordEmbed(
                 action=action,
                 primaryInfo=str(member),
@@ -433,11 +451,16 @@ class UserTrackingModule(Module):
                 footer=footer if action == 'Kick' else ''
            )
         )
+        if punishment:
+            punishment['modLogEntryID'] = modLogEntry.id
+        punishments[-1] = punishment
+        print(punishment)
+        Users.setUserPunishments(member.id, punishments)
 
     # Specifically built for moderation module.
     async def on_member_warn(self, member, punishment):
-        await self.client.send_message(
-            self.botOutput,
+        modLogEntry = await self.client.send_message(
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Warn',
                 primaryInfo=str(member),
@@ -447,35 +470,75 @@ class UserTrackingModule(Module):
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['editID'])),
                         punishment['editID']
                     )
                 }]
            )
         )
+        print(modLogEntry)
+        punishment['modLogEntryID'] = modLogEntry.id
+        punishments = Users.getUserPunishments(member.id)
+        punishments[-1] = punishment
+        Users.setUserPunishments(member.id, punishments)
 
     # Specifically built for moderation module.
-    async def on_message_filter(self, message):
+    async def on_message_filter(self, message, word=None, text=None, embed=None):
+        replaceFrom = text if text else message.content
         await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
             self.createDiscordEmbed(
                 action='Filter',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}{}:\n\n{}'.format(
+                secondaryInfo='{} in{} {}{}:\n\n{}'.format(
                     message.author.mention,
+                    " the {} of an embed in".format(embed) if embed else '',
                     '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
                     message.channel.mention,
-                    message.content
+                    replaceFrom.replace(word, '**' + word + '**') if word else replaceFrom
                 ),
                 thumbnail=message.author.avatar_url
            )
         )
 
-    async def on_message_delete(self, message):
-        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message in self.filtered:
-            return
+    # Specifically built for moderation module.
+    async def on_message_review_filter(self, message, rating, url):
         await self.client.send_message(
-            self.botOutput,
+            self.logChannel,
+            self.createDiscordEmbed(
+                action='Review',
+                primaryInfo=str(message.author),
+                secondaryInfo='{} in {}{} **[Rating: {}]**:'.format(
+                    message.author.mention,
+                    '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
+                    message.channel.mention,
+                    rating
+                ),
+                image=url,
+                thumbnail=message.author.avatar_url
+           )
+        )
+
+    async def on_message_delete(self, message):
+        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silence']:
+            return
+        footer = {}
+        async for entry in self.client.rTTR.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
+            # Discord Audit Logs will clump together deleted messages, saying "MOD deleted X message(s) from USER in TARGET"
+            # It will still keep the creation date of the entry though, which could be as stale as a few minutes.
+            #
+            # So if it's not an entry made within 2 seconds, just verify the message being deleted is in the same channel
+            # and by the same user and we can assume that if the count is more than 1 that it was deleted by someone else.
+            # The best we can do right now.
+            prevDeletionCount = self.auditLogEntries.get(entry.id, 0)
+            if message.nonce == 'banned':
+                footer={'text': 'Message deleted due to a ban', 'icon_url': self.ACTIONS['Ban']['icon']}
+            elif entry.created_at >= datetime.utcnow() - timedelta(seconds=2) or \
+              (entry.extra.channel == message.channel and entry.target == message.author and entry.extra.count > prevDeletionCount):
+                footer={'text': 'Message deleted by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
+            self.auditLogEntries[entry.id] = entry.extra.count
+        await self.client.send_message(
+            self.spamChannel if message.nonce in ['banned'] else self.logChannel,
             self.createDiscordEmbed(
                 action='Delete',
                 primaryInfo=str(message.author),
@@ -485,7 +548,8 @@ class UserTrackingModule(Module):
                     message.channel.mention,
                     message.content
                 ),
-                thumbnail=message.author.avatar_url
+                thumbnail=message.author.avatar_url,
+                footer=footer
            )
         )
 

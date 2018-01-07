@@ -43,12 +43,13 @@ class NewPostAnnouncement(Announcer):
 
         url = 'https://www.toontownrewritten.com/news/item/' + str(data['postId']) + '/' + alphanumeric.sub('', data['title'].lower().replace(' ', '-'))
 
-        value = "**{}**\nPosted by {} on {}".format(data['title'], data['author'], data['date'])
-        embed = module.createDiscordEmbed("New Blog Post!", "**{}**\nPosted by {} on {}".format(data['title'], data['author'], data['date']), url=url)
+        info = "**{}**\nPosted by {} on {}".format(data['title'], data['author'], data['date'])
+        image = Embed.Empty
         if data['image']:
             k = data['image'].rfind('?')
             k = len(data['image']) if k == -1 else k
-            embed.set_image(url=data['image'][:k])
+            image = data['image'][:k]
+        embed = module.createDiscordEmbed(subtitle="New Blog Post!", subtitleUrl=url, info=info, image=image)
 
         return embed
 
