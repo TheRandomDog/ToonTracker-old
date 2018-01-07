@@ -556,7 +556,10 @@ class LobbyManagement(Module):
         async def execute(client, module, message, *args):
             name = ' '.join(args)
             lobby = module.getLobby(name=name)
-            if not name:
+            if not lobby and message.channel.category and message.channel.category.startswith('Lobby'):
+                lobby = module.getLobby(id=message.channel.category.id)
+
+            if not name and not lobby:
                 return message.author.mention + ' ' + FORCE_FAILURE_MISSING_NAME
             elif not lobby:
                 return message.author.mention + ' ' + FORCE_FAILURE_MISSING_LOBBY.format(name=name)
