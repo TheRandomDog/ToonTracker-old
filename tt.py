@@ -374,7 +374,7 @@ class ToonTracker(discord.Client):
             print('[!!!] ' + e)
         self.rTTR = self.get_guild(rTTR)
         if not self.rTTR:
-            e = 'No known guild was designated as rTTR in config, or it was malformed.'
+            e = 'No known guild was designated for participating in in config, or it was malformed.'
             errors.append(e)
             print('[!!!] ' + e)
         if not channel:
