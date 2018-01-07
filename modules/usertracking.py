@@ -394,6 +394,15 @@ class UserTrackingModule(Module):
                     ),
                     'inline': False
                 })
+        xp = Users.getUserXP(member.id)
+        level = Users.getUserLevel(member.id)
+        # Show off user's level / xp 
+        levelxp = '**Level {}**   {} / {} XP\n{}'.format(
+            level,
+            xp,
+            self.xpNeededForLevel(level),
+            getProgressBar(xp, self.xpNeededForLevel(level))
+        )
         await self.client.send_message(
             self.logChannel,
             self.createDiscordEmbed(
@@ -404,8 +413,7 @@ class UserTrackingModule(Module):
                 fields=[
                     {'name': 'Account Creation Date', 'value': str(member.created_at.date()), 'inline': True},
                     {'name': 'Join Date', 'value': str(member.joined_at.date()), 'inline': True},
-                    {'name': 'Level', 'value': str(Users.getUserLevel(member.id)), 'inline': True},
-                    {'name': 'XP', 'value': str(Users.getUserXP(member.id)), 'inline': True}
+                    {'name': 'Level / XP', 'value': levelxp, 'inline': True}
                 ] + punishmentFields,
                 #footer="You can use a punishment's edit ID to ~editReason or ~removePunishment" if Users.getUserPunishments(member.id) else ''
             )
