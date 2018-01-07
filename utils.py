@@ -47,7 +47,7 @@ class Config:
     @staticmethod
     def openFile(mode):
         file = open(os.path.join(__location__, 'config.json'), mode)
-        content = json.loads(file.read())
+        content = json.loads(file.read().decode('utf-8'))
         file.close()
         try:
             file = open(os.path.join(__location__, 'profiles', content['profile']), mode)
@@ -60,8 +60,8 @@ class Config:
     @classmethod
     def getSetting(cls, setting, otherwise=None):
         try:
-            file = cls.openFile('r')
-            content = json.loads(file.read())
+            file = cls.openFile('rb')
+            content = json.loads(file.read().decode('utf-8'))
             return content.get(setting, otherwise)
         except json.JSONDecodeError:
             print('[!!!] Tried to read setting "{}", but {} did not have valid JSON content.'.format(
@@ -127,11 +127,11 @@ class Config:
     @classmethod
     def setSetting(cls, setting, value):
         try:
-            file = cls.openFile('r+')
-            content = json.loads(file.read())
+            file = cls.openFile('r+b')
+            content = json.loads(file.read().decode('utf-8'))
             content[setting] = value
             file.seek(0, 0)
-            file.write(json.dumps(content, indent=4, sort_keys=True))
+            file.write(json.dumps(content, indent=4, sort_keys=True).encode('utf-8'))
             file.truncate()
         except json.JSONDecodeError:
             print('[!!!] Tried to write value "{}" to setting "{}", but {} did not have valid JSON content.'.format(
@@ -173,8 +173,8 @@ class Users:
     @classmethod
     def getUsers(cls):
         try:
-            file = cls.openFile('r')
-            content = {int(userID): data for userID, data in json.loads(file.read()).items()}
+            file = cls.openFile('rb')
+            content = {int(userID): data for userID, data in json.loads(file.read().decode('utf-8')).items()}
             return content
         except json.JSONDecodeError:
             print('[!!!] Tried to read user data, but {} did not have valid JSON content.'.format(
@@ -293,11 +293,11 @@ class Users:
     def setUserJSON(cls, userID, value):
         userID = str(userID)
         try:
-            file = cls.openFile('r+')
-            content = json.loads(file.read())
+            file = cls.openFile('r+b')
+            content = json.loads(file.read().decode('utf-8'))
             content[str(userID)] = value
             file.seek(0, 0)
-            file.write(json.dumps(content, indent=4, sort_keys=True))
+            file.write(json.dumps(content, indent=4, sort_keys=True).encode('utf-8'))
             file.truncate()
         except json.JSONDecodeError:
             print('[!!!] Tried to write value "{}" to user "{}", but {} did not have valid JSON content.'.format(
