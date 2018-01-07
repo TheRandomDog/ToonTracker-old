@@ -193,7 +193,8 @@ class UserTrackingModule(Module):
         self.trackMessages = Config.getModuleSetting('usertracking', 'track_messages', True)
         self.trackingExceptions = Config.getModuleSetting('usertracking', 'tracking_exceptions', [])
 
-        self.memberStatusTimeStart = {member.id: time.time() for member in client.rTTR.members}
+        self.moduleTimeStart = time.time()
+        self.memberStatusTimeStart = {}
         self.trackStatuses = Config.getModuleSetting('usertracking', 'track_statuses', True)
 
         self.auditLogEntries = {}
@@ -555,14 +556,16 @@ class UserTrackingModule(Module):
 
     async def on_member_update(self, before, after):
         if self.trackStatuses and before.status != after.status:
+            lastStatusTime = self.memberStatusTimeStart.get(before.id, self.moduleTimeStart)
+
             if before.status == discord.Status.online:
-                Users.setUserTimeOnline(before.id, Users.getUserTimeOnline(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
+                Users.setUserTimeOnline(before.id, Users.getUserTimeOnline(before.id) + (time.time() - lastStatusTime))
             elif before.status == discord.Status.offline:
-                Users.setUserTimeOffline(before.id, Users.getUserTimeOffline(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
+                Users.setUserTimeOffline(before.id, Users.getUserTimeOffline(before.id) + (time.time() - lastStatusTime))
             elif before.status == discord.Status.idle:
-                Users.setUserTimeIdle(before.id, Users.getUserTimeIdle(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
+                Users.setUserTimeIdle(before.id, Users.getUserTimeIdle(before.id) + (time.time() - lastStatusTime))
             elif before.status == discord.Status.dnd:
-                Users.setUserTimeDND(before.id, Users.getUserTimeDND(before.id) + (time.time() - self.memberStatusTimeStart[before.id]))
+                Users.setUserTimeDND(before.id, Users.getUserTimeDND(before.id) + (time.time() - lastStatusTime))
             self.memberStatusTimeStart[before.id] = time.time()
 
 
