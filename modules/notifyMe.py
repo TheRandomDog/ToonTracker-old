@@ -153,9 +153,10 @@ class NotifyMeModule(Module):
             for possibleRole in client.rTTR.roles:
                 if roleName.lower() == possibleRole.name.lower():
                     role = possibleRole
-                    for member in client.rTTR.members:
-                        if role in member.roles:
-                            await member.remove_roles(role, reason='Removed by moderator via ~removeNotificationRole')
+                    async with message.channel.typing():
+                        for member in client.rTTR.members:
+                            if role in member.roles:
+                                await member.remove_roles(role, reason='Removed by moderator via ~removeNotificationRole')
 
                     configRoles = Config.getModuleSetting('notifyMe', 'roles')
                     if role.name not in configRoles:
