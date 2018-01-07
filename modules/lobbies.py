@@ -534,8 +534,13 @@ class LobbyManagement(Module):
                 confirmationMessage = await client.send_message(message.author, LOG_CONFIRM_2)
                 async with message.author.typing():
                     file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
-                    await client.send_message([message.author, module.logChannel], file)
+                    await client.send_message(message.author, file)
                 await confirmationMessage.edit(content=LOG_CONFIRM_3)
+                if module.logChannel:
+                    await client.send_message(module.logChannel, LOG_CONFIRM_MOD.format(lobby.customName))
+                    async with module.logChannel.typing():
+                        file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
+                        await client.send_message(module.logChannel, file)
     class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandlobby'
     class LobbyDisbandCMD_Variant2(LobbyDisbandCMD): NAME = 'disband'
 
@@ -582,8 +587,13 @@ class LobbyManagement(Module):
                 confirmationMessage = await client.send_message(owner, LOG_CONFIRM_5)
                 async with message.author.typing():
                     file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
-                    await client.send_message([message.author, module.logChannel], file)
+                    await client.send_message(message.author, file)
                 await confirmationMessage.edit(content=LOG_CONFIRM_6)
+                if module.logChannel:
+                    await client.send_message(module.logChannel, LOG_CONFIRM_MOD.format(lobby.customName))
+                    async with module.logChannel.typing():
+                        file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
+                        await client.send_message(module.logChannel, file)
     class LobbyForceDisbandCMD_Variant1(LobbyForceDisbandCMD): NAME = 'forcedisband'
 
     class LobbyFilterEnableCMD(Command):
@@ -715,7 +725,7 @@ class LobbyManagement(Module):
         
         self.activeLobbies = {}
         self.lobbyChannel = Config.getModuleSetting('lobbies', 'interaction')
-        self.logChannel = Config.getModuleSetting('lobbies', 'log_channel')
+        self.logChannel = client.get_channel(Config.getModuleSetting('lobbies', 'log_channel'))
         self.unvisitedExpiryWarningTime = assertType(Config.getModuleSetting('lobbies', 'unvisited_expiry_warning_time'), int, otherwise=600)
         self.unvisitedExpiryTime = assertType(Config.getModuleSetting('lobbies', 'unvisited_expiry_time'), int, otherwise=300)
         self.visitedExpiryWarningTime = assertType(Config.getModuleSetting('lobbies', 'visited_expiry_warning_time'), int, otherwise=518400)
