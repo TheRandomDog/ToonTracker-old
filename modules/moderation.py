@@ -154,13 +154,13 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), message=message)
 
         @classmethod
-        async def getUserInPunishCMD(cls, client, message):
+        async def getUserInPunishCMD(cls, client, message, *args):
             if not message.mentions:
                 if not message.raw_mentions:
                     try:
@@ -184,7 +184,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), silent=True, message=message)
@@ -195,7 +195,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
@@ -206,7 +206,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
@@ -217,7 +217,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
@@ -228,7 +228,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
@@ -239,7 +239,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, message=message)
@@ -250,7 +250,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, length=args[1] if len(args) > 1 else None, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, silent=True, message=message)
@@ -265,7 +265,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, message=message)
@@ -276,7 +276,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message)
+            user = await cls.getUserInPunishCMD(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
