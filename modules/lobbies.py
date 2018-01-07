@@ -779,7 +779,7 @@ class LobbyManagement(Module):
             lobby.expiryWarning = None
 
             moderation = self.client.requestModule('moderation')
-            if lobby.filter and moderation:
+            if lobby.filter and moderation and message.author != self.client.rTTR.me:
                 filterActivated = await moderation.filterBadWords(message, silentFilter=True)
                 if filterActivated and not lobby.filterWarning:
                     lobby.filterWarning = True
@@ -796,7 +796,7 @@ class LobbyManagement(Module):
             lobby.expiryWarning = None
 
             moderation = self.client.requestModule('moderation')
-            if lobby.filter and moderation:
+            if lobby.filter and moderation and message.author != self.client.rTTR.me:
                 filterActivated = await moderation.filterBadWords(message, edited=' edited ', silentFilter=True)
                 if filterActivated and not lobby.filterWarning:
                     lobby.filterWarning = True
