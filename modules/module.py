@@ -87,6 +87,9 @@ class Module:
         except Exception as e:
             return '```\n{}```'.format(format_exc())
 
+    async def on_message(self, message):
+        pass
+
     def announce(self, announcer, *args, **kwargs):
         try:
             assert issubclass(announcer, Announcer)

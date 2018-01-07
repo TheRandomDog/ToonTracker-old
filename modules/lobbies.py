@@ -108,6 +108,7 @@ LOG_CONFIRM_3 = "Here's that chat log for you:"
 LOG_CONFIRM_4 = "We're generating a chat log for you in case you needed to save anything..."
 LOG_CONFIRM_5 = "Here's the chat log for your lobby, in case you needed to save anything..."
 LOG_CONFIRM_6 = "Here's the chat log for your lobby, in case you needed to save anything:"
+LOG_CONFIRM_MOD = "The **{}** lobby disbanded, here's a chat log from the channel:"
 LOG_NO_TEXT = 'No chatlog was generated because the lobby does not have a text channel.'
 
 CORRUPTED_CHANNELS = 'Just a heads up -- your lobby (somehow) ended up with no channels associated with it, ' \
@@ -533,7 +534,7 @@ class LobbyManagement(Module):
                 confirmationMessage = await client.send_message(message.author, LOG_CONFIRM_2)
                 async with message.author.typing():
                     file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
-                    await client.send_message(message.author, file)
+                    await client.send_message([message.author, module.logChannel], file)
                 await confirmationMessage.edit(content=LOG_CONFIRM_3)
     class LobbyDisbandCMD_Variant1(LobbyDisbandCMD): NAME = 'disbandlobby'
     class LobbyDisbandCMD_Variant2(LobbyDisbandCMD): NAME = 'disband'
@@ -581,7 +582,7 @@ class LobbyManagement(Module):
                 confirmationMessage = await client.send_message(owner, LOG_CONFIRM_5)
                 async with message.author.typing():
                     file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
-                    await client.send_message(owner, file)
+                    await client.send_message([message.author, module.logChannel], file)
                 await confirmationMessage.edit(content=LOG_CONFIRM_6)
     class LobbyForceDisbandCMD_Variant1(LobbyForceDisbandCMD): NAME = 'forcedisband'
 
@@ -713,7 +714,8 @@ class LobbyManagement(Module):
         Module.__init__(self, client)
         
         self.activeLobbies = {}
-        self.lobbyChannel = Config.getModuleSetting("lobbies", "interaction")
+        self.lobbyChannel = Config.getModuleSetting('lobbies', 'interaction')
+        self.logChannel = Config.getModuleSetting('lobbies', 'log_channel')
         self.unvisitedExpiryWarningTime = assertType(Config.getModuleSetting('lobbies', 'unvisited_expiry_warning_time'), int, otherwise=600)
         self.unvisitedExpiryTime = assertType(Config.getModuleSetting('lobbies', 'unvisited_expiry_time'), int, otherwise=300)
         self.visitedExpiryWarningTime = assertType(Config.getModuleSetting('lobbies', 'visited_expiry_warning_time'), int, otherwise=518400)
