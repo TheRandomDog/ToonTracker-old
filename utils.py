@@ -7,17 +7,7 @@ from discord import Embed, Color, Member, User
 from datetime import datetime
 from math import ceil
 
-# Create config file if it doesn't exist
-try:
-    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    f = open(os.path.join(__location__, 'config.json'), 'r+')
-    c = f.read()
-    if c == '':
-        f.write('{}')
-except json.JSONDecodeError:
-    f.write('{}')
-finally:
-    f.close()
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 # ASSERTIONS
 
@@ -46,7 +36,14 @@ def assertClass(value, *classes, otherwise=TypeError):
 class Config:
     @staticmethod
     def openFile(mode):
-        file = open(os.path.join(__location__, 'config.json'), mode)
+        try:
+            file = open(os.path.join(__location__, 'config.json'), mode)
+        except FileNotFoundError:
+            createdFile = open(os.path.join(__location__, 'config.json'), 'w+')
+            createdFile.write('{}')
+            createdFile.close()
+            file = open(os.path.join(__location__, 'config.json'), mode)
+            print('config.json was not found, so the file was created.')
         content = json.loads(file.read().decode('utf-8'))
         file.close()
         try:
@@ -167,7 +164,14 @@ class Users:
 
     @staticmethod
     def openFile(mode):
-        file = open(os.path.join(__location__, 'users.json'), mode)
+        try:
+            file = open(os.path.join(__location__, 'users.json'), mode)
+        except FileNotFoundError:
+            createdFile = open(os.path.join(__location__, 'users.json'), 'w+')
+            createdFile.write('{}')
+            createdFile.close()
+            file = open(os.path.join(__location__, 'users.json'), mode)
+            print('users.json was not found, so the file was created.')
         return file
 
     @classmethod
