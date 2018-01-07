@@ -41,18 +41,18 @@ WARNING_MESSAGE = "Heyo, {}!\n\nThis is just to let you know you've been given a
                 "and that this been marked down officially. Here's the reason:\n```{}```\nAs a refresher, we recommend re-reading " \
                 "the Discord server's rules so you're familiar with the way we run things there. Thank you!"
 WARNING_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('warning')
-KICK_MESSAGE = "Heyo, {}!\n\nThis is just to let you know you've been kicked from the Toontown Rewritten " \
+KICK_MESSAGE = "Heyo, {}!\n\nThis is just to let you know you've been kicked from the {} " \
                 "Discord server by a moderator, and that this has been marked down officially. Here's the reason:\n```{}```\n" \
                 "As a refresher, we recommend re-reading the Discord server's rules so you're familiar with the way we run " \
                 "things there if you decide to rejoin. We'd love to have you back, as long as you stay Toony!"
 KICK_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('kick')
 KICK_FAILURE = "Could not kick the user. This is probably bad. Please use Discord's built-in moderation tools to enforce the punishment."
 TEMPORARY_BAN_MESSAGE = "Hey there, {}.\n\nThis is just to let you know you've been temporarily banned from the " \
-                    "Toontown Rewritten Discord server by a moderator for **{}**, and that this has been marked down officially. Here's " \
+                    "{} Discord server by a moderator for **{}**, and that this has been marked down officially. Here's " \
                     "the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server's rules so you're familiar " \
                     "with the way we run things there if you decide to rejoin after your ban. We'd love to have you back, as long as you stay Toony!"
 TEMPORARY_BAN_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('temporary ban')
-PERMANENT_BAN_MESSAGE = "Hey there, {}.\n\nThis is just to let you know you've been permanently banned from the Toontown Rewritten Discord server by " \
+PERMANENT_BAN_MESSAGE = "Hey there, {}.\n\nThis is just to let you know you've been permanently banned from the {} Discord server by " \
                     "a moderator. Here's the reason:\n```{}```\nIf you feel this is illegitimate, please contact one of our mods. Thank you for chatting with us!"
 TEMPORARY_BAN_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('permanent ban')
 BAN_FAILURE = "Could not ban the user. This is probably bad. You should use Discord's built-in moderation tools to enforce the ban."
@@ -522,7 +522,7 @@ class ModerationModule(Module):
         elif nextPunishment == self.KICK:
             if not silent:                   
                 try:
-                    notice = await self.client.send_message(user, KICK_MESSAGE.format(user.mention, reason))
+                    notice = await self.client.send_message(user, KICK_MESSAGE.format(user.mention, self.client.rTTR.name, reason))
                     punishmentEntry['noticeID'] = notice.id
                 except Exception as e:
                     await self.client.send_message(author, KICK_MESSAGE_FAILURE)
@@ -530,7 +530,7 @@ class ModerationModule(Module):
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.kick(user, reason=punishmentEntry['editID'])
+                await self.client.rTTR.kick(user, reason=str(punishmentEntry['editID']))
             except discord.HTTPException:
                 await self.client.send_message(author, KICK_FAILURE)
         elif nextPunishment == self.TEMPORARY_BAN:
@@ -538,7 +538,7 @@ class ModerationModule(Module):
             punishmentEntry['length'] = lengthText
             if not silent:
                 try:
-                    notice = await self.client.send_message(user, TEMPORARY_BAN_MESSAGE.format(user.mention, lengthText, reason))
+                    notice = await self.client.send_message(user, TEMPORARY_BAN_MESSAGE.format(user.mention, self.client.rTTR.name, lengthText, reason))
                     punishmentEntry['noticeID'] = notice.id
                 except Exception as e:
                     await self.client.send_message(author, TEMPORARY_BAN_MESSAGE_FAILURE)
@@ -546,13 +546,13 @@ class ModerationModule(Module):
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.ban(user, reason=punishmentEntry['editID'])
+                await self.client.rTTR.ban(user, reason=str(punishmentEntry['editID']))
             except discord.HTTPException:
                 await self.client.send_message(author, BAN_FAILURE)
         elif nextPunishment == self.PERMANENT_BAN:
             if not silent:
                 try:
-                    notice = await self.client.send_message(user, PERMANENT_BAN_MESSAGE.format(user.mention, reason))
+                    notice = await self.client.send_message(user, PERMANENT_BAN_MESSAGE.format(user.mention, self.client.rTTR.name, reason))
                     punishmentEntry['noticeID'] = notice.id
                 except Exception as e:
                     await self.client.send_message(author, PERMANENT_BAN_MESSAGE_FAILURE)
@@ -560,7 +560,7 @@ class ModerationModule(Module):
             try:
                 punishments.append(punishmentEntry)
                 Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.ban(user, reason=punishmentEntry['editID'])
+                await self.client.rTTR.ban(user, reason=str(punishmentEntry['editID']))
             except discord.HTTPException:
                 await self.client.send_message(author, BAN_FAILURE)
         await self.scheduleUnbans()
