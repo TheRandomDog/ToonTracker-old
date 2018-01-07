@@ -509,9 +509,7 @@ class UserTrackingModule(Module):
         )
 
     async def on_message_delete(self, message):
-        if (message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel
-          or message.author.id in self.exceptions or message.channel.id in self.exceptions
-          or message.channel.category.id in self.exceptions or message.nonce in ['filter', 'silence']):
+        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silence']:
             return
         footer = {}
         async for entry in self.client.rTTR.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
