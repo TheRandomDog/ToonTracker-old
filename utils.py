@@ -421,22 +421,6 @@ def getAttributeFromMatch(iterable, match):
 def getVersion():
     return __version__
 
-def createDiscordEmbed(title, description=Embed.Empty, *, multipleFields=False, color=None, url=None, **kwargs):
-    if multipleFields:
-        embed = Embed(color=color if color else Color.green(), **kwargs)
-        # If we have multiple inline fields, the thumbnail might push them off.
-        # Therefore, we'll use the author space to include the icon url.
-        embed.set_author(name=title)#, icon_url=TTR_ICON)
-    elif url:
-        embed = Embed(title=title, description=description, url=url, color=color if color else Color.default(), **kwargs)
-        #embed.set_thumbnail(url=TTR_ICON)
-    else:
-        embed = Embed(color=color if color else Color.green(), **kwargs)
-        embed.add_field(name=title, value=description)
-        #embed.set_thumbnail(url=TTR_ICON)
-
-    return embed
-
 def getProgressBar(progress, outOf):
     p = int((progress/outOf) * 10)
     # Pray this never has to be debugged.
