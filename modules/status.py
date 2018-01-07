@@ -5,7 +5,6 @@ import requests
 import regex as re
 
 from .module import *
-from extra.server import *
 from json import JSONDecodeError
 from discord import Embed, Color
 from utils import Config, getVersion

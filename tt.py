@@ -278,7 +278,7 @@ class ToonTracker(discord.Client):
                 async for message in channel.history(limit=10):
                     for embed in message.embeds:
                         # Find the message that has a matching title / author to replace with the new message.
-                        if embed.fields[0].name == update[1] or embed.author.name == update[1]:
+                        if (embed.fields and embed.fields[0].name == update[1]) or embed.author.name == update[1] or embed.title == update[1]:
                             await message.edit(embed=update[2])
                             messageSent = True
                 if not messageSent:
@@ -404,7 +404,7 @@ class ToonTracker(discord.Client):
             try:
                 modsmod = import_module('modules.' + module)
             except ImportError:
-                w = 'Could not find Python module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
+                w = 'Could not import Python module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
                 warnings.append(w)
                 print(w)
                 continue

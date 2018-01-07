@@ -4,7 +4,6 @@ import socket
 import re
 
 from .module import *
-from extra.server import *
 from discord import Embed, Color
 from utils import Config, getVersion
 uaHeader = Config.getSetting('ua_header', getVersion())

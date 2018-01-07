@@ -158,7 +158,7 @@ class Module:
     # This is preferred over simply creating a new instance of discord.Embed because there 
     # are some properties that require method input due to containing multiple sub-values.
     def createDiscordEmbed(self, **kwargs):
-        title = kwargs.get('title', Embed.Empty)
+        title = kwargs.get('title', None)
         subtitle = kwargs.get('subtitle', Embed.Empty)
         info = kwargs.get('info', Embed.Empty)
         titleUrl = kwargs.get('titleUrl', Embed.Empty)
@@ -172,8 +172,9 @@ class Module:
         color = kwargs.get('color', Embed.Empty)
 
         embed = Embed(title=subtitle, description=info, url=subtitleUrl, color=color)
-        embed.set_author(name=title, url=titleUrl, icon_url=icon)
         embed.set_footer(text=footer, icon_url=footerIcon)
+        if title:
+            embed.set_author(name=title, url=titleUrl, icon_url=icon)
         if thumbnail != Embed.Empty:
             embed.set_thumbnail(url=thumbnail)
         if image != Embed.Empty:
