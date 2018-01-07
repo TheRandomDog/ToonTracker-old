@@ -323,7 +323,7 @@ class UserTrackingModule(Module):
                 )
                 await self.client.send_message(member, embed)
 
-    def createDiscordEmbed(self, action, primaryInfo=discord.Embed.Empty, secondaryInfo=discord.Embed.Empty, thumbnail='', fields=[], footer={}, color=None):
+    def createDiscordEmbed(self, action, primaryInfo=discord.Embed.Empty, secondaryInfo=discord.Embed.Empty, thumbnail='', fields=[], footer={}, image=None, color=None):
         action = self.ACTIONS[action]
         embed = discord.Embed(title=primaryInfo, description=secondaryInfo, color=color if color else action['color'])
         embed.set_author(name=action['title'], icon_url=action['icon'])
@@ -331,8 +331,11 @@ class UserTrackingModule(Module):
             embed.set_thumbnail(url=thumbnail)
         if footer:
             embed.set_footer(**footer)
+        if image:
+            embed.set_image(url=image)
         for field in fields:
             embed.add_field(**field)
+
         return embed
 
     async def on_member_ban(self, guild, member):

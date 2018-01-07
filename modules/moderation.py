@@ -12,7 +12,7 @@ from traceback import format_exc
 
 messages = []
 
-if Config.getModuleSetting('moderation', 'badimagefilter'):
+if Config.getModuleSetting('moderation', 'bad_image_filter'):
     try:
         from clarifai.rest import ClarifaiApp, Image, Video
     except ImportError:
@@ -62,7 +62,7 @@ WORD_FILTER_EMBED_ENTRY = "Removed{}message from {} in {}: {}\nThe embed {} cont
 WORD_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
                     "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
                     "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
-IMAGE_FILTER_REASON = 'Posting Inappropriate Content [Rating: {}]'
+IMAGE_FILTER_REASON = 'Posting Inappropriate Content **[Rating: {}]**'
 IMAGE_FILTER_REVIEW = '{} posted an image in {} that has been registered as possibly bad. **[Rating: {}]**\n' \
                     '*If the image has bad content in it, please act accordingly.*\n{}'
 
@@ -387,7 +387,6 @@ class ModerationModule(Module):
             self.imageFilterApp = ClarifaiApp(api_key=gifKey)
             self.generalImageFilter = self.imageFilterApp.models.get('moderation')
             self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
-            self.nsfwspam = Config.getModuleSetting('moderation', 'nsfw_location')
 
     async def punishUser(self, user, punishment=None, length=None, reason=NO_REASON, silent=False, message=None, snowflake=None):
         member = self.client.rTTR.get_member(user.id)
@@ -677,7 +676,7 @@ class ModerationModule(Module):
     async def filterBadImages(self, message):
         # Refreshes embed info from the API.
         try:
-            message = await self.client.get_message(message.channel, message.id)
+            message = await message.channel.get_message(message.id)
         except discord.errors.NotFound:
             print('Tried to rediscover message {} to filter bad images but message wasn\'t found.'.format(message.id))
 
@@ -685,14 +684,14 @@ class ModerationModule(Module):
             return
 
         for embed in message.embeds:
-            if embed['type'] in ['image', 'gif', 'gifv']:
-                rating = self.runImageFilter(embed['thumbnail']['url'], gif=True if embed['type'] in ['gif', 'gifv'] or embed['url'].endswith('gif') else False)
-                await self.determineImageRatingAction(message, rating, embed['url'])
+            if embed.type in ['image', 'gif', 'gifv']:
+                rating = self.runImageFilter(embed.thumbnail.url, gif=True if embed.type in ['gif', 'gifv'] or embed.url.endswith('gif') else False)
+                await self.determineImageRatingAction(message, rating, embed.url)
 
         for attachment in message.attachments:
-            if any([attachment['filename'].endswith(extension) for extension in ('.jpg', '.png', '.gif', '.bmp')]):
-                rating = self.runImageFilter(attachment['url'], gif=True if attachment['filename'].endswith('.gif') or attachment['filename'].endswith('.gifv') else False)
-                await self.determineImageRatingAction(message, rating, attachment['url'])
+            if any([attachment.filename.endswith(extension) for extension in ('.jpg', '.png', '.gif', '.bmp')]):
+                rating = self.runImageFilter(attachment.url, gif=True if attachment.filename.endswith('.gif') or attachment.filename.endswith('.gifv') else False)
+                await self.determineImageRatingAction(message, rating, attachment.url)
 
     def runImageFilter(self, url, gif=False):
         # The image content is based on a scale from 0-2.
@@ -756,16 +755,18 @@ class ModerationModule(Module):
 
         if rating > 1.5:
             rating = round(rating, 2)
-            message.filtered = True
             await self.client.delete_message(message)
             if usertracking:
+                # On this specific instance, using `nonce` is more unreliable than usual.
+                # We'll unhack it up later and figure out a better way. For the rest of them too.
+                message.nonce = 'filter'  # See other code that edits `nonce` for explanation.
                 await usertracking.on_message_filter(message)
             await self.punishUser(message.author, punishment=self.PERMANENT_BAN, reason=IMAGE_FILTER_REASON.format(rating), snowflake=message.id)
         elif rating > 1:
             rating = round(rating, 2)
-            message.filtered = True
             await self.client.delete_message(message)
             if usertracking:
+                message.nonce = 'filter'
                 await usertracking.on_message_filter(message)
             await self.punishUser(message.author, punishment=self.KICK, reason=IMAGE_FILTER_REASON.format(rating), snowflake=message.id)
         elif rating > .5:
@@ -773,12 +774,12 @@ class ModerationModule(Module):
             if usertracking:
                 await usertracking.on_message_review_filter(message, rating, url)
             else:
-                await self.client.send_message(self.spamChannel, IMAGE_FILTER_REVIEW.format(
+                await self.client.send_message(self.logChannel, IMAGE_FILTER_REVIEW.format(
                     message.author.mention, message.channel.mention, rating, url))
         # For debug.
-        #else:
-        #    rating = round(rating, 2)
-        #    await self.client.send_message(self.spamChannel, "Image posted was fine. **[Rating: {}]**".format(rating))
+        else:
+            rating = round(rating, 2)
+            await self.client.send_message(self.spamChannel, "Image posted was fine. **[Rating: {}]**".format(rating))
 
     async def handleMsg(self, message):
         if message.channel.id in self.filterExceptions or message.author.id in self.filterExceptions or \
