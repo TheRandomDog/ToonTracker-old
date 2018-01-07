@@ -580,7 +580,7 @@ class LobbyManagement(Module):
             for member in members:
                 await client.send_message(member, DISBAND_SUCCESS_MEMBER.format(lobby.customName))
             await client.send_message(owner, FORCE_SUCCESS_OWNER.format(name))
-            await client.send_message(message.channel, message.author.mention + ' ' + FORCE_SUCCESS.format(name))
+            await client.send_message(module.logChannel if message.channel == lobby.textChannel else lobby.textChannel, message.author.mention + ' ' + FORCE_SUCCESS.format(name))
             del module.activeLobbies[lobby.id]
 
             if lobby.textChannel:
