@@ -359,6 +359,23 @@ class ModerationModule(Module):
                         return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
             return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
+    class ViewBadWordsCMD(Command):
+        NAME = 'viewBadWords'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if not hasattr(module, 'words'):
+                return "{} The bad word filter isn't turned on in the channel".format(message.author.mention)
+            blacklistLength = len(module.words)
+            words = sorted(module.words)
+            for i in range(int(blacklistLength / 100)):
+                embed = module.createDiscordEmbed(
+                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100)), 
+                    info='\n'.join(words[100 * i:100 * (i + 1)])
+                )
+                await client.send_message(message.channel, embed)
+
     def __init__(self, client):
         Module.__init__(self, client)
 
