@@ -367,9 +367,9 @@ class ToonTracker(discord.Client):
         warnings = []
         errors = []
 
-        rTTR = Config.getSetting('rTTR')
+        rTTR = Config.getSetting('guild')
         if not rTTR:
-            e = 'No guild ID was designated as rTTR in config, or it was malformed.'
+            e = 'No guild ID was designated for participating in in config, or it was malformed.'
             errors.append(e)
             print('[!!!] ' + e)
         self.rTTR = self.get_guild(rTTR)
