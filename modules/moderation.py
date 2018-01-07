@@ -369,9 +369,9 @@ class ModerationModule(Module):
                 return "{} The bad word filter isn't turned on in the channel".format(message.author.mention)
             blacklistLength = len(module.words)
             words = sorted(module.words)
-            for i in range(int(blacklistLength / 100)):
+            for i in range(int(blacklistLength / 100) + 1):
                 embed = module.createDiscordEmbed(
-                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100)), 
+                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
                     info='\n'.join(words[100 * i:100 * (i + 1)])
                 )
                 await client.send_message(message.channel, embed)
