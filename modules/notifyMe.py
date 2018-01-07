@@ -13,7 +13,7 @@ class NotifyMeModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not type(message.channel) == discord.DMChannel:
+            if not type(message.channel) == discord.DMChannel and message.channel.id != module.interaction:
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -44,7 +44,7 @@ class NotifyMeModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not type(message.channel) == discord.DMChannel:
+            if not type(message.channel) == discord.DMChannel and message.channel.id != module.interaction:
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
@@ -203,6 +203,8 @@ class NotifyMeModule(Module):
 
     def __init__(self, client):
         Module.__init__(self, client)
+
+        self.interaction = Config.getModuleSetting('notifyMe', 'interaction')
 
         self.availableRoles = {}
         self.refreshAvailableRoles()
