@@ -781,7 +781,7 @@ class ModerationModule(Module):
             rating = round(rating, 2)
             await self.client.send_message(self.spamChannel, "Image posted was fine. **[Rating: {}]**".format(rating))
 
-    async def handleMsg(self, message):
+    async def on_message(self, message):
         if message.channel.id in self.filterExceptions or message.author.id in self.filterExceptions or \
             (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
             (message.author.bot and not self.filterBots) or (Config.getRankOfMember(message.author) >= 300 and not self.filterMods):

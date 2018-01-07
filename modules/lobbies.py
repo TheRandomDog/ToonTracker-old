@@ -760,7 +760,7 @@ class LobbyManagement(Module):
             members += [self.getLobbyOwner(lobby)]
         return members
 
-    async def handleMsg(self, message):
+    async def on_message(self, message):
         if self.channelInLobby(message.channel):
             lobby = self.getLobby(id=message.channel.category.id)
             lobby.lastVisited = time.mktime(time.gmtime())

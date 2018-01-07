@@ -269,7 +269,7 @@ class UserTrackingModule(Module):
             Users.setUserXP(member.id, xp - xpNeeded)
         return response
 
-    async def handleMsg(self, message):
+    async def on_message(self, message):
         # Definitely don't want to progress if it's a heckin' webhook.
         if message.webhook_id:
             return

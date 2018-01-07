@@ -81,14 +81,11 @@ class Module:
                 return response
 
         try:
-            response = await self.handleMsg(message)
+            response = await self.on_message(message)
             if response:
                 return response
         except Exception as e:
             return '```\n{}```'.format(format_exc())
-
-    async def handleMsg(self, message):
-        pass
 
     def announce(self, announcer, *args, **kwargs):
         try:
