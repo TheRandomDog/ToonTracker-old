@@ -777,9 +777,9 @@ class ModerationModule(Module):
                 await self.client.send_message(self.logChannel, IMAGE_FILTER_REVIEW.format(
                     message.author.mention, message.channel.mention, rating, url))
         # For debug.
-        else:
-            rating = round(rating, 2)
-            await self.client.send_message(self.spamChannel, "Image posted was fine. **[Rating: {}]**".format(rating))
+        #else:
+        #    rating = round(rating, 2)
+        #   await self.client.send_message(self.spamChannel, "Image posted was fine. **[Rating: {}]**".format(rating))
 
     async def on_message(self, message):
         if message.channel.id in self.filterExceptions or message.author.id in self.filterExceptions or \
