@@ -475,8 +475,8 @@ class ModerationModule(Module):
             reason = NO_REASON
 
         if length:
-            length = getShortTimeLength(length)
             lengthText = getLongTime(length)
+            length = getShortTimeLength(length)
             nextPunishment = self.TEMPORARY_BAN  # Just asserts this if we have a time.
             if not 15 <= length <= 63113852:
                 return CommandResponse(
