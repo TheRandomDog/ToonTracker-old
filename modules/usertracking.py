@@ -114,19 +114,19 @@ class UserTrackingModule(Module):
             messages = []
             channelParticipation = Users.getUserChannelHistory(user.id)
             # A classic Computer Science solution eh? Too lazy for something clever
-            mostChannelParticipation = [(None, -1, 0, 0, 0) for _ in range(10)]
+            mostChannelParticipation = [(None, -1, 0, 0, 0) for _ in range(3)]
             for channel, participation in channelParticipation.items():
                 channel = client.rTTR.get_channel(int(channel))
                 if not channel:
                     continue
 
                 totalMessages = participation['messages'] + participation['attachments'] + participation['embeds']
-                for i in range(9, -1, -1):
+                for i in range(2, -1, -1):
                     if totalMessages > mostChannelParticipation[i][1]:
                         if i != 0 and totalMessages > mostChannelParticipation[i - 1][1]:
                             continue
                         else:
-                            for j in range(8, i - 1, -1):
+                            for j in range(1, i - 1, -1):
                                 mostChannelParticipation[j + 1] = mostChannelParticipation[j]
                             mostChannelParticipation[i] = (channel, totalMessages, participation['messages'], participation['attachments'], participation['embeds'])
             for channel, _, _messages, attachments, embeds in mostChannelParticipation:
@@ -185,7 +185,7 @@ class UserTrackingModule(Module):
                         'value': '\n'.join(namedRoles),
                         'inline': True
                     },
-                    {'name': 'Messages', 'value': '\n'.join(messages), 'inline': True},
+                    {'name': 'Top 3 Channels', 'value': '\n'.join(messages), 'inline': True},
                     {'name': 'Statuses', 'value': statuses, 'inline': True}
                 ] + punishmentFields,
                 footer={'text': "You can use a punishment's edit ID to ~editReason or ~removePunishment"} if punishmentFields else None,
