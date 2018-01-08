@@ -54,7 +54,7 @@ TEMPORARY_BAN_MESSAGE = "Hey there, {}.\n\nThis is just to let you know you've b
 TEMPORARY_BAN_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('temporary ban')
 PERMANENT_BAN_MESSAGE = "Hey there, {}.\n\nThis is just to let you know you've been permanently banned from the {} Discord server by " \
                     "a moderator. Here's the reason:\n```{}```\nIf you feel this is illegitimate, please contact one of our mods. Thank you for chatting with us!"
-TEMPORARY_BAN_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('permanent ban')
+PERMANENT_BAN_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('permanent ban')
 BAN_FAILURE = "Could not ban the user. This is probably bad. You should use Discord's built-in moderation tools to enforce the ban."
 
 WORD_FILTER_ENTRY = 'Removed{}message from {} in {}: {}'
@@ -526,61 +526,45 @@ class ModerationModule(Module):
             'noticeID': None
         }
         if nextPunishment == self.WARNING:
-            if not silent:
-                try:
-                    notice = await self.client.send_message(user, WARNING_MESSAGE.format(user.mention, reason))
-                    punishmentEntry['noticeID'] = notice.id
-                except Exception as e:
-                    await self.client.send_message(author, WARNING_MESSAGE_FAILURE)
-                    print('Could not send warning notification message to {}'.format(user.id))
-            punishments.append(punishmentEntry)
-            Users.setUserPunishments(user.id, punishments)
-            if usertracking:
-                await usertracking.on_member_warn(user, punishmentEntry)
+            punishMessage = WARNING_MESSAGE.format(user.mention, reason)
+            messageFailed = WARNING_MESSAGE_FAILURE
+            punishAction = None
+            actionFailure = None
         elif nextPunishment == self.KICK:
-            if not silent:                   
-                try:
-                    notice = await self.client.send_message(user, KICK_MESSAGE.format(user.mention, self.client.rTTR.name, reason))
-                    punishmentEntry['noticeID'] = notice.id
-                except Exception as e:
-                    await self.client.send_message(author, KICK_MESSAGE_FAILURE)
-                    print('Could not send kick notification message to {}'.format(user.id))
-            try:
-                punishments.append(punishmentEntry)
-                Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.kick(user, reason=str(punishmentEntry['editID']))
-            except discord.HTTPException:
-                await self.client.send_message(author, KICK_FAILURE)
+            punishMessage = KICK_MESSAGE.format(user.mention, self.client.rTTR.name, reason)
+            messageFailed = KICK_MESSAGE_FAILURE
+            punishAction = self.client.rTTR.kick
+            actionFailure = KICK_FAILURE
         elif nextPunishment == self.TEMPORARY_BAN:
             punishmentEntry['endTime'] = time.time() + length
             punishmentEntry['length'] = lengthText
-            if not silent:
-                try:
-                    notice = await self.client.send_message(user, TEMPORARY_BAN_MESSAGE.format(user.mention, self.client.rTTR.name, lengthText, reason))
-                    punishmentEntry['noticeID'] = notice.id
-                except Exception as e:
-                    await self.client.send_message(author, TEMPORARY_BAN_MESSAGE_FAILURE)
-                    print('Could not send temporary ban notification message to {}'.format(user.id))
-            try:
-                punishments.append(punishmentEntry)
-                Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.ban(user, reason=str(punishmentEntry['editID']))
-            except discord.HTTPException:
-                await self.client.send_message(author, BAN_FAILURE)
+            punishMessage = TEMPORARY_BAN_MESSAGE.format(user.mention, self.client.rTTR.name, lengthText, reason)
+            messageFailed = TEMPORARY_BAN_MESSAGE_FAILURE
+            punishAction = self.client.rTTR.ban
+            actionFailure = BAN_FAILURE
         elif nextPunishment == self.PERMANENT_BAN:
-            if not silent:
-                try:
-                    notice = await self.client.send_message(user, PERMANENT_BAN_MESSAGE.format(user.mention, self.client.rTTR.name, reason))
-                    punishmentEntry['noticeID'] = notice.id
-                except Exception as e:
-                    await self.client.send_message(author, PERMANENT_BAN_MESSAGE_FAILURE)
-                    print('Could not send permanent ban notification message to {}'.format(user.id))
+            punishMessage = PERMANENT_BAN_MESSAGE.format(user.mention, self.client.rTTR.name, reason)
+            messageFailed = PERMANENT_BAN_MESSAGE_FAILURE
+            punishAction = self.client.rTTR.ban
+            actionFailure = BAN_FAILURE
+
+        if not silent and punishMessage:
             try:
-                punishments.append(punishmentEntry)
-                Users.setUserPunishments(user.id, punishments)
-                await self.client.rTTR.ban(user, reason=str(punishmentEntry['editID']))
-            except discord.HTTPException:
-                await self.client.send_message(author, BAN_FAILURE)
+                notice = await self.client.send_message(user, punishMessage)
+                punishmentEntry['noticeID'] = notice.id
+            except Exception as e:
+                await self.client.send_message(author, messageFailed)
+                print('Could not send {} notification message to {}'.format(nextPunishment.lower(), user.id))
+        try:
+            punishments.append(punishmentEntry)
+            Users.setUserPunishments(user.id, punishments)
+            if punishAction:
+                await punishAction(user, reason=str(punishmentEntry['editID']))
+            elif nextPunishment == self.WARNING:  # Can't do everything cleanly :(
+                await usertracking.on_member_warn(user, punishmentEntry)
+        except discord.HTTPException:
+            await self.client.send_message(author, actionFailure)
+
         await self.scheduleUnbans()
 
     async def scheduleUnbans(self):
