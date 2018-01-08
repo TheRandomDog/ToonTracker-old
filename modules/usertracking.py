@@ -99,45 +99,47 @@ class UserTrackingModule(Module):
             # Get all punishments for user, each will be an individual field in the embed.
             punishmentFields = []
             for punishment in Users.getUserPunishments(user.id):
-                if punishment.get('length', None):
-                    punishmentFields.append({
-                        'name': 'Temporary Ban ({})'.format(punishment['length']),
-                        'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
-                            punishment['mod'],
-                            str(datetime.fromtimestamp(punishment['created']).date()),
-                            punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
-                            punishment['editID']
-                        ),
-                        'inline': False
-                    })
-                else:
-                    punishmentFields.append({
-                        'name': punishment['type'],
-                        'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
-                            punishment['mod'],
-                            str(datetime.fromtimestamp(punishment['created']).date()),
-                            punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
-                            punishment['editID']
-                        ),
-                        'inline': False
-                    })
-            xp = Users.getUserXP(user.id)
-            level = Users.getUserLevel(user.id)
+                punishmentFields.append({
+                    'name': punishment['type'] + (' ({})'.format(punishment['length']) if punishment.get('length', None) else ''),
+                    'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                        punishment['mod'],
+                        str(datetime.fromtimestamp(punishment['created']).date()),
+                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                        punishment['editID']
+                    ),
+                    'inline': False
+                })
+
             # Get all channel participation
             messages = []
             channelParticipation = Users.getUserChannelHistory(user.id)
+            # A classic Computer Science solution eh? Too lazy for something clever
+            mostChannelParticipation = [(None, -1, 0, 0, 0) for _ in range(10)]
             for channel, participation in channelParticipation.items():
                 channel = client.rTTR.get_channel(int(channel))
                 if not channel:
                     continue
-                messages.append('{} -> :envelope: **{}** | :paperclip: **{}** | :page_facing_up: **{}**'.format(
-                    channel.mention,
-                    participation['messages'],
-                    participation['attachments'],
-                    participation['embeds']
-                ))
+
+                totalMessages = participation['messages'] + participation['attachments'] + participation['embeds']
+                for i in range(9, -1, -1):
+                    if totalMessages > mostChannelParticipation[i][1]:
+                        if i != 0 and totalMessages > mostChannelParticipation[i - 1][1]:
+                            continue
+                        else:
+                            for j in range(8, i - 1, -1):
+                                mostChannelParticipation[j + 1] = mostChannelParticipation[j]
+                            mostChannelParticipation[i] = (channel, totalMessages, participation['messages'], participation['attachments'], participation['embeds'])
+            for channel, _, _messages, attachments, embeds in mostChannelParticipation:
+                if channel:
+                    messages.append('{} -> :envelope: **{}** | :paperclip: **{}** | :page_facing_up: **{}**'.format(
+                        channel.mention,
+                        _messages,
+                        attachments,
+                        embeds
+                    ))
             if not messages:
                 messages = ['¯\_(ツ)_/¯']
+
             # Get Discord statuses for the past however long we've been recording them...
             statuses = '**Online:** {}\n**Idle:** {}\n**Do Not Disturb:** {}\n**Offline / Invisible:** {}'.format(
                 getTimeFromSeconds(Users.getUserTimeOnline(user.id), oneUnitLimit=True),
@@ -145,13 +147,17 @@ class UserTrackingModule(Module):
                 getTimeFromSeconds(Users.getUserTimeDND(user.id), oneUnitLimit=True),
                 getTimeFromSeconds(Users.getUserTimeOffline(user.id), oneUnitLimit=True)
             )
+
             # Show off user's level / xp 
+            xp = Users.getUserXP(user.id)
+            level = Users.getUserLevel(user.id)
             levelxp = '**Level {}**   {} / {} XP\n{}'.format(
                 level,
                 xp,
                 module.xpNeededForLevel(level),
                 getProgressBar(xp, module.xpNeededForLevel(level))
             )
+
             # Get all of the user's roles, highlighting their top role
             if hasattr(user, 'roles'):
                 roles = user.roles[1:]
