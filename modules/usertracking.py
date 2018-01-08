@@ -346,7 +346,7 @@ class UserTrackingModule(Module):
             punishment = punishments[-1]
             if time.time() - punishment['created'] < 10:
                 fields = [{
-                    'name': punishment['type'],
+                    'name': punishment['type'] + (' ({})'.format(punishment['length']) if punishment.get('length', None) else ''),
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
@@ -373,28 +373,16 @@ class UserTrackingModule(Module):
     async def on_member_join(self, member):
         punishmentFields = []
         for punishment in Users.getUserPunishments(member.id):
-            if punishment.get('length', None):
-                punishmentFields.append({
-                    'name': 'Temporary Ban ({})'.format(punishment['length']),
-                    'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
-                        punishment['mod'],
-                        str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
-                        punishment['editID']
-                    ),
-                    'inline': False
-                })
-            else:
-                punishmentFields.append({
-                    'name': punishment['type'],
-                    'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
-                        punishment['mod'],
-                        str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
-                        punishment['editID']
-                    ),
-                    'inline': False
-                })
+            punishmentFields.append({
+                'name': punishment['type'] + (' ({})'.format(punishment['length']) if punishment.get('length', None) else ''),
+                'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                    punishment['mod'],
+                    str(datetime.fromtimestamp(punishment['created']).date()),
+                    punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
+                    punishment['editID']
+                ),
+                'inline': False
+            })
         xp = Users.getUserXP(member.id)
         level = Users.getUserLevel(member.id)
         # Show off user's level / xp 
@@ -430,7 +418,7 @@ class UserTrackingModule(Module):
             punishment = punishments[-1]
             if time.time() - punishment['created'] < 10:
                 fields = [{
-                    'name': punishment['type'],
+                    'name': punishment['type'] + (' ({})'.format(punishment['length']) if punishment.get('length', None) else ''),
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
