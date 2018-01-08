@@ -414,6 +414,8 @@ class ModerationModule(Module):
             feedback = message.author.mention
             priorMessage = message
             snowflake = message.id
+            message.nonce = 'silence'
+            await message.delete()
         else:
             channel = self.logChannel
             author = self.client.rTTR.me
