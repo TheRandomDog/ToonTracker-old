@@ -388,6 +388,7 @@ def getShortTimeUnit(time):
         raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')
     return FULL[match.group('char')]
 def getLongTime(time):
+    print(time)
     match = SHORT_TIME.match(time)
     if not match:
         raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')

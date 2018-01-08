@@ -414,7 +414,7 @@ class ModerationModule(Module):
             feedback = message.author.mention
             priorMessage = message
             snowflake = message.id
-            message.nonce = 'silence'
+            message.nonce = 'silent'
             await message.delete()
         else:
             channel = self.logChannel
