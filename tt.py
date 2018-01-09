@@ -137,8 +137,7 @@ class ToonTracker(discord.Client):
         self.readyToClose = False
         self.restart = False
 
-        self.prevUpdateTime = time.time()
-        self.updateDelay = assertType(Config.getSetting('update_delay'), int, float, otherwise=10)
+        self.updateInterval = assertType(Config.getSetting('update_interval'), int, float, otherwise=10)
 
     def isModuleAvailable(self, module):
         if module in self.modules and self.modules[module].publicModule:
@@ -287,15 +286,6 @@ class ToonTracker(discord.Client):
             # All pending messages sent, clear out the list.
             module.pendingAnnouncements = []
             module.pendingUpdates = []
-
-    def ttLoop(self):
-        while not self.readyToClose:
-            loop.stop()
-            loop.run_forever()
-
-            if time.time() - self.prevUpdateTime > 10:
-                loop.create_task(self.announceUpdates())
-                self.prevUpdateTime = time.time()
 
     @delegateEvent
     async def on_private_channel_create(self, channel): pass
@@ -451,13 +441,18 @@ class ToonTracker(discord.Client):
             full += '\n'.join([':warning: ' + w for w in warnings])
         await self.send_message(channel, full)
 
+    async def updateLoop(self):
+        while not self.readyToClose:
+            await asyncio.sleep(self.updateInterval)
+            await self.announceUpdates()
+
     async def on_ready(self):
         if self.ready:
             return
 
         await self.load_config(term='start' if not restarted else 'restart')
         self.ready = True
-
+        loop.create_task(self.updateLoop())
 
 token = Config.getSetting('token')
 if not token:
@@ -481,10 +476,7 @@ while True:
     if not botspam:
         print('No bot spam channel specified in the config. You may miss important messages.')
 
-    connLoop = loop.create_task(TT.connect())
-    loop.run_until_complete(TT.wait_until_ready())
-
-    TT.ttLoop()
+    loop.run_until_complete(TT.connect())
 
     for module in TT.modules.values():
         module.stopTracking()
