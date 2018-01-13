@@ -74,11 +74,11 @@
     },
     "moderation": {
         "announcements": "CHANNEL_ID",
-        "badlinks": [
+        "bad_links": [
             "meatspin",
             "DOMAIN_NAME"
         ],
-        "badwords": [
+        "bad_words": [
             "ass",
             "ffs",
             "BAD_WORD3"
@@ -93,7 +93,10 @@
             "as",
             "ff",
             "PLURAL_EXCEPTION3"
-        ]
+        ],
+        "slowmode"{
+            "CHANNEL_ID": 0
+        }
     },
     "news": {
         "announcements": "CHANNEL_ID"
