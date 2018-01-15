@@ -23,12 +23,10 @@ class CustomCommandModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not args[0]:
+            if len(args) < 2:
                 return
             command = args[0].lower()
-            reply = re.sub("(?i)" + command + " ", "", ' '.join(args).strip())
-            if not command or not reply:
-                return
+            reply = args[1:]
             commands = Config.getModuleSetting('customcommands', 'commands')
             if command in commands:
                 return COMMAND_EXISTS
@@ -42,7 +40,7 @@ class CustomCommandModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not args[0]:
+            if len(args) == 0:
                 return
             command = args[0].lower()
             commands = Config.getModuleSetting('customcommands', 'commands')
@@ -58,10 +56,10 @@ class CustomCommandModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not args[0]:
+            if len(args) < 2:
                 return
             command = args[0].lower()
-            reply = re.sub("(?i)" + command + " ", "", ' '.join(args).strip())
+            reply = args[1:]
             if not command or not reply:
                 return
             commands = Config.getModuleSetting('customcommands', 'commands')
@@ -77,7 +75,7 @@ class CustomCommandModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not args[0]:
+            if len(args) == 0:
                 return
             Config.setModuleSetting('customcommands', 'prefix', args[0])
             return PREFIX_UPDATED

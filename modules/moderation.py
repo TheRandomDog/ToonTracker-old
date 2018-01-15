@@ -100,31 +100,18 @@ class ModerationModule(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             channel = message.channel
+            if len(args) == 0:
+                return
             time = args[0]
-            if not time.isdigit() and time != "-1": # Invalid number, but accept -1 as a "valid number"
-                return "Please enter a valid number for slowmode!"
-            time = int(time) # Convert time to an int so we can do num checks on it
-            slowmode = Config.getModuleSetting('moderation', 'slowmode') # The dict we will edit to update the config
-            if time <= 0: # Accept "-1" or "0" as a value to turn slowmode off
-                channels = Config.getModuleSetting('moderation', 'slowmode') # one for iterating
-                found = False
-                for key, value in channels.items(): # Loop through each channel in the config
-                    if str(key) == str(channel.id) and not found: # If the current key == the channel we're in and a previous channel hasn't been found
-                        del slowmode[str(key)] # Delete the channel from our slowmode dict
-                        found = True # Set found to true so we can show the appropriate message to the user
-                if found:
-                    Config.setModuleSetting('moderation', 'slowmode', slowmode) # Update the config with our edited dict
-                    return SLOWMODE_OFF.format(channel.name) # Return success!
-                else:
+            if not time.isdigit() and time != "-1":
+                return "Please enter a valid number for Slowmode!"
+            time = int(time)
+            if time <= 0:
+                if not self.slowmodeConfig(str(message.channel.id), None):
                     return "Slowmode is already disabled for this channel!"
-            found = False
-            for key, value in slowmode.items():
-                if str(key) == str(channel.id) and not found:
-                    found = True
-            if found: # We already have a slowmode set
-                del slowmode[str(channel.id)] # remove the old slowmode
-            slowmode[str(channel.id)] = time # set the new slowmode
-            Config.setModuleSetting('moderation', 'slowmode', slowmode)
+                del self.slowmodeConfig[message.channel.id]
+                return SLOWMODE_OFF.format(channel.name)
+            self.slowmodeConfig[message.channel.id] = time
             return SLOWMODE_ON.format(channel.name, time)
 
     class RemoveBadWordCMD(Command):
@@ -209,7 +196,7 @@ class ModerationModule(Module):
                     try:
                         user = await client.get_user_info(message.raw_mentions[0])
                     except discord.NotFound:
-                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)   
+                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)
             else:
                 user = message.mentions[0]
             return user
@@ -407,7 +394,7 @@ class ModerationModule(Module):
             words = sorted(module.words)
             for i in range(int(blacklistLength / 100) + 1):
                 embed = module.createDiscordEmbed(
-                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
+                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1),
                     info='\n'.join(words[100 * i:100 * (i + 1)])
                 )
                 await client.send_message(message.channel, embed)
@@ -415,7 +402,8 @@ class ModerationModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.users = []
+        self.slowmodeChannels = []
+        self.slowmodeConfig = []
         self.cooldownInterval = 30
 
         self.badWordFilterOn = Config.getModuleSetting('moderation', 'bad_word_filter', True)
@@ -502,7 +490,7 @@ class ModerationModule(Module):
         # nor can we kick them if they aren't on the server.
         if not member and nextPunishment in (self.WARNING, self.KICK):
             return CommandResponse(
-                channel, 
+                channel,
                 author.mention + ' ' + PUNISH_FAILURE_NONMEMBER,
                 deleteIn=5,
                 priorMessage=priorMessage
@@ -830,26 +818,25 @@ class ModerationModule(Module):
             return
 
         timeStart = time.time()
+        currentTime = timeStart * 1000
 
-        currentTime = int(timeStart * 1000)
-        slowmode = Config.getModuleSetting('moderation', 'slowmode')
-        if str(message.channel.id) in slowmode:
-            slowmodeTime = slowmode[str(message.channel.id)]
-            newUsers = []
-            found = False
-            for user in self.users:
-                if user['user_id'] == message.author.id and user['channel_id'] == message.channel.id:
-                    found = True
-                    if ((currentTime - user['last_message']) / 1000) < slowmodeTime:
-                        await message.delete()
-                        newUsers.append(user)
-                    else:
-                        newUsers.append({'user_id': message.author.id, 'channel_id': message.channel.id, 'last_message': currentTime})
+        slowmodeTime = self.slowmodeConfig.get(str(message.channel.id), None)
+
+        if slowmodeTime:
+            channel = self.slowmodeChannels.get(str(message.channel.id), None)
+            if channel:
+                if not channel.get(str(message.author.id), None):
+                    channel[str(message.author.id)] = currentTime
+                    return
+                lastSpoken = channel[str(message.author.id)]
+                if ((currentTime - lastSpoken) / 1000) < slowmodeTime:
+                    await message.delete()
                 else:
-                    newUsers.append(user)
-            if not found:
-                newUsers.append({'user_id': message.author.id, 'channel_id': message.channel.id, 'last_message': currentTime})
-            self.users = newUsers
+                    channel.update({str(message.author.id): currentTime})
+                    self.slowmodeChannels[str(message.channel.id)] = channel
+            else:
+                channel = {str(message.author.id): currentTime}
+                self.slowmodeChannels[str(message.channel.id)] = channel
 
         try:
             if self.badWordFilterOn:
@@ -886,14 +873,14 @@ class ModerationModule(Module):
 
     def loopIteration(self):
         slowmode = Config.getModuleSetting('moderation', 'slowmode')
-        print(self.users)
+        print(self.slowmodeUsers)
         newUsers = []
-        for user in self.users:
+        for user in self.slowmodeUsers:
             if str(user['channel_id']) in slowmode:
                 slowmodeTime = slowmode[str(user['channel_id'])] * 1000
                 currentTime = int(time.time() * 1000)
                 if (currentTime - user['last_message']) < slowmodeTime:
                     newUsers.append(user)
-        self.users = newUsers
+        self.slowmodeUsers = newUsers
 
 module = ModerationModule

@@ -105,10 +105,7 @@
             "as",
             "ff",
             "PLURAL_EXCEPTION3"
-        ],
-        "slowmode"{
-            "CHANNEL_ID": 0
-        }
+        ]
     },
     "news": {
         "announcements": "CHANNEL_ID"
