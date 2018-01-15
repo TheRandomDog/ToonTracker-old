@@ -28,7 +28,10 @@ class Invasion:
 
     def __init__(self, district, cog, asOf, defeated, total, defeatRate=None, startTime=None):
         global invasionCache
-        invasionCache.append(self)
+        if self in invasionCache:
+            return
+        else:
+            invasionCache.append(self)
 
         self.district = district
         self.cog = cog
