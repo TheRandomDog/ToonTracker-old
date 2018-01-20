@@ -87,7 +87,7 @@ class ModerationModule(Module):
                 return module.createDiscordEmbed(info='**{}** is already classified as a bad word'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
             Config.setModuleSetting('moderation', 'bad_words', badwords)
-            module.words = badwords
+            module.badWords = badwords
 
             return module.createDiscordEmbed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
 
@@ -106,7 +106,7 @@ class ModerationModule(Module):
                 return module.createDiscordEmbed(info='**{}** was never a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
             Config.setModuleSetting('moderation', 'bad_words', badwords)
-            module.words = badwords
+            module.badWords = badwords
 
             return module.createDiscordEmbed(info='**{}** was removed from the bad word list.'.format(word), color=discord.Color.green())
 
@@ -125,7 +125,7 @@ class ModerationModule(Module):
                 return module.createDiscordEmbed(info='**{}** is already classified as a bad emoji'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
             Config.setModuleSetting('moderation', 'bad_emojis', badwords)
-            module.words = badwords
+            module.badEmojis = badwords
 
             return module.createDiscordEmbed(info='**{}** was added as a bad emoji.'.format(word), color=discord.Color.green())
 
@@ -144,7 +144,7 @@ class ModerationModule(Module):
                 return module.createDiscordEmbed(info='**{}** was never a bad emoji.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
             Config.setModuleSetting('moderation', 'bad_emojis', badwords)
-            module.words = badwords
+            module.badEmojis = badwords
 
             return module.createDiscordEmbed(info='**{}** was removed from the bad word emoji.'.format(word), color=discord.Color.green())
 
