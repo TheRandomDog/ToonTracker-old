@@ -531,7 +531,7 @@ class UserTrackingModule(Module):
                 footer={'text': 'Message deleted by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
             self.auditLogEntries[entry.id] = entry.extra.count
         await self.client.send_message(
-            self.spamChannel if message.nonce in ['banned'] else self.logChannel,
+            self.spamChannel,
             self.createDiscordEmbed(
                 action='Delete',
                 primaryInfo=str(message.author),
