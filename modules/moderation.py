@@ -84,7 +84,7 @@ class ModerationModule(Module):
 
             badwords = Config.getModuleSetting('moderation', 'bad_words')
             if word in badwords:
-                return module.createDiscordEmbed(info='**{}** is already classified as a bad word'.format(word), color=discord.Color.dark_orange())
+                return module.createDiscordEmbed(info='**{}** is already classified as a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
             Config.setModuleSetting('moderation', 'bad_words', badwords)
             module.badWords = badwords
@@ -122,7 +122,7 @@ class ModerationModule(Module):
 
             badwords = Config.getModuleSetting('moderation', 'bad_emojis')
             if word in badwords:
-                return module.createDiscordEmbed(info='**{}** is already classified as a bad emoji'.format(word), color=discord.Color.dark_orange())
+                return module.createDiscordEmbed(info='**{}** is already classified as a bad emoji.'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
             Config.setModuleSetting('moderation', 'bad_emojis', badwords)
             module.badEmojis = badwords
@@ -146,7 +146,7 @@ class ModerationModule(Module):
             Config.setModuleSetting('moderation', 'bad_emojis', badwords)
             module.badEmojis = badwords
 
-            return module.createDiscordEmbed(info='**{}** was removed from the bad word emoji.'.format(word), color=discord.Color.green())
+            return module.createDiscordEmbed(info='**{}** was removed from the bad word emoji list.'.format(word), color=discord.Color.green())
 
     class AddPluralExceptionCMD(Command):
         NAME = 'addPluralException'
@@ -686,7 +686,6 @@ class ModerationModule(Module):
             return response
 
         word = re.sub(r'\W+', '', word)
-        print(word)
         wordNoPlural = word.rstrip('s').rstrip('e')
         if word in self.badWords or (wordNoPlural in self.badWords and word not in self.pluralExceptions):
             response['word'] = word
