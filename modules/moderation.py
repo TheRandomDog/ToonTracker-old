@@ -602,6 +602,7 @@ class ModerationModule(Module):
         # Bad phrases are essentially bad words with spaces in them.
         response = {'word': None, 'evadedWord': None}
 
+        evadedText = evadedText.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
         text = evadedText.translate(FILTER_EVASION_CHAR_MAP).lower()
         for phrase in filter(lambda word: ' ' in word, self.words):
             phrase = phrase.lower()  # Sanity check, you never know if a mod'll add caps to a bad word entry.
@@ -617,12 +618,12 @@ class ModerationModule(Module):
 
     def _testForBadWhole(self, evadedText):
         # This smooshes the whole message together (no spaces) and tests if it matches a bad word.
-        text = evadedText.replace(' ', '')
+        text = evadedText.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
         return self._testForBadWord(evadedText)
 
     async def _filterBadWords(self, message, evadedText, edited=' ', silentFilter=False, embed=None):
         response = {}
-        for word in evadedText.split(' '):
+        for word in evadedText.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').split(' '):
             wordResponse = self._testForBadWord(word)
             if wordResponse['word']:
                 response = wordResponse
