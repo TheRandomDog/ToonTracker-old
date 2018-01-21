@@ -53,7 +53,10 @@
             React Module (react):
                 interaction: Channel ID where mod interaction is allowed.
                 emotes: Emote IDs that are to be used when reacting to messages.
-
+            CustomCommands Module:
+                prefix: The prefix all Custom Commands will use
+                commands: The list of commands available to use
+                channels: Channels that custom commands are allowed to be sent in
     ",
 
     "profile": "profile.example",
@@ -72,13 +75,22 @@
     "lobbies": {
         "interaction": "CHANNEL_ID"
     },
+    "customcommands":{
+        "prefix": "!",
+        "commands":{
+            "example": "What a great example!"
+        },
+        "channels":[
+            "CHANNEL_ID1", "CHANNEL_ID2"
+        ]
+    },
     "moderation": {
         "announcements": "CHANNEL_ID",
-        "badlinks": [
+        "bad_links": [
             "meatspin",
             "DOMAIN_NAME"
         ],
-        "badwords": [
+        "bad_words": [
             "ass",
             "ffs",
             "BAD_WORD3"

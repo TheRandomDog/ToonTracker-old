@@ -65,6 +65,8 @@ WORD_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've s
 IMAGE_FILTER_REASON = 'Posting Inappropriate Content **[Rating: {}]**'
 IMAGE_FILTER_REVIEW = '{} posted an image in {} that has been registered as possibly bad. **[Rating: {}]**\n' \
                     '*If the image has bad content in it, please act accordingly.*\n{}'
+SLOWMODE_ON='Slowmode enabled in **{}** [{} seconds]'
+SLOWMODE_OFF='Slowmode has been disabled in **{}** 👍'
 
 class ModerationModule(Module):
     WARNING = 'Warning'
@@ -90,6 +92,27 @@ class ModerationModule(Module):
             module.badWords = badwords
 
             return module.createDiscordEmbed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
+
+    class Slowmode(Command):
+        NAME = 'slowmode'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            channel = message.channel
+            if len(args) == 0:
+                return
+            time = args[0]
+            if not time.isdigit() and time != "-1":
+                return "Please enter a valid number for Slowmode!"
+            time = int(time)
+            if time <= 0:
+                if not self.slowmodeConfig(str(message.channel.id), None):
+                    return "Slowmode is already disabled for this channel!"
+                del self.slowmodeConfig[message.channel.id]
+                return SLOWMODE_OFF.format(channel.name)
+            self.slowmodeConfig[message.channel.id] = time
+            return SLOWMODE_ON.format(channel.name, time)
 
     class RemoveBadWordCMD(Command):
         NAME = 'removeBadWord'
@@ -183,7 +206,7 @@ class ModerationModule(Module):
             exc.remove(word)
             Config.setModuleSetting('moderation', 'plural_exceptions', exc)
             module.pluralExceptions = exc
-            
+
             return module.createDiscordEmbed(info='**{}** was removed from the plural exception list.'.format(word), color=discord.Color.green())
 
     class AddWordExceptionCMD(Command):
@@ -249,7 +272,7 @@ class ModerationModule(Module):
                     try:
                         user = await client.get_user_info(message.raw_mentions[0])
                     except discord.NotFound:
-                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)   
+                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)
             else:
                 user = message.mentions[0]
             return user
@@ -447,7 +470,7 @@ class ModerationModule(Module):
             words = sorted(module.badWords)
             for i in range(int(blacklistLength / 100) + 1):
                 embed = module.createDiscordEmbed(
-                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
+                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1),
                     info='\n'.join(words[100 * i:100 * (i + 1)])
                 )
                 await client.send_message(message.channel, embed)
@@ -471,6 +494,10 @@ class ModerationModule(Module):
 
     def __init__(self, client):
         Module.__init__(self, client)
+
+        self.slowmodeChannels = []
+        self.slowmodeConfig = []
+        self.cooldownInterval = 30
 
         self.badWordFilterOn = Config.getModuleSetting('moderation', 'bad_word_filter', True)
         self.badImageFilterOn = Config.getModuleSetting('moderation', 'bad_image_filter', True) and ClarifaiApp
@@ -557,7 +584,7 @@ class ModerationModule(Module):
         # nor can we kick them if they aren't on the server.
         if not member and nextPunishment in (self.WARNING, self.KICK):
             return CommandResponse(
-                channel, 
+                channel,
                 author.mention + ' ' + PUNISH_FAILURE_NONMEMBER,
                 deleteIn=5,
                 priorMessage=priorMessage
@@ -900,6 +927,26 @@ class ModerationModule(Module):
             return
 
         timeStart = time.time()
+        currentTime = timeStart * 1000
+
+        slowmodeTime = self.slowmodeConfig.get(str(message.channel.id), None)
+
+        if slowmodeTime:
+            channel = self.slowmodeChannels.get(str(message.channel.id), None)
+            if channel:
+                if not channel.get(str(message.author.id), None):
+                    channel[str(message.author.id)] = currentTime
+                    return
+                lastSpoken = channel[str(message.author.id)]
+                if ((currentTime - lastSpoken) / 1000) < slowmodeTime:
+                    await message.delete()
+                else:
+                    channel.update({str(message.author.id): currentTime})
+                    self.slowmodeChannels[str(message.channel.id)] = channel
+            else:
+                channel = {str(message.author.id): currentTime}
+                self.slowmodeChannels[str(message.channel.id)] = channel
+
         try:
             if self.badWordFilterOn:
                 await self.filterBadWords(message)
@@ -932,5 +979,17 @@ class ModerationModule(Module):
         except discord.errors.NotFound:
             print('Tried to remove edited message in bad word filter but message wasn\'t found.')
             return
+
+    def loopIteration(self):
+        slowmode = Config.getModuleSetting('moderation', 'slowmode')
+        print(self.slowmodeUsers)
+        newUsers = []
+        for user in self.slowmodeUsers:
+            if str(user['channel_id']) in slowmode:
+                slowmodeTime = slowmode[str(user['channel_id'])] * 1000
+                currentTime = int(time.time() * 1000)
+                if (currentTime - user['last_message']) < slowmodeTime:
+                    newUsers.append(user)
+        self.slowmodeUsers = newUsers
 
 module = ModerationModule
