@@ -448,8 +448,8 @@ class UserTrackingModule(Module):
         )
         if punishment:
             punishment['modLogEntryID'] = modLogEntry.id
-        punishments[-1] = punishment
-        Users.setUserPunishments(member.id, punishments)
+            punishments[-1] = punishment
+            Users.setUserPunishments(member.id, punishments)
 
     # Specifically built for moderation module.
     async def on_member_warn(self, member, punishment):
