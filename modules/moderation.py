@@ -718,6 +718,8 @@ class ModerationModule(Module):
     def _testForBadEmoji(self, evadedText):
         # A simple check, naturally.
         response = {'word': None, 'evadedWord': None}
+
+        evadedText = evadedText.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
         for emoji in self.badEmojis:
             if emoji in evadedText:
                 response['word'] = emoji
