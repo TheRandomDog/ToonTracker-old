@@ -31,6 +31,21 @@ def assertClass(value, *classes, otherwise=TypeError):
             return otherwise
     return value
 
+# DATABASE
+
+from db import DatabaseManager
+class DBM(DatabaseManager):
+    def __init__(self):
+        super().__init__('toontracker.db')
+
+    def createSection(self, module, sectionName, arguments):
+        return super().createTable(module.__class__.__name__ + '-' + sectionName, arguments)
+
+    def getSection(self, module, sectionName):
+        for table in self.tables:
+            if table.name == module.__class__.__name__ + '-' + sectionName:
+                return table
+
 # CONFIG
 
 class Config:
