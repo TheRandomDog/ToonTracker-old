@@ -206,12 +206,12 @@ class ToonTracker(discord.Client):
             return
         # Gets a channel object from a string (channel ID).
         elif type(target) == int:
-            target = self.get_channel(target)
+            target = self.get_channel(target) or self.get_user(target)
             if not target:
                 return
         # No target? Rip.
         elif type(target) == None:
-            return
+            raise TypeError('target type not recognized')
 
         # Deliver message
         if message.__class__ == discord.File:
@@ -403,13 +403,13 @@ class ToonTracker(discord.Client):
 
             try:
                 modsmod = import_module('modules.' + module)
-            except ImportError:
-                w = 'Could not import Python module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
+            except ImportError as e:
+                w = 'Could not **import** Python module of ToonTracker module "{}"'.format(module)
                 warnings.append(w)
-                print(w)
+                print(w + '\n\n{}'.format(format_exc()))
                 continue
             except Exception as e:
-                w = 'Could not load Python module of ToonTracker module "{}"'.format(module)
+                w = 'Could not **load** Python module of ToonTracker module "{}"'.format(module)
                 warnings.append(w)
                 print(w + '\n\n{}'.format(format_exc()))
                 continue
