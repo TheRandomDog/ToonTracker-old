@@ -221,29 +221,30 @@ class UserTrackingModule(Module):
 
             # Get all punishments for user, each will be an individual field in the embed.
             punishmentFields = []
-            moderation = client.requestModule('moderation')
-            for punishment in moderation.punishments.select(where=f"user={user.id}"):
-                punishmentFields.append({
-                    'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
-                    'value': '{}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
-                        ('`' + punishment['reason'] + '`').replace('`' + NO_REASON + '`', '*No reason was ever specified.*'),
-                        punishment['mod'],
-                        str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['id']
-                    ),
-                    'inline': False
-                })
-
             notes = []
-            moderation = client.requestModule('moderation')
-            for note in moderation.notes.select(where=f"user={user.id}"):
-                notes.append('{tilde}{}{tilde}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
-                    note['content'],
-                    note['mod'],
-                    str(datetime.fromtimestamp(note['created']).date()),
-                    note['id'],
-                    tilde='`'
-                ))
+
+            if assertClass(message.channel, discord.DMChannel, otherwise=False) or (message.channel.category and message.channel.category.name == 'Staff'):
+                moderation = client.requestModule('moderation')
+                for punishment in moderation.punishments.select(where=f"user={user.id}"):
+                    punishmentFields.append({
+                        'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
+                        'value': '{}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
+                            ('`' + punishment['reason'] + '`').replace('`' + NO_REASON + '`', '*No reason was ever specified.*'),
+                            punishment['mod'],
+                            str(datetime.fromtimestamp(punishment['created']).date()),
+                            punishment['id']
+                        ),
+                        'inline': False
+                    })
+
+                for note in moderation.notes.select(where=f"user={user.id}"):
+                    notes.append('{tilde}{}{tilde}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
+                        note['content'],
+                        note['mod'],
+                        str(datetime.fromtimestamp(note['created']).date()),
+                        note['id'],
+                        tilde='`'
+                    ))
 
             if len(punishmentFields) > 18:
                 punishmentFields = punishmentFields[:17]
@@ -330,9 +331,8 @@ class UserTrackingModule(Module):
                         'inline': True
                     },
                     {'name': 'Top 3 Channels', 'value': '\n'.join(messages), 'inline': True},
-                    {'name': 'Statuses', 'value': statuses, 'inline': True},
-                    {'name': 'Notes', 'value': '\n\n'.join(notes), 'inline': False}
-                ] + punishmentFields,
+                    {'name': 'Statuses', 'value': statuses, 'inline': True}
+                ] + ([{'name': 'Notes', 'value': '\n\n'.join(notes), 'inline': False}] if notes else []) + punishmentFields,
                 footer={'text': "Available Commands: ~editReason | ~removePunishment | ~editNote | ~removeNote"} if punishmentFields else None,
                 color=roles[0].color if roles else None
             )
