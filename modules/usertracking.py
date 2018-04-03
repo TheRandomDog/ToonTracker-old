@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timedelta
 from extra.commands import Command
 from modules.module import Module
-from utils import Config, database, assertType, getTimeFromSeconds, getProgressBar
+from utils import Config, database, assertType, assertClass, getTimeFromSeconds, getProgressBar
 
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
 NO_REASON_ENTRY = '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'
