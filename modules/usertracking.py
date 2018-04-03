@@ -177,6 +177,28 @@ class UserTrackingModule(Module):
         }
     }
 
+    class LevelCMD(Command):
+        NAME = 'level'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            # Show off user's level / xp 
+            if message.channel.id != 358032526763360277:
+                return
+
+            user = message.author
+            xp = module.users.getUserXP(user.id)
+            level = module.users.getUserLevel(user.id)
+            levelxp = '{}\n**Level {}**   {} / {} XP\n{}'.format(
+                user.mention,
+                level,
+                xp,
+                module.xpNeededForLevel(level),
+                getProgressBar(xp, module.xpNeededForLevel(level))
+            )
+            embed = discord.Embed(description=levelxp, color=discord.Color.purple()ZZZZ)
+            return embed
+
     class LookupCMD(Command):
         NAME = 'lookup'
         RANK = 300
