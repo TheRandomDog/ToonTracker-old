@@ -196,7 +196,7 @@ class UserTrackingModule(Module):
                 module.xpNeededForLevel(level),
                 getProgressBar(xp, module.xpNeededForLevel(level))
             )
-            embed = discord.Embed(description=levelxp, color=discord.Color.purple()ZZZZ)
+            embed = discord.Embed(description=levelxp, color=discord.Color.purple())
             return embed
 
     class LookupCMD(Command):
