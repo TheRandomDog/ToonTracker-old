@@ -739,6 +739,16 @@ class UserTrackingModule(Module):
     async def on_message_delete(self, message):
         if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silent']:
             return
+
+        if self.trackMessages:
+            try:
+                self.users.msgsDB.update(
+                    where=f'id="{message.id}"',
+                    deleted=1
+                )
+            except sqlite3.OperationalError as e:
+                pass
+
         footer = {}
         async for entry in self.client.rTTR.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
             # Discord Audit Logs will clump together deleted messages, saying "MOD deleted X message(s) from USER in TARGET"
