@@ -1,4 +1,3 @@
-import regex as re
 import requests
 import logging
 import locale
