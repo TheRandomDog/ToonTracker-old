@@ -256,7 +256,7 @@ class LobbyManagement(Module):
             elif len(args) > len(message.mentions):
                 lobby = module.getLobby(name=' '.join(args[:len(args) - len(message.mentions)]))
                 if not lobby:
-                    return message.author.mention + ' ' + INVITATION_FAILURE_NAME
+                    return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_NAME
 
             if not lobby:
                 return message.author.mention + ' ' + INVITATION_FAILURE_MISSING_LOBBY
