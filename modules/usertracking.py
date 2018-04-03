@@ -125,9 +125,14 @@ class UserTrackingModule(Module):
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394664540916154378/exit.png',
             'title': 'User Left'
         },
+        'Note': {
+            'color': discord.Color.from_rgb(156, 43, 255),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/430426293021179934/note.png',
+            'title': 'Note'
+        },
         'Warn': {
             'color': discord.Color.from_rgb(245, 165, 0),
-            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394675747324821504/warn.png',
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/430425633424801803/warn2.png',
             'title': 'Warned'
         },
         'Kick': {
@@ -185,7 +190,18 @@ class UserTrackingModule(Module):
                 if not message.raw_mentions:
                     try:
                         user = await client.get_user_info(int(args[0]))
-                    except (ValueError, IndexError, discord.NotFound):
+                    except discord.NotFound:
+                        moderation = client.requestModule('moderation')
+                        if moderation:
+                            punishmentID = int(args[0])
+                            punishment = moderation.punishments.select(where=f"id={punishmentID}", limit=1)
+                            if not punishment:
+                                return 'No known user / lookup ID'
+                            try:
+                                user = await client.get_user_info(punishment['user'])
+                            except discord.NotFound:
+                                return 'No known user / lookup ID'
+                    except (ValueError, IndexError):
                         name = ' '.join(args)
                         discriminator = args[-1].split('#')[-1]
                         if discriminator:
@@ -209,18 +225,38 @@ class UserTrackingModule(Module):
             for punishment in moderation.punishments.select(where=f"user={user.id}"):
                 punishmentFields.append({
                     'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
-                    'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                    'value': '{}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
+                        ('`' + punishment['reason'] + '`').replace('`' + NO_REASON + '`', '*No reason was ever specified.*'),
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
                         punishment['id']
                     ),
                     'inline': False
                 })
 
+            notes = []
+            moderation = client.requestModule('moderation')
+            for note in moderation.notes.select(where=f"user={user.id}"):
+                notes.append('{tilde}{}{tilde}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
+                    note['content'],
+                    note['mod'],
+                    str(datetime.fromtimestamp(note['created']).date()),
+                    note['id'],
+                    tilde='`'
+                ))
+
+            if len(punishmentFields) > 18:
+                punishmentFields = punishmentFields[:17]
+                """noteFields = noteFields[:18 - len(punishmentFields)]
+                noteFields.append({
+                    'name': 'MORE PUNISHMENTS / NOTES EXIST!', 
+                    'value': 'All of the punishments / notes on this account cannot be displayed in an embed. Please delete some that are older or unneeded.',
+                    'inline': False
+                })"""
+
             # Get all channel participation
             messages = []
-            channelParticipation = {}#Users.getUserChannelHistory(user.id)
+            channelParticipation = module.users.getUserMessageOverview(user.id)
             # A classic Computer Science solution eh? Too lazy for something clever
             mostChannelParticipation = [(None, -1, 0, 0, 0) for _ in range(3)]
             for channel, participation in channelParticipation.items():
@@ -250,15 +286,15 @@ class UserTrackingModule(Module):
 
             # Get Discord statuses for the past however long we've been recording them...
             statuses = '**Online:** {}\n**Idle:** {}\n**Do Not Disturb:** {}\n**Offline / Invisible:** {}'.format(
-                0,#getTimeFromSeconds(Users.getUserTimeOnline(user.id), oneUnitLimit=True),
-                0,#getTimeFromSeconds(Users.getUserTimeIdle(user.id), oneUnitLimit=True),
-                0,#getTimeFromSeconds(Users.getUserTimeDND(user.id), oneUnitLimit=True),
-                0#getTimeFromSeconds(Users.getUserTimeOffline(user.id), oneUnitLimit=True)
+                getTimeFromSeconds(module.users.getUserTimeOnline(user.id), oneUnitLimit=True),
+                getTimeFromSeconds(module.users.getUserTimeIdle(user.id), oneUnitLimit=True),
+                getTimeFromSeconds(module.users.getUserTimeDND(user.id), oneUnitLimit=True),
+                getTimeFromSeconds(module.users.getUserTimeOffline(user.id), oneUnitLimit=True)
             )
 
             # Show off user's level / xp 
-            xp = 0#Users.getUserXP(user.id)
-            level = 0#Users.getUserLevel(user.id)
+            xp = module.users.getUserXP(user.id)
+            level = module.users.getUserLevel(user.id)
             levelxp = '**Level {}**   {} / {} XP\n{}'.format(
                 level,
                 xp,
@@ -294,9 +330,10 @@ class UserTrackingModule(Module):
                         'inline': True
                     },
                     {'name': 'Top 3 Channels', 'value': '\n'.join(messages), 'inline': True},
-                    {'name': 'Statuses', 'value': statuses, 'inline': True}
+                    {'name': 'Statuses', 'value': statuses, 'inline': True},
+                    {'name': 'Notes', 'value': '\n\n'.join(notes), 'inline': False}
                 ] + punishmentFields,
-                footer={'text': "You can use a punishment's edit ID to ~editReason or ~removePunishment"} if punishmentFields else None,
+                footer={'text': "Available Commands: ~editReason | ~removePunishment | ~editNote | ~removeNote"} if punishmentFields else None,
                 color=roles[0].color if roles else None
             )
             return embed
@@ -493,6 +530,7 @@ class UserTrackingModule(Module):
         )
         if punishment:
             moderation.punishments.update(where=f"id={punishment['id']}", log=modLogEntry.id)
+        return modLogEntry
 
     async def on_member_join(self, member):
         punishmentFields = []
@@ -570,6 +608,7 @@ class UserTrackingModule(Module):
         )
         if punishment:
             moderation.punishments.update(where=f"id={punishment['id']}", log=modLogEntry.id)
+        return modLogEntry
 
     # Specifically built for moderation module.
     async def on_member_warn(self, member, punishment):
@@ -592,6 +631,7 @@ class UserTrackingModule(Module):
         )
         moderation = self.client.requestModule('moderation')
         moderation.punishments.update(where=f"id={punishment['id']}", log=modLogEntry.id)
+        return modLogEntry
 
     # Specifically built for moderation module.
     async def on_message_filter(self, message, word=None, text=None, embed=None):
@@ -649,6 +689,30 @@ class UserTrackingModule(Module):
                 }]
            )
         )
+
+    # Specifically built for moderation module.
+    async def on_member_note(self, member, note):
+        modLogEntry = await self.client.send_message(
+            self.logChannel,
+            self.createDiscordEmbed(
+                action='Note',
+                primaryInfo=str(member),
+                thumbnail=member.avatar_url,
+                fields=[{
+                    'name': 'Note',
+                    'value': '**Mod:** <@{}>\n**Date:** {}\n**ID:** {}\n\n{}'.format(
+                        note['mod'],
+                        str(datetime.fromtimestamp(note['created']).date()),
+                        note['id'],
+                        note['content']
+                    )
+                }]
+           )
+        )
+        moderation = self.client.requestModule('moderation')
+        moderation.notes.update(where=f"id={note['id']}", log=modLogEntry.id)
+        return modLogEntry
+
 
     async def on_message_delete(self, message):
         if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silent']:

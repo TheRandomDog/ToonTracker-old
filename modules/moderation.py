@@ -28,8 +28,14 @@ FILTER_EVASION_CHAR_MAP = str.maketrans(
 
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
 NO_REASON_ENTRY = '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'
+NO_REASON_ENTRY_NOTE = '*No reason yet. Please add one with `{}editNote {} reason goes here` as soon as possible.*'
 NO_REASON_ENTRY_REGEX = r'\*No reason yet\. Please add one with `.+` as soon as possible\.\*'
 MOD_LOG_ENTRY = '**User:** {}\n**Mod:** {}\n**Punishment:** {}\n**Reason:** {}\n**Edit ID:** {}'
+
+NOTE_FAILURE_BOT = "You cannot issue a note on a bot user."
+NOTE_FAILURE_MOD = "You cannot issue a note on another mod."
+NOTE_FAILURE_CONTENT = "Please provide the content of your note."
+NOTE_LOG_ENTRY = '**User:** {}\n**Mod:** {}\n**Note:** {}\n**Edit ID:** {}'
 
 PUNISH_FAILURE_BOT = "You cannot punish a bot user. Please use Discord's built-in moderation tools."
 PUNISH_FAILURE_MOD = "You cannot punish another mod. Please use Discord's built-in moderation tools."
@@ -189,6 +195,67 @@ class ModerationModule(Module):
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), silent=True, message=message)
 
+    class NoteCMD(PunishCMD):
+        NAME = 'note'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            user = await cls.getUserInPunishCMD(client, message, *args)
+            if user.__class__ == CommandResponse:
+                return user
+
+            member = client.rTTR.get_member(user.id)
+            reason = ' '.join(args[1:])
+            if not reason:
+                return CommandResponse(
+                    message.channel,
+                    message.author.mention + ' ' + NOTE_FAILURE_CONTENT,
+                    deleteIn=5,
+                    priorMessage=message
+                )
+            if user.bot and not module.allowBotPunishments:
+                return CommandResponse(
+                    message.channel,
+                    message.author.mention + ' ' + NOTE_FAILURE_BOT,
+                    deleteIn=5,
+                    priorMessage=message
+                )
+            if Config.getRankOfMember(user) >= 300 and not module.allowModPunishments:
+                return CommandResponse(
+                    message.channel,
+                    message.author.mention + ' ' + MOTE_FAILURE_MOD,
+                    deleteIn=5,
+                    priorMessage=message
+                )
+
+            i = module.notes.insert(
+                user=user.id,
+                mod=message.author.id,
+                log=None,
+                content=reason,
+                created=time.time()
+            )
+            note = module.notes.select(where=f"id={i}", limit=1)
+
+            # The user tracking module makes things prettier and consistent for displaying
+            # information about users (embeds <3). We can fallback to text, though.
+            usertracking = module.client.requestModule('usertracking')
+            modLogEntry = None
+            if module.logChannel:
+                if not usertracking:
+                    modLogEntry = await client.send_message(module.logChannel, NOTE_LOG_ENTRY.format(
+                        str(user),
+                        author.mention,
+                        reason,
+                        note['id']
+                        )
+                    )
+                    module.notes.update(where=f"id={note['id']}", log=modLogEntry.id)
+                else:
+                    modLogEntry = await usertracking.on_member_note(user, note)
+            return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+
     class WarnCMD(PunishCMD):
         NAME = 'warn'
         RANK = 300
@@ -336,6 +403,40 @@ class ModerationModule(Module):
             module.punishments.update(where=f'id={args[0]}', reason=newReason)
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
+    class EditNoteReasonCMD(Command):
+        NAME = 'editNote'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            try:
+                int(args[0])
+            except (ValueError, IndexError) as e:
+                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+
+            if not args[1:]:
+                return CommandResponse(message.channel, '{} A reason must be given.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+            newReason = ' '.join(args[1:])
+
+            note = module.notes.select(where=f'id={args[0]}', limit=1)
+            if not note:
+                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+
+            if note['log']:
+                logEntry = await client.get_channel(module.logChannel).get_message(note['log'])
+                if logEntry:
+                    editedMessage = logEntry.embeds[0].fields[0].value if logEntry.embeds else logEntry.content
+                    if str(note['mod']) not in editedMessage:
+                        editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(note['mod']), '**Mod:** <@!{}> (edited by <@!{}>)'.format(note['mod'], message.author.id))
+                    editedMessage = editedMessage.replace('\n\n' + note['content'], '\n\n' + newReason)
+                    if logEntry.embeds:
+                        logEntry.embeds[0].set_field_at(0, name=logEntry.embeds[0].fields[0].name, value=editedMessage)
+                        await logEntry.edit(embed=logEntry.embeds[0])
+                    else:
+                        await logEntry.edit(content=editedMessage)
+            module.notes.update(where=f'id={args[0]}', content=newReason)
+            return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+
     class RemovePunishmentCMD(Command):
         NAME = 'removePunishment'
         RANK = 300
@@ -371,6 +472,29 @@ class ModerationModule(Module):
     class RevokePunishmentCMD(RemovePunishmentCMD):
         NAME = 'revokePunishment'
 
+    class RemoveNoteCMD(Command):
+        NAME = 'removeNote'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            try:
+                int(args[0])
+            except (ValueError, IndexError) as e:
+                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+
+            note = module.notes.select(where=f'id={args[0]}', limit=1)
+            if not note:
+                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+
+            if note['log']:
+                logEntry = await client.get_channel(module.logChannel).get_message(note['log'])
+                if logEntry:
+                    await logEntry.delete()
+            module.notes.delete(where=f'id={args[0]}')
+
+            return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+
     class ViewBadWordsCMD(Command):
         NAME = 'viewBadWords'
         RANK = 300
@@ -402,6 +526,14 @@ class ModerationModule(Module):
             'end_length': database.TEXT,
             'reason': database.TEXT,
             'type': database.TEXT
+        })
+        self.notes = database.createSection(self, 'notes', {
+            'id': [database.INT, database.PRIMARY_KEY],
+            'created': database.INT,
+            'mod': database.INT,
+            'user': database.INT,
+            'log': database.INT,
+            'content': database.TEXT
         })
 
         self.badWordFilterOn = Config.getModuleSetting('moderation', 'bad_word_filter', True)
