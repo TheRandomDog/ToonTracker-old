@@ -90,10 +90,10 @@ class ModerationModule(Module):
 
             badwords = Config.getModuleSetting('moderation', 'bad_words')
             if word in badwords:
-                return module.createDiscordEmbed(info='**{}** is already classified as a bad word'.format(word), color=discord.Color.dark_orange())
+                return module.createDiscordEmbed(info='**{}** is already classified as a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
             Config.setModuleSetting('moderation', 'bad_words', badwords)
-            module.words = badwords
+            module.badWords = badwords
 
             return module.createDiscordEmbed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
 
@@ -112,9 +112,47 @@ class ModerationModule(Module):
                 return module.createDiscordEmbed(info='**{}** was never a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
             Config.setModuleSetting('moderation', 'bad_words', badwords)
-            module.words = badwords
+            module.badWords = badwords
 
             return module.createDiscordEmbed(info='**{}** was removed from the bad word list.'.format(word), color=discord.Color.green())
+
+    class AddBadEmojiCMD(Command):
+        NAME = 'addBadEmoji'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            word = ' '.join(args).strip().lower()
+            if not word:
+                return
+
+            badwords = Config.getModuleSetting('moderation', 'bad_emojis')
+            if word in badwords:
+                return module.createDiscordEmbed(info='**{}** is already classified as a bad emoji.'.format(word), color=discord.Color.dark_orange())
+            badwords.append(word)
+            Config.setModuleSetting('moderation', 'bad_emojis', badwords)
+            module.badEmojis = badwords
+
+            return module.createDiscordEmbed(info='**{}** was added as a bad emoji.'.format(word), color=discord.Color.green())
+
+    class RemoveBadEmojiCMD(Command):
+        NAME = 'removeBadEmoji'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            word = ' '.join(args).strip()
+            if not word:
+                return
+
+            badwords = Config.getModuleSetting('moderation', 'bad_emojis')
+            if word not in badwords:
+                return module.createDiscordEmbed(info='**{}** was never a bad emoji.'.format(word), color=discord.Color.dark_orange())
+            badwords.remove(word)
+            Config.setModuleSetting('moderation', 'bad_emojis', badwords)
+            module.badEmojis = badwords
+
+            return module.createDiscordEmbed(info='**{}** was removed from the bad word emoji list.'.format(word), color=discord.Color.green())
 
     class AddPluralExceptionCMD(Command):
         NAME = 'addPluralException'
@@ -153,6 +191,44 @@ class ModerationModule(Module):
             module.pluralExceptions = exc
             
             return module.createDiscordEmbed(info='**{}** was removed from the plural exception list.'.format(word), color=discord.Color.green())
+
+    class AddWordExceptionCMD(Command):
+        NAME = 'addWordException'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            word = ' '.join(args).strip()
+            if not word:
+                return
+
+            exc = Config.getModuleSetting('moderation', 'word_exceptions')
+            if word in exc:
+                return module.createDiscordEmbed(info='**{}** is already classified as a bad word exception.'.format(word), color=discord.Color.dark_orange())
+            exc.append(word)
+            Config.setModuleSetting('moderation', 'word_exceptions', exc)
+            module.pluralExceptions = exc
+
+            return module.createDiscordEmbed(info='**{}** was added as a bad word exception.'.format(word), color=discord.Color.green())
+
+    class RemoveWordExceptionCMD(Command):
+        NAME = 'removeWordException'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            word = ' '.join(args).strip()
+            if not word:
+                return
+
+            exc = Config.getModuleSetting('moderation', 'word_exceptions')
+            if word not in exc:
+                return module.createDiscordEmbed(info='**{}** was never a bad word exception.'.format(word), color=discord.Color.dark_orange())
+            exc.remove(word)
+            Config.setModuleSetting('moderation', 'word_exceptions', exc)
+            module.pluralExceptions = exc
+            
+            return module.createDiscordEmbed(info='**{}** was removed from the bad word exception list.'.format(word), color=discord.Color.green())
 
     class PunishCMD(Command):
         NAME = 'punish'
@@ -501,13 +577,30 @@ class ModerationModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not hasattr(module, 'words'):
+            if not hasattr(module, 'badWords'):
                 return "{} The bad word filter isn't turned on in the channel".format(message.author.mention)
-            blacklistLength = len(module.words)
-            words = sorted(module.words)
+            blacklistLength = len(module.badWords)
+            words = sorted(module.badWords)
             for i in range(int(blacklistLength / 100) + 1):
                 embed = module.createDiscordEmbed(
                     subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
+                    info='\n'.join(words[100 * i:100 * (i + 1)])
+                )
+                await client.send_message(message.channel, embed)
+
+    class ViewBadEmojisCMD(Command):
+        NAME = 'viewBadEmojis'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if not hasattr(module, 'badWords'):
+                return "{} The bad word filter isn't turned on in the channel".format(message.author.mention)
+            blacklistLength = len(module.badEmojis)
+            words = sorted(module.badEmojis)
+            for i in range(int(blacklistLength / 100) + 1):
+                embed = module.createDiscordEmbed(
+                    subtitle='Bad Emojis (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
                     info='\n'.join(words[100 * i:100 * (i + 1)])
                 )
                 await client.send_message(message.channel, embed)
@@ -549,7 +642,8 @@ class ModerationModule(Module):
         asyncio.get_event_loop().create_task(self.scheduleUnbans())
 
         if self.badWordFilterOn:
-            self.words = [word.lower() for word in Config.getModuleSetting('moderation', 'bad_words')]
+            self.badWords = [word.lower() for word in Config.getModuleSetting('moderation', 'bad_words')]
+            self.badEmojis = Config.getModuleSetting('moderation', 'bad_emojis')
             self.filterExceptions = Config.getModuleSetting('moderation', 'filter_exceptions')
             self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
             self.wordExceptions = Config.getModuleSetting('moderation', 'word_exceptions')
@@ -753,7 +847,7 @@ class ModerationModule(Module):
 
         word = re.sub(r'\W+', '', word)
         wordNoPlural = word.rstrip('s').rstrip('e')
-        if word in self.words or (wordNoPlural in self.words and word not in self.pluralExceptions):
+        if word in self.badWords or (wordNoPlural in self.badWords and word not in self.pluralExceptions):
             response['word'] = word
         return response
 
@@ -762,8 +856,9 @@ class ModerationModule(Module):
         # Bad phrases are essentially bad words with spaces in them.
         response = {'word': None, 'evadedWord': None}
 
+        evadedText = evadedText.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
         text = evadedText.translate(FILTER_EVASION_CHAR_MAP).lower()
-        for phrase in filter(lambda word: ' ' in word, self.words):
+        for phrase in filter(lambda word: ' ' in word, self.badWords):
             phrase = phrase.lower()  # Sanity check, you never know if a mod'll add caps to a bad word entry.
             phraseNoPlural = phrase.rstrip('s').rstrip('e')
             if (phrase == text or phraseNoPlural == text                                    # If the message is literally the phrase.
@@ -777,12 +872,23 @@ class ModerationModule(Module):
 
     def _testForBadWhole(self, evadedText):
         # This smooshes the whole message together (no spaces) and tests if it matches a bad word.
-        text = evadedText.replace(' ', '')
+        text = evadedText.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
         return self._testForBadWord(evadedText)
+
+    def _testForBadEmoji(self, evadedText):
+        # A simple check, naturally.
+        response = {'word': None, 'evadedWord': None}
+
+        evadedText = evadedText.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
+        for emoji in self.badEmojis:
+            if emoji in evadedText:
+                response['word'] = emoji
+                response['evadedWord'] = emoji
+        return response
 
     async def _filterBadWords(self, message, evadedText, edited=' ', silentFilter=False, embed=None):
         response = {}
-        for word in evadedText.split(' '):
+        for word in evadedText.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').split(' '):
             wordResponse = self._testForBadWord(word)
             if wordResponse['word']:
                 response = wordResponse
@@ -792,6 +898,9 @@ class ModerationModule(Module):
         wholeResponse = self._testForBadWhole(evadedText)
         if not response and wholeResponse['word']:
             response = wholeResponse
+        emojiResponse = self._testForBadEmoji(evadedText)
+        if not response and emojiResponse['word']:
+            response = emojiResponse
         if not response:
             return False
 
