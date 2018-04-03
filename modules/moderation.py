@@ -300,7 +300,7 @@ class ModerationModule(Module):
             if Config.getRankOfMember(user) >= 300 and not module.allowModPunishments:
                 return CommandResponse(
                     message.channel,
-                    message.author.mention + ' ' + MOTE_FAILURE_MOD,
+                    message.author.mention + ' ' + NOTE_FAILURE_MOD,
                     deleteIn=5,
                     priorMessage=message
                 )
