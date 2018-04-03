@@ -169,7 +169,7 @@ class LobbyManagement(Module):
             category = await client.rTTR.create_category(name='Lobby [{}]'.format(name), reason=auditLogReason)
             discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
             await category.set_permissions(client.rTTR.default_role, read_messages=False)
-            await category.set_permissions(message.author, read_messages=True)
+            await category.set_permissions(message.author, read_messages=True, send_messages=True)
             await category.set_permissions(
                 discordModRole,
                 read_messages=True,
@@ -406,7 +406,7 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + RSVP_FAILURE_UNINVITED
 
             category = discord.utils.get(client.rTTR.categories, id=lobby['category_id'])
-            await category.set_permissions(message.author, read_messages=True)
+            await category.set_permissions(message.author, read_messages=True, send_messages=True)
 
             module.activeLobbies.update(
                 where=f"id={lobby['id']}",
