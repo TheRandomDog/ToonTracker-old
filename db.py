@@ -45,10 +45,7 @@ class DatabaseTable:
         self.c = None
         self.name = tableName
         self.arguments = arguments
-
-    def makeListFromString(self, string):
-        return string.split(',') if string else []
-
+        
     def create(self, errorIfExisting=False):
         listArgs = []
         for argName, argType in self.arguments.items():
@@ -67,7 +64,6 @@ class DatabaseTable:
             listArgs.append(arg)
         try:
             command = 'CREATE TABLE {}({})'.format(self.name, ', '.join(listArgs))
-            print(command)
             self.c.execute(command)
             self.conn.commit()
         except sqlite3.OperationalError as e:
@@ -107,7 +103,6 @@ class DatabaseTable:
             command += ' AND '.join(where)
         if limit:
             command += ' LIMIT {}'.format(limit)
-        print(command)
         self.c.execute(command)
         return fetch()
 
@@ -119,7 +114,6 @@ class DatabaseTable:
         command += ' AND '.join(where)
         if limit:
             command += ' LIMIT {}'.format(limit)
-        print(command)
         self.c.execute(command)
         self.conn.commit()
 
@@ -134,7 +128,6 @@ class DatabaseTable:
         if where:
             command += ' WHERE '
             command += ' AND '.join(where)
-        print(command)
         self.c.execute(command, list(kwargs.values()))
         self.conn.commit()
 
@@ -152,7 +145,6 @@ class DatabaseTable:
             ','.join(columns),
             ','.join(['?' for _ in range(len(values))])
         )
-        print(command)
         self.c.execute(command, values)
         self.conn.commit()
         return self.c.lastrowid
