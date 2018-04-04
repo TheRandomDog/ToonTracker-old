@@ -581,7 +581,6 @@ class LobbyManagement(Module):
             members = [int(i) for i in lobby['member_ids'].split(',') if i]
 
             auditLogReason = 'User disbanded lobby via ~disbandLobby'
-            print(lobby['category_id'], type(lobby['category_id']))
             category = discord.utils.get(client.rTTR.categories, id=lobby['category_id'])
             for channel in category.channels:
                 await channel.delete(reason=auditLogReason)
@@ -739,7 +738,6 @@ class LobbyManagement(Module):
             # The number of filter votes needed is the number of users
             filterVotesNeeded = makeCountOfString(lobby['member_ids']) - makeCountOfString(lobby['filter_vote_ids'])
 
-            print(str(message.author.id), lobby['filter_vote_ids'], str(message.author.id) in lobby['filter_vote_ids'])
             if not lobby['filter_enabled']:
                 return message.author.mention + ' ' + FILTER_DISABLE_FAILURE_DISABLED
             if filterVotesNeeded < 0:
