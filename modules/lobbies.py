@@ -796,7 +796,7 @@ class LobbyManagement(Module):
 
             await confMsgObj.edit(content=LOG_CONFIRM_2)
             async with message.author.typing():
-                file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(message.created_at.timestamp())))
+                file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(lobby['name']))
                 await client.send_message(message.channel, file)
             await confMsgObj.edit(content=LOG_CONFIRM_3)
     class LobbyChatLogCMD_Variant1(LobbyChatLogCMD): NAME = 'getchatlog'
@@ -921,7 +921,7 @@ class LobbyManagement(Module):
             # OR
             # If the lobby was not visited and an expiry warning was sent...
             elif lobby['expiry_warning'] and time.time() - lobby['expiry_warning'] >= (self.visitedExpiryTime if lobby['last_visited'] else self.unvisitedExpiryTime):
-                for member in lobby['member_ids'].split(','):
+                for member in [int(m) for m in lobby['member_ids'].split(',') if m]:
                     await self.client.send_message(member, BUMP_MEMBER)
                 owner = discord.utils.get(self.client.rTTR.members, id=lobby['owner_id'])
                 await self.client.send_message(owner, BUMP_OWNER)
@@ -933,7 +933,7 @@ class LobbyManagement(Module):
                         chatlog = await self.getChatLog(lobby, savingMessage)
 
                 auditLogReason = 'Lobby hit expiration date of {}'.format(
-                    getTimeFromSeconds(self.visitedExpiryTime if lobby.lastVisited else self.unvisitedExpiryTime, oneUnitLimit=True))
+                    getTimeFromSeconds(self.visitedExpiryTime if lobby['last_visited'] else self.unvisitedExpiryTime, oneUnitLimit=True))
                 category = discord.utils.get(self.client.rTTR.categories, id=lobby['category_id'])
                 for channel in category.channels:
                     await channel.delete(reason=auditLogReason)
@@ -944,7 +944,7 @@ class LobbyManagement(Module):
                     await savingMsgObj.delete()
                     confirmationMessage = await self.client.send_message(owner, LOG_CONFIRM_5)
                     async with owner.typing():
-                        file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(int(lobby.created)))
+                        file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(lobby['name']))
                         await self.client.send_message(owner, file)
                     await confirmationMessage.edit(content=LOG_CONFIRM_6)
 
