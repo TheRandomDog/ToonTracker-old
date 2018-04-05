@@ -36,7 +36,7 @@ class Users:
         return self.usersDB.select()
 
     def getUserByID(self, userID, createIfNonexistent=True):
-        user = self.usersDB.select(where=f'id={userID}', limit=1)
+        user = self.usersDB.select(where=['id=?', userID], limit=1)
         if not user and createIfNonexistent:
             self.usersDB.insert(
                 id=userID,
@@ -47,7 +47,7 @@ class Users:
                 time_dnd=0,
                 time_offline=0
             )
-            user = self.usersDB.select(where=f'id={userID}', limit=1)
+            user = self.usersDB.select(where=['id=?', userID], limit=1)
         return user
     def getUser(self, member, createIfNonexistent=True):
         return self.getUserByID(member.id, createIfNonexistent)
@@ -77,9 +77,9 @@ class Users:
         return user['time_idle']
 
     def getUserMessageOverview(self, userID, channelID=None):
-        where = [f'user={userID}']
+        where = [['user=?', userID]]
         if channelID:
-            where.append(f'channel={channelID}')
+            where.append(['channel=?', channelID])
 
         messages = self.msgsDB.select('channel, attachments, embeds', where=where)
         overview = {}
@@ -95,22 +95,22 @@ class Users:
         return overview
 
     def setUserXP(self, userID, value):
-        self.usersDB.update(where=f'id={userID}', xp=value)
+        self.usersDB.update(where=['id=?', userID], xp=value)
 
     def setUserLevel(self, userID, value):
-        self.usersDB.update(where=f'id={userID}', level=value)
+        self.usersDB.update(where=['id=?', userID], level=value)
 
     def setUserTimeOnline(self, userID, value):
-        self.usersDB.update(where=f'id={userID}', time_online=value)
+        self.usersDB.update(where=['id=?', userID], time_online=value)
 
     def setUserTimeOffline(self, userID, value):
-        self.usersDB.update(where=f'id={userID}', time_offline=value)
+        self.usersDB.update(where=['id=?', userID], time_offline=value)
 
     def setUserTimeDND(self, userID, value):
-        self.usersDB.update(where=f'id={userID}', time_dnd=value)
+        self.usersDB.update(where=['id=?', userID], time_dnd=value)
 
     def setUserTimeIdle(self, userID, value):
-        self.usersDB.update(where=f'id={userID}', time_idle=value)
+        self.usersDB.update(where=['id=?', userID], time_idle=value)
 
 
 class UserTrackingModule(Module):
@@ -216,7 +216,7 @@ class UserTrackingModule(Module):
                         moderation = client.requestModule('moderation')
                         if moderation:
                             punishmentID = int(args[0])
-                            punishment = moderation.punishments.select(where=f"id={punishmentID}", limit=1)
+                            punishment = moderation.punishments.select(where=["id=?", punishmentID], limit=1)
                             if not punishment:
                                 return 'No known user / lookup ID'
                             try:
@@ -247,7 +247,7 @@ class UserTrackingModule(Module):
 
             if assertClass(message.channel, discord.DMChannel, otherwise=False) or (message.channel.category and message.channel.category.name == 'Staff'):
                 moderation = client.requestModule('moderation')
-                for punishment in moderation.punishments.select(where=f"user={user.id}"):
+                for punishment in moderation.punishments.select(where=['user=?', user.id]):
                     punishmentFields.append({
                         'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
                         'value': '{}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
@@ -259,7 +259,7 @@ class UserTrackingModule(Module):
                         'inline': False
                     })
 
-                for note in moderation.notes.select(where=f"user={user.id}"):
+                for note in moderation.notes.select(where=['user=?', user.id]):
                     notes.append('{tilde}{}{tilde}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
                         note['content'],
                         note['mod'],
@@ -523,7 +523,7 @@ class UserTrackingModule(Module):
         punishment = None
         moderation = self.client.requestModule('moderation')
         if moderation:
-            punishments = moderation.punishments.select(where=f"user={member.id} AND strftime('%s', 'now') - created < 10")
+            punishments = moderation.punishments.select(where=["user=? AND strftime('%s', 'now') - created < 10", member.id])
         if moderation and punishments:
             punishment = punishments[-1]
             fields = [{
@@ -551,14 +551,14 @@ class UserTrackingModule(Module):
            )
         )
         if punishment:
-            moderation.punishments.update(where=f"id={punishment['id']}", log=modLogEntry.id)
+            moderation.punishments.update(where=['id=?', punishment['id']], log=modLogEntry.id)
         return modLogEntry
 
     async def on_member_join(self, member):
         punishmentFields = []
         moderation = self.client.requestModule('moderation')
         if moderation:
-            for punishment in moderation.punishments.select(where=f"user={member.id}"):
+            for punishment in moderation.punishments.select(where=['user=?', member.id]):
                 punishmentFields.append({
                     'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
@@ -601,7 +601,7 @@ class UserTrackingModule(Module):
         punishment = None
         moderation = self.client.requestModule('moderation')
         if moderation:
-            punishments = moderation.punishments.select(where=f"user={member.id} AND type='Kick' AND strftime('%s', 'now') - created < 10")
+            punishments = moderation.punishments.select(where=["user? AND type='Kick' AND strftime('%s', 'now') - created < 10", member.id])
         if moderation and punishments:
             punishment = punishments[-1]
             fields = [{
@@ -629,7 +629,7 @@ class UserTrackingModule(Module):
            )
         )
         if punishment:
-            moderation.punishments.update(where=f"id={punishment['id']}", log=modLogEntry.id)
+            moderation.punishments.update(where=['id=?', punishment['id']], log=modLogEntry.id)
         return modLogEntry
 
     # Specifically built for moderation module.
@@ -652,7 +652,7 @@ class UserTrackingModule(Module):
            )
         )
         moderation = self.client.requestModule('moderation')
-        moderation.punishments.update(where=f"id={punishment['id']}", log=modLogEntry.id)
+        moderation.punishments.update(where=['id=?', punishment['id']], log=modLogEntry.id)
         return modLogEntry
 
     # Specifically built for moderation module.
@@ -732,7 +732,7 @@ class UserTrackingModule(Module):
            )
         )
         moderation = self.client.requestModule('moderation')
-        moderation.notes.update(where=f"id={note['id']}", log=modLogEntry.id)
+        moderation.notes.update(where=['id=?', note['id']], log=modLogEntry.id)
         return modLogEntry
 
 
@@ -743,7 +743,7 @@ class UserTrackingModule(Module):
         if self.trackMessages:
             try:
                 self.users.msgsDB.update(
-                    where=f'id="{message.id}"',
+                    where=['id=?', message.id],
                     deleted=1
                 )
             except sqlite3.OperationalError as e:

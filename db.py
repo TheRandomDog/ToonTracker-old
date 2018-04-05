@@ -45,6 +45,23 @@ class DatabaseTable:
         self.c = None
         self.name = tableName
         self.arguments = arguments
+
+    @staticmethod
+    def getWhereSanitzation(rawWhere, where):
+        sanitize = bool(where)
+        whereKeys = []
+        whereValues = []
+
+        if sanitize:
+            if type(where[0]) == str:
+                where = [where]
+            for w in where:
+                whereKeys.append(w[0])
+                whereValues.extend(w[1:])
+        else:
+            if type(rawWhere) == str: rawWhere = [rawWhere]
+            whereKeys = rawWhere
+        return whereKeys, whereValues
         
     def create(self, errorIfExisting=False):
         listArgs = []
@@ -70,7 +87,7 @@ class DatabaseTable:
             if errorIfExisting or 'exists' not in str(e):
                 raise e
 
-    def cleanSelect(self, columns='*', where=[], limit=10):
+    def cleanSelect(self, columns='*', *, rawWhere=[], where=[], limit=10):
         result = []
         rowFormat = ''
         for argument in self.arguments.keys():
@@ -82,53 +99,53 @@ class DatabaseTable:
             rowFormat += '{:>%d}' % max(len(argument), valueLength)
         result.append(rowFormat.format(*tuple(self.arguments.keys())))
 
-        selection = self.select(columns, where, limit)
+        selection = self.select(columns, rawWhere, limit)
         if limit == 1: selection = [selection]
         for row in selection:
             result.append(rowFormat.format(*[row[arg] for arg in self.arguments.keys()]))
 
         return '\n'.join(result)
 
-    def select(self, columns='*', where=[], limit=None):
+    def select(self, columns='*', *, rawWhere=[], where=[], limit=None):
         fetch = self.c.fetchone if limit == 1 else self.c.fetchall
 
         if type(columns) == list:
             columns = ', '.join(columns)
-        if type(where) == str:
-            where = [where]
+        whereKeys, whereValues = self.getWhereSanitzation(rawWhere, where)
 
         command = 'SELECT {} FROM {}'.format(columns, self.name)
-        if where:
+        if whereKeys:
             command += ' WHERE '
-            command += ' AND '.join(where)
+            command += ' AND '.join(whereKeys)
         if limit:
             command += ' LIMIT {}'.format(limit)
-        self.c.execute(command)
+        print(command, whereKeys, whereValues)
+        self.c.execute(command, whereValues)
         return fetch()
 
-    def delete(self, where, limit=None):
-        if type(where) == str:
-            where = [where]
+    def delete(self, *, rawWhere=[], where=[], limit=None):
+        whereKeys, whereValues = self.getWhereSanitzation(rawWhere, where)
 
         command = 'DELETE FROM {} WHERE '.format(self.name)
-        command += ' AND '.join(where)
+        command += ' AND '.join(whereKeys)
         if limit:
             command += ' LIMIT {}'.format(limit)
-        self.c.execute(command)
+        print(command, whereKeys, whereValues)
+        self.c.execute(command, whereValues)
         self.conn.commit()
 
-    def update(self, where=[], **kwargs):
-        if type(where) == str:
-            where = [where]
+    def update(self, *, rawWhere=[], where=[], **kwargs):
+        whereKeys, whereValues = self.getWhereSanitzation(rawWhere, where)
 
         command = 'UPDATE {} SET {}'.format(
             self.name,
             ', '.join([column + '=?' for column in kwargs.keys()])
         )
-        if where:
+        if whereKeys:
             command += ' WHERE '
-            command += ' AND '.join(where)
-        self.c.execute(command, list(kwargs.values()))
+            command += ' AND '.join(whereKeys)
+        print(command, whereKeys, whereValues)
+        self.c.execute(command, list(kwargs.values()) + whereValues)
         self.conn.commit()
 
     def insert(self, **kwargs):
@@ -145,6 +162,7 @@ class DatabaseTable:
             ','.join(columns),
             ','.join(['?' for _ in range(len(values))])
         )
+        print(command, values)
         self.c.execute(command, values)
         self.conn.commit()
         return self.c.lastrowid

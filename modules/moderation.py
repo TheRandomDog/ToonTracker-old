@@ -312,7 +312,7 @@ class ModerationModule(Module):
                 content=reason,
                 created=time.time()
             )
-            note = module.notes.select(where=f"id={i}", limit=1)
+            note = module.notes.select(where=['id=?', i], limit=1)
 
             # The user tracking module makes things prettier and consistent for displaying
             # information about users (embeds <3). We can fallback to text, though.
@@ -327,7 +327,7 @@ class ModerationModule(Module):
                         note['id']
                         )
                     )
-                    module.notes.update(where=f"id={note['id']}", log=modLogEntry.id)
+                    module.notes.update(where=['id=?', note['id']], log=modLogEntry.id)
                 else:
                     modLogEntry = await usertracking.on_member_note(user, note)
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
@@ -449,7 +449,7 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} A reason must be given.'.format(message.author.mention), deleteIn=5, priorMessage=message)
             newReason = ' '.join(args[1:])
 
-            punishment = module.punishments.select(where=f'id={args[0]}', limit=1)
+            punishment = module.punishments.select(where=['id=?', args[0]], limit=1)
             if not punishment:
                 return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
@@ -476,7 +476,7 @@ class ModerationModule(Module):
                 if notice:
                     editedMessage = notice.content.replace('```' + punishment['reason'] + '```', '```' + newReason + '```')
                     await notice.edit(content=editedMessage)
-            module.punishments.update(where=f'id={args[0]}', reason=newReason)
+            module.punishments.update(where=['id=?', args[0]], reason=newReason)
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
     class EditNoteReasonCMD(Command):
@@ -494,7 +494,7 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} A reason must be given.'.format(message.author.mention), deleteIn=5, priorMessage=message)
             newReason = ' '.join(args[1:])
 
-            note = module.notes.select(where=f'id={args[0]}', limit=1)
+            note = module.notes.select(where=['id=?', args[0]], limit=1)
             if not note:
                 return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
@@ -510,7 +510,7 @@ class ModerationModule(Module):
                         await logEntry.edit(embed=logEntry.embeds[0])
                     else:
                         await logEntry.edit(content=editedMessage)
-            module.notes.update(where=f'id={args[0]}', content=newReason)
+            module.notes.update(where=['id=?', args[0]], content=newReason)
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
     class RemovePunishmentCMD(Command):
@@ -524,7 +524,7 @@ class ModerationModule(Module):
             except (ValueError, IndexError) as e:
                 return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
-            punishment = module.punishments.select(where=f'id={args[0]}', limit=1)
+            punishment = module.punishments.select(where=['id=?', args[0]], limit=1)
             if not punishment:
                 return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
@@ -539,7 +539,7 @@ class ModerationModule(Module):
                 notice = await user.dm_channel.get_message(punishment['notice'])
                 if notice:
                     await notice.delete()
-            module.punishments.delete(where=f'id={args[0]}')
+            module.punishments.delete(where=['id=?', args[0]])
 
             usertracking = client.requestModule('usertracking')
             await usertracking.on_member_unpunish(user, punishment)
@@ -559,7 +559,7 @@ class ModerationModule(Module):
             except (ValueError, IndexError) as e:
                 return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
-            note = module.notes.select(where=f'id={args[0]}', limit=1)
+            note = module.notes.select(where=['id=?', args[0]], limit=1)
             if not note:
                 return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
 
@@ -567,7 +567,7 @@ class ModerationModule(Module):
                 logEntry = await client.get_channel(module.logChannel).get_message(note['log'])
                 if logEntry:
                     await logEntry.delete()
-            module.notes.delete(where=f'id={args[0]}')
+            module.notes.delete(where=['id=?', args[0]])
 
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
@@ -696,7 +696,7 @@ class ModerationModule(Module):
             highestPunishment = None
             highestPunishmentJSON = None
 
-            punishments = self.punishments.select('type', where=f'user={user.id}')
+            punishments = self.punishments.select('type', where['user=?', user.id])
             for punishment in punishments:
                 if punishmentScale.index(punishment['type']) > punishmentScale.index(highestPunishment):
                     highestPunishment = punishment['type']
@@ -819,11 +819,11 @@ class ModerationModule(Module):
         await self.scheduleUnbans()
 
     async def scheduleUnbans(self):
-        punishments = self.punishments.select(where='end_time IS NOT NULL')
+        punishments = self.punishments.select(rawWhere='end_time IS NOT NULL')
         for punishment in punishments:
             if punishment['user'] in self.scheduledUnbans or punishment['end_time'] <= time.time():
                 continue  # Don't schedule an unban for someone already scheduled for one, or if the ban hasn't expired.
-            permaBanned = self.punishments.select(where=f"user={punishment['user']} AND type='{self.PERMANENT_BAN}'", limit=1)
+            permaBanned = self.punishments.select(where=['user=? AND type=?', punishment['user'], self.PERMANENT_BAN], limit=1)
             if permaBanned:
                 continue  # Don't schedule an unban for someone who was since permanently banned.
             self.scheduledUnbans.append(punishment['user'])

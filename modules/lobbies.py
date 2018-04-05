@@ -163,7 +163,7 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_LENGTH
             elif not name:
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_MISSING
-            elif module.activeLobbies.select(where=f'name="{name}"'):
+            elif module.activeLobbies.select(where=['name=?', name]):
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_GENERIC
 
             category = await client.rTTR.create_category(name='Lobby [{}]'.format(name), reason=auditLogReason)
@@ -248,7 +248,7 @@ class LobbyManagement(Module):
             lobby = None
             if module.channelInLobby(message.channel):
                 lobby = module.activeLobbies.select(
-                    where='text_channel_id={}'.format(message.channel.id),
+                    where=['text_channel_id=?', message.channel.id],
                     limit=1
                 )
             elif len(module.getLobbies(member=message.author)) == 1:
@@ -286,7 +286,7 @@ class LobbyManagement(Module):
 
                 try:
                     module.activeLobbies.update(
-                        where=f"id={lobby['id']}",
+                        where=['id=?', lobby['id']],
                         invited_ids=','.join([i for i in lobby['invited_ids'].split(',') if i] + [str(user.id)])
                     )
                     await user.send(INVITATION_MESSAGE_1.format(
@@ -335,7 +335,7 @@ class LobbyManagement(Module):
             lobby = None
             if module.channelInLobby(message.channel):
                 lobby = module.activeLobbies.select(
-                    where='text_channel_id={}'.format(message.channel.id),
+                    where=['text_channel_id=?', message.channel.id],
                     limit=1
                 )
             elif len(module.getLobbies(owner=message.author)) == 1:
@@ -363,7 +363,7 @@ class LobbyManagement(Module):
                     continue
 
                 module.activeLobbies.update(
-                    where=f"id={lobby['id']}",
+                    where=['id=?', lobby['id']],
                     invited_ids=','.join([i for i in lobby['invited_ids'] if i != user.id])
                 )
             if len(failedNotInvited) == len(message.mentions):
@@ -409,7 +409,7 @@ class LobbyManagement(Module):
             await category.set_permissions(message.author, read_messages=True, send_messages=True)
 
             module.activeLobbies.update(
-                where=f"id={lobby['id']}",
+                where=['id=?', lobby['id']],
                 invited_ids=','.join([i for i in lobby['invited_ids'].split(',') if i and int(i) != message.author.id]),
                 member_ids=','.join([i for i in lobby['member_ids'].split(',') if i] + [str(message.author.id)])
             )
@@ -439,7 +439,7 @@ class LobbyManagement(Module):
             lobbiesOwned = module.getLobbies(owner=message.author)
             if module.channelInLobby(message.channel):
                 lobby = module.activeLobbies.select(
-                    where='text_channel_id={}'.format(message.channel.id),
+                    where=['text_channel_id=?', message.channel.id],
                     limit=1
                 )
             elif len(lobbiesOwned) == 1:
@@ -471,7 +471,7 @@ class LobbyManagement(Module):
                 category = discord.utils.get(client.rTTR.categories, id=lobby['category_id'])
                 await category.set_permissions(user, overwrite=None, reason='User got kicked from lobby')
 
-                module.activeLobbies.update(where=f"id={lobby['id']}", member_ids=','.join([str(i) for i in lobby['member_ids'] if i and int(i) != user.id]))
+                module.activeLobbies.update(where=['id=?', lobby['id']], member_ids=','.join([str(i) for i in lobby['member_ids'] if i and int(i) != user.id]))
 
                 if lobby['text_channel_id']:
                     await client.send_message(lobby['text_channel_id'], '{} has left the lobby.'.format(user.mention))
@@ -512,7 +512,7 @@ class LobbyManagement(Module):
                     return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_NAME
             elif module.channelInLobby(message.channel):
                 lobby = module.activeLobbies.select(
-                    where='text_channel_id={}'.format(message.channel.id),
+                    where=['text_channel_id=?', message.channel.id],
                     limit=1
                 )
             elif len(lobbiesIn) == 1:
@@ -556,7 +556,7 @@ class LobbyManagement(Module):
                     return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_NAME
             elif module.channelInLobby(message.channel):
                 lobby = module.activeLobbies.select(
-                    where='text_channel_id={}'.format(message.channel.id),
+                    where=['text_channel_id=?', message.channel.id],
                     limit=1
                 )
             elif len(lobbiesOwned) == 1:
@@ -589,7 +589,7 @@ class LobbyManagement(Module):
                 await client.send_message(member, DISBAND_SUCCESS_MEMBER.format(lobby['name']))
             await client.send_message(module.lobbyChannel if message.channel.id == module.lobbyChannel else message.author, 
                 message.author.mention + ' ' + DISBAND_SUCCESS)
-            module.activeLobbies.delete(where=f"id={lobby['id']}")
+            module.activeLobbies.delete(where=['id=?', lobby['id']])
 
             if lobby['text_channel_id']:
                 try:
@@ -648,7 +648,7 @@ class LobbyManagement(Module):
                 await client.send_message(member, DISBAND_SUCCESS_MEMBER.format(lobby['name']))
             await client.send_message(owner, FORCE_SUCCESS_OWNER.format(name))
             await client.send_message(module.logChannel if message.channel.id == lobby['text_channel_id'] else lobby['text_channel_id'], message.author.mention + ' ' + FORCE_SUCCESS.format(name))
-            module.activeLobbies.delete(where=f"id={lobby['id']}")
+            module.activeLobbies.delete(where=['id=?', lobby['id']])
 
             if lobby['text_channel_id']:
                 confirmationMessage = await client.send_message(int(owner), LOG_CONFIRM_5)
@@ -696,14 +696,14 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + FILTER_FAILURE_VOTED
 
             module.activeLobbies.update(
-                where=f"id={lobby['id']}",
+                where=['id=?', lobby['id']],
                 filter_votes_required=filterVotesNeeded,
                 filter_vote_ids=','.join([i for i in lobby['filter_vote_ids'].split(',') if i] + [str(message.author.id)]),
             )
 
             if lobby['filter_vote_ids'].count(',') + 1 >= filterVotesNeeded:
                 module.activeLobbies.update(
-                    where=f"id={lobby['id']}",
+                    where=['id=?', lobby['id']],
                     filter_votes_required=0,
                     filter_vote_ids='',
                     filter_enabled=1
@@ -747,14 +747,14 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + FILTER_FAILURE_VOTED
 
             module.activeLobbies.update(
-                where=f"id={lobby['id']}",
+                where=['id=?', lobby['id']],
                 filter_votes_required=filterVotesNeeded,
                 filter_vote_ids=','.join([i for i in lobby['filter_vote_ids'].split(',') if i] + [str(message.author.id)]),
             )
 
             if filterVotesNeeded <= 0:
                 module.activeLobbies.update(
-                    where=f"id={lobby['id']}",
+                    where=['id=?', lobby['id']],
                     filter_votes_required=0,
                     filter_vote_ids='',
                     filter_enabled=0
@@ -842,11 +842,11 @@ class LobbyManagement(Module):
         return assertClass(channel, discord.DMChannel, otherwise=False)
 
     def getMemberLobbies(self, member):
-        lobbies = self.activeLobbies.select(where='member_ids LIKE "%{}%"'.format(member.id))
+        lobbies = self.activeLobbies.select(where=['member_ids LIKE ?', "%{}%".format(member.id)])
         return lobbies
 
     def getOwnerLobbies(self, member):
-        lobbies = self.activeLobbies.select(where='owner_id LIKE "%{}%"'.format(member.id))
+        lobbies = self.activeLobbies.select(where=['owner_id=?', member.id])
         return lobbies
 
     def getLobbies(self, **kwargs):
@@ -854,13 +854,13 @@ class LobbyManagement(Module):
         lobbies = None if limit == 1 else []
 
         if kwargs.get('id', None):
-            lobbies = self.activeLobbies.select(where=f"id={kwargs['id']}", limit=limit)
+            lobbies = self.activeLobbies.select(where=['id=?', kwargs['id']], limit=limit)
         elif kwargs.get('name', None):
-            lobbies = self.activeLobbies.select(where=f"name=\"{kwargs['name']}\"", limit=1)
+            lobbies = self.activeLobbies.select(where=['name=?', kwargs['name']], limit=1)
         elif kwargs.get('member', None):
-            lobbies = self.activeLobbies.select(where=f"member_ids LIKE \"%{kwargs['member'].id}%\"", limit=limit)
+            lobbies = self.activeLobbies.select(where=['member_ids LIKE ?', '%{}%'.format(kwargs['member'].id)], limit=limit)
         elif kwargs.get('owner', None):
-            lobbies = self.activeLobbies.select(where=f"owner_id={kwargs['owner'].id}", limit=limit)
+            lobbies = self.activeLobbies.select(where=['owner_id=?', kwargs['owner'].id], limit=limit)
         return lobbies
 
     def getLobby(self, **kwargs):
@@ -869,10 +869,9 @@ class LobbyManagement(Module):
 
     async def on_message(self, message):
         if self.channelInLobby(message.channel):
-            lobby = self.activeLobbies.select(where=f'category_id={message.channel.category.id}', limit=1)
-            id = 'id=' + str(lobby['id'])
+            lobby = self.activeLobbies.select(where=['category_id=?', message.channel.category.id], limit=1)
             self.activeLobbies.update(
-                where=id, 
+                where=['id=?', lobby['id']], 
                 last_visited=time.mktime(time.gmtime()),
                 expiry_warning=None
             )
@@ -881,7 +880,7 @@ class LobbyManagement(Module):
             if lobby['filter_enabled'] and moderation and message.author != self.client.rTTR.me:
                 filterActivated = await moderation.filterBadWords(message, silentFilter=True)
                 if filterActivated and not lobby['filter_warning']:
-                    self.activeLobbies.update(where=f"id={lobby['id']}", filter_warning=1)
+                    self.activeLobbies.update(where=['id=?', lobby['id']], filter_warning=1)
                     await self.client.send_message(
                         message.channel, 
                         message.author.mention + ' ' + FILTER_WARNING
@@ -894,7 +893,7 @@ class LobbyManagement(Module):
     async def on_voice_state_update(self, member, before, after):
         if after.channel and self.channelInLobby(after.channel):
             self.activeLobbies.update(
-                where=f'category_id={after.channel.category.id}', 
+                where=['category_id=?', after.channel.category.id], 
                 last_visited=time.mktime(time.gmtime()),
                 expiry_warning=None
             )
@@ -905,13 +904,13 @@ class LobbyManagement(Module):
         for lobby in self.activeLobbies.select():
             # If the lobby has not been visited...
             if not lobby['last_visited'] and not lobby['expiry_warning'] and time.time() - lobby['created'] >= self.unvisitedExpiryWarningTime:
-                self.activeLobbies.update(where=f"id={lobby['id']}", expiry_warning=time.time())
+                self.activeLobbies.update(where=['id=?', lobby['id']], expiry_warning=time.time())
                 target = discord.utils.get(self.client.rTTR.members, id=lobby['owner_id']) if not lobby['text_channel_id'] else lobby['text_channel_id']
                 await self.client.send_message(target, BUMP_WARNING_UNVISITED.format(time=getTimeFromSeconds(self.unvisitedExpiryTime, oneUnitLimit=True))
                 )
             # If the lobby was last visited...
             elif lobby['last_visited'] and not lobby['expiry_warning'] and time.time() - lobby['last_visited'] >= self.visitedExpiryWarningTime:
-                self.activeLobbies.update(where=f"id={lobby['id']}", xpiry_warning=time.time())
+                self.activeLobbies.update(where=['id=?', lobby['id']], xpiry_warning=time.time())
                 target = discord.utils.get(self.client.rTTR.mebmers, id=lobby['owner_id']) if not lobby['text_channel_id'] else lobby['text_channel_id']
                 await self.client.send_message(target, BUMP_WARNING_VISITED.format(time=getTimeFromSeconds(self.visitedExpiryTime, oneUnitLimit=True))
                 )
@@ -947,7 +946,7 @@ class LobbyManagement(Module):
                     await confirmationMessage.edit(content=LOG_CONFIRM_6)
 
         for inactiveLobby in inactiveLobbies:
-            self.activeLobbies.delete(where=f"id={inactiveLobby['id']}")
+            self.activeLobbies.delete(where=['id=?', inactiveLobby['id']])
 
     async def getChatLog(self, lobby, savingMessage=None):
         if not lobby['text_channel_id']:
