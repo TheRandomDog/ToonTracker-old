@@ -47,7 +47,7 @@ class DatabaseTable:
         self.arguments = arguments
 
     @staticmethod
-    def getWhereSanitzation(rawWhere, where):
+    def getWhereSanitization(rawWhere, where):
         sanitize = bool(where)
         whereKeys = []
         whereValues = []
@@ -111,7 +111,7 @@ class DatabaseTable:
 
         if type(columns) == list:
             columns = ', '.join(columns)
-        whereKeys, whereValues = self.getWhereSanitzation(rawWhere, where)
+        whereKeys, whereValues = self.getWhereSanitization(rawWhere, where)
 
         command = 'SELECT {} FROM {}'.format(columns, self.name)
         if whereKeys:
@@ -124,7 +124,7 @@ class DatabaseTable:
         return fetch()
 
     def delete(self, *, rawWhere=[], where=[], limit=None):
-        whereKeys, whereValues = self.getWhereSanitzation(rawWhere, where)
+        whereKeys, whereValues = self.getWhereSanitization(rawWhere, where)
 
         command = 'DELETE FROM {} WHERE '.format(self.name)
         command += ' AND '.join(whereKeys)
@@ -135,7 +135,7 @@ class DatabaseTable:
         self.conn.commit()
 
     def update(self, *, rawWhere=[], where=[], **kwargs):
-        whereKeys, whereValues = self.getWhereSanitzation(rawWhere, where)
+        whereKeys, whereValues = self.getWhereSanitization(rawWhere, where)
 
         command = 'UPDATE {} SET {}'.format(
             self.name,
