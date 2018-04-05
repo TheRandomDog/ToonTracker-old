@@ -137,7 +137,6 @@ class DatabaseTable:
             command += ' AND '.join(whereKeys)
         if limit:
             command += ' LIMIT {}'.format(limit)
-        print(command, whereKeys, whereValues)
         self.c.execute(command, whereValues)
         return fetch()
 
@@ -148,7 +147,6 @@ class DatabaseTable:
         command += ' AND '.join(whereKeys)
         if limit:
             command += ' LIMIT {}'.format(limit)
-        print(command, whereKeys, whereValues)
         self.c.execute(command, whereValues)
         self.conn.commit()
 
@@ -162,7 +160,6 @@ class DatabaseTable:
         if whereKeys:
             command += ' WHERE '
             command += ' AND '.join(whereKeys)
-        print(command, whereKeys, whereValues)
         self.c.execute(command, list(kwargs.values()) + whereValues)
         self.conn.commit()
 
@@ -180,7 +177,6 @@ class DatabaseTable:
             ','.join(columns),
             ','.join(['?' for _ in range(len(values))])
         )
-        print(command, values)
         self.c.execute(command, values)
         self.conn.commit()
         return self.c.lastrowid

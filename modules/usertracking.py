@@ -601,7 +601,7 @@ class UserTrackingModule(Module):
         punishment = None
         moderation = self.client.requestModule('moderation')
         if moderation:
-            punishments = moderation.punishments.select(where=["user? AND type='Kick' AND strftime('%s', 'now') - created < 10", member.id])
+            punishments = moderation.punishments.select(where=["user=? AND type='Kick' AND strftime('%s', 'now') - created < 10", member.id])
         if moderation and punishments:
             punishment = punishments[-1]
             fields = [{
