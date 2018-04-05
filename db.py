@@ -48,19 +48,37 @@ class DatabaseTable:
 
     @staticmethod
     def getWhereSanitization(rawWhere, where):
-        sanitize = bool(where)
-        whereKeys = []
-        whereValues = []
+        """
+            SQL Operation methods have two options for inputting WHERE clauses:
+                They can do it with `rawWhere`, no sanitization, if the value is hard-coded or trusted.
+                Or it can be sanitized with `where`, if the value is variable or untrusted.
+
+            When using `rawWhere`, you can enter a string or a list of WHERE clauses (that will be joined together by ANDs).
+                e.g. table.select(rawWhere='id=1')
+                e.g. table.select(rawWhere='id=1' AND 'name="Monty"')
+                e.g. table.select(rawWhere=['id=1', 'name="Monty"'])
+            When using `where`, you create a list or a list of lists (that will be joined together by ANDs).
+            You enter the column information first with the values substituted with a question mark, then the rest of the list contains the values.
+                e.g. table.select(where=['id=?', 1])
+                e.g. table.select(where=['id=? AND name=?'], 1, "Monty"')
+                e.g. table.select(where=[['id=?', 1], ['name=?', "Monty"]])
+
+            WHERE queries being joined together by ANDs are strung together in the SQL Operation methods themselves.
+        """
+
+        sanitize = bool(where)  # are we sanitzing? (is there something in where?)
+        whereKeys = []  # the where queries, columns and scuh
+        whereValues = []  # the values that are being substituted
 
         if sanitize:
-            if type(where[0]) == str:
+            if type(where[0]) == str:  # If it's not a list of lists, make it one 
                 where = [where]
-            for w in where:
+            for w in where:  # For every list in major list, take the where query and extend the values list
                 whereKeys.append(w[0])
                 whereValues.extend(w[1:])
         else:
-            if type(rawWhere) == str: rawWhere = [rawWhere]
-            whereKeys = rawWhere
+            if type(rawWhere) == str: rawWhere = [rawWhere]  # if it's not a list, make it one
+            whereKeys = rawWhere  # we're not sanitizing, so just put in the keys, and not values
         return whereKeys, whereValues
         
     def create(self, errorIfExisting=False):
