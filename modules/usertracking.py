@@ -127,7 +127,7 @@ class UserTrackingModule(Module):
         },
         'Mute': {
             'color': discord.Color.dark_blue(),
-            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394679150683881472/deleted.png',
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/431896437488615435/deleted.png',
             'title': 'Muted'
         },
         'Note': {
