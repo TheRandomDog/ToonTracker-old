@@ -506,11 +506,13 @@ class ModerationModule(Module):
             if user.__class__ == CommandResponse:
                 return user
             try:
-                getLongTime(args[1] if len(args) > 1 else None)
+                getLongTime(args[1] if len(args) > 1 else '')
                 length = args[1]
+                reason = ' '.join(args[2:])
             except ValueError:
                 length = None
-            return await module.punishUser(user, length=length, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, silent=True, message=message)
+                reason = ' '.join(args[1:])
+            return await module.punishUser(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, silent=True, message=message)
     class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
         NAME = 'silentTb'
     class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
