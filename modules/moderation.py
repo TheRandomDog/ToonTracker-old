@@ -284,16 +284,94 @@ class ModerationModule(Module):
         @classmethod
         async def execute(cls, client, module, message, *args):
             user = await cls.getUserInPunishCMD(client, message, *args)
+            channel = None
             if user.__class__ == CommandResponse:
-                return user
+                if message.channel_mentions:
+                    user = None
+                    channel = message.channel_mentions[0]
+                else:
+                    response = user
+                    response.message = '{} Please use a mention to refer to a user or channel.'.format(message.author.mention)
+                    return response
             try:
                 getLongTime(args[1] if len(args) > 1 else '')
                 length = args[1]
+                lengthText = None
                 reason = ' '.join(args[2:])
             except ValueError:
                 length = None
+                lengthText = None
                 reason = ' '.join(args[1:])
-            return await module.punishUser(user, length=length, reason=reason, punishment=module.MUTE, message=message)
+
+            if user:
+                return await module.punishUser(user, length=length, reason=reason, punishment=module.MUTE, message=message)
+            elif channel:
+                punishment = module.punishments.select(where=['user=?', channel.id], limit=1)
+                if punishment:
+                    return CommandResponse(
+                        message.channel,
+                        "{} That channel is already muted.".format(message.author.mention),
+                        deleteIn=5,
+                        priorMessage=message
+                    )
+                if length:
+                    lengthText = getLongTime(length)
+                    length = getShortTimeLength(length)
+                    if not 15 <= length <= 63113852:
+                        return CommandResponse(
+                            message.channel,
+                            author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
+                            deleteIn=5,
+                            priorMessage=priorMessage
+                        )
+                punishmentEntry = {
+                    'user': channel.id,
+                    'type': module.MUTE,
+                    'mod': message.author.id,
+                    'created': time.time(),
+                    'end_time': time.time() + length if length else None,
+                    'end_length': lengthText
+                }
+                module.punishments.insert(**punishmentEntry)
+                discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
+                await channel.set_permissions(discordModRole, send_messages=True)
+                await channel.set_permissions(client.rTTR.default_role, send_messages=False)
+                await channel.send(embed=module.createDiscordEmbed(info=':mute: This channel has been temporarily muted.', color=discord.Color.red()))
+                await module.scheduleUnmutes()
+
+    class UnmuteCMD(Command):
+        NAME = 'unmute'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            try:
+                if message.channel_mentions:
+                    channel = message.channel_mentions[0]
+                else:
+                    channel = client.get_channel(int(args[0]))
+                assert channel != None
+            except (ValueError, IndexError, AssertionError) as e:
+                return CommandResponse(
+                    message.channel,
+                    '{} Please use a mention to refer to a channel. If you meant to unmute a user, please use `~removePunishment`.'.format(message.author.mention),
+                    deleteIn=5,
+                    priorMessage=message
+                )
+
+            punishment = module.punishments.select(where=['user=?', channel.id], limit=1)
+            if not punishment:
+                return CommandResponse(message.channel, "{} That channel isn't muted!".format(message.author.mention), deleteIn=5, priorMessage=message)
+
+            module.punishments.delete(where=['id=?', punishment['id']])
+            await channel.set_permissions(client.rTTR.default_role, send_messages=True, reason='The channel was unmuted by a mod via ~unmute')
+            await channel.send(embed=module.createDiscordEmbed(
+                info=':loud_sound: This channel is now unmuted.',
+                footer='Please avoid flooding the channel and follow the rules set in #welcome.',
+                color=discord.Color.green()
+            ))
+            if channel.id in module.scheduledUnmutes:
+                module.scheduledUnmutes.remove(channel.id)
 
     class NoteCMD(PunishCMD):
         NAME = 'note'
@@ -890,17 +968,29 @@ class ModerationModule(Module):
     async def scheduleUnmutes(self):
         punishments = self.punishments.select(where=['type=?', self.MUTE])
         for punishment in punishments:
-            if punishment['user'] in self.scheduledUnmutes or punishment['end_time'] <= time.time():
-                continue  # Don't schedule an unmute for someone already scheduled for one, or if the mute hasn't expired.
+            if punishment['user'] in self.scheduledUnmutes or not punishment['end_time'] or punishment['end_time'] <= time.time():
+                continue  # Don't schedule an unmute for someone already scheduled for one, or if the mute hasn't or won't expire(d).
             self.scheduledUnmutes.append(punishment['user'])
             await self.scheduledUnmute(punishment['user'], punishment['end_time'])
 
-    async def scheduledUnmute(self, userID, endTime=None):
-        user = self.client.rTTR.get_member(userID)
+    async def scheduledUnmute(self, id, endTime=None):
+        user = self.client.rTTR.get_member(id)
+        channel = self.client.rTTR.get_channel(id)
         if endTime:
             await asyncio.sleep(endTime - time.time())
-        await user.remove_roles(self.mutedRole, reason='The user\'s mute expired.')
-        self.scheduledUnmutes.remove(userID)
+        if id not in self.scheduledUnmutes:  # The channel was prematurely unmuted.
+            return
+        if user:
+            await user.remove_roles(self.mutedRole, reason='The user\'s mute expired.')
+        elif channel:
+            await channel.set_permissions(self.client.rTTR.default_role, send_messages=True, reason='The channel\'s mute expired.')
+            await channel.send(embed=self.createDiscordEmbed(
+                info=':loud_sound: This channel is now unmuted.',
+                footer='Please avoid flooding the channel and follow the rules set in #welcome.',
+                color=discord.Color.green()
+            ))
+            self.punishments.delete(where=['user=?', channel.id])
+        self.scheduledUnmutes.remove(id)
 
     def _testForBadWord(self, evadedWord):
         # Tests for a bad word against the provided word.
