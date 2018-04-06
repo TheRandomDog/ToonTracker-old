@@ -696,7 +696,7 @@ class ModerationModule(Module):
             highestPunishment = None
             highestPunishmentJSON = None
 
-            punishments = self.punishments.select('type', where['user=?', user.id])
+            punishments = self.punishments.select('type', where=['user=?', user.id])
             for punishment in punishments:
                 if punishmentScale.index(punishment['type']) > punishmentScale.index(highestPunishment):
                     highestPunishment = punishment['type']
