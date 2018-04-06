@@ -125,6 +125,11 @@ class UserTrackingModule(Module):
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394664540916154378/exit.png',
             'title': 'User Left'
         },
+        'Mute': {
+            'color': discord.Color.dark_blue(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394679150683881472/deleted.png',
+            'title': 'Muted'
+        },
         'Note': {
             'color': discord.Color.from_rgb(156, 43, 255),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/430426293021179934/note.png',
@@ -781,6 +786,7 @@ class UserTrackingModule(Module):
         )
 
     async def on_member_update(self, before, after):
+        # First, track statues.
         if self.trackStatuses and before.status != after.status:
             lastStatusTime = self.memberStatusTimeStart.get(before.id, self.moduleTimeStart)
 
@@ -794,5 +800,41 @@ class UserTrackingModule(Module):
                 self.users.setUserTimeDND(before.id, self.users.getUserTimeDND(before.id) + (time.time() - lastStatusTime))
             self.memberStatusTimeStart[before.id] = time.time()
 
+        # Then mutes.
+        mutedRole = discord.utils.get(self.client.rTTR.roles, name=Config.getModuleSetting('moderation', 'muted_role_name') or 'Muted')
+        if mutedRole and (mutedRole not in before.roles and mutedRole in after.roles):
+            fields = []
+            punishment = None
+            moderation = self.client.requestModule('moderation')
+            if moderation:
+                punishments = moderation.punishments.select(where=["user=? AND strftime('%s', 'now') - created < 10", after.id])
+            if moderation and punishments:
+                punishment = punishments[-1]
+                fields = [{
+                    'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
+                    'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                        punishment['mod'],
+                        str(datetime.fromtimestamp(punishment['created']).date()),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['id'])),
+                        punishment['id']
+                    )
+                }]
+            async for entry in self.client.rTTR.audit_logs(limit=5, action=discord.AuditLogAction.member_role_update):
+                if mutedRole in entry.after.roles:
+                    footer={'text': 'Mute performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
+                    break
+            modLogEntry = await self.client.send_message(
+                self.logChannel,
+                self.createDiscordEmbed(
+                    action='Mute',
+                    primaryInfo=str(after),
+                    thumbnail=after.avatar_url,
+                    fields=fields,
+                    footer=footer
+               )
+            )
+            if punishment:
+                moderation.punishments.update(where=['id=?', punishment['id']], log=modLogEntry.id)
+            return modLogEntry
 
 module = UserTrackingModule

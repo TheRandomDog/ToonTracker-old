@@ -47,7 +47,7 @@ WARNING_MESSAGE = "Heyo, {}!\n\nThis is just to let you know you've been given a
                 "and that this been marked down officially. Here's the reason:\n```{}```\nAs a refresher, we recommend re-reading " \
                 "the Discord server's rules so you're familiar with the way we run things there. Thank you!"
 WARNING_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('warning')
-KICK_MESSAGE = "Heyo, {}!\n\nThis is just to let you know you've been kicked from the {} " \
+KICK_MESSAGE = "Hey there, {}!\n\nThis is just to let you know you've been kicked from the {} " \
                 "Discord server by a moderator, and that this has been marked down officially. Here's the reason:\n```{}```\n" \
                 "As a refresher, we recommend re-reading the Discord server's rules so you're familiar with the way we run " \
                 "things there if you decide to rejoin. We'd love to have you back, as long as you stay Toony!"
@@ -63,6 +63,11 @@ PERMANENT_BAN_MESSAGE = "Hey there, {}.\n\nThis is just to let you know you've b
 PERMANENT_BAN_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('permanent ban')
 BAN_FAILURE = "Could not ban the user. This is probably bad. You should use Discord's built-in moderation tools to enforce the ban."
 
+MUTE_MESSAGE = "Hey there, {}!\n\nThis is just to let you know you've been muted on the {} Discord server by a moderator for **{}**, and that this " \
+            "has been marked down officially. Here's the reason:\n```{}```\nAs a refresher, we recommend re-reading the Discord server's rules so " \
+            "you're familar with the way we run things there when you're unmuted. We'd love to have you back, as long as you stay Toony!"
+MUTE_MESSAGE_FAILURE = PUNISHMENT_MESSAGE_FAILURE.format('mute')
+
 WORD_FILTER_ENTRY = 'Removed{}message from {} in {}: {}'
 WORD_FILTER_EMBED_ENTRY = "Removed{}message from {} in {}: {}\nThe embed {} contained: {}"
 WORD_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
@@ -77,6 +82,7 @@ class ModerationModule(Module):
     KICK = 'Kick'
     TEMPORARY_BAN = 'Temporary Ban'
     PERMANENT_BAN = 'Permanent Ban'
+    MUTE = 'Mute'
 
     class AddBadWordCMD(Command):
         NAME = 'addBadWord'
@@ -271,6 +277,24 @@ class ModerationModule(Module):
                 return user
             return await module.punishUser(user, reason=' '.join(args[1:]), silent=True, message=message)
 
+    class MuteCMD(PunishCMD):
+        NAME = 'mute'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            user = await cls.getUserInPunishCMD(client, message, *args)
+            if user.__class__ == CommandResponse:
+                return user
+            try:
+                getLongTime(args[1] if len(args) > 1 else '')
+                length = args[1]
+                reason = ' '.join(args[2:])
+            except ValueError:
+                length = None
+                reason = ' '.join(args[1:])
+            return await module.punishUser(user, length=length, reason=reason, punishment=module.MUTE, message=message)
+
     class NoteCMD(PunishCMD):
         NAME = 'note'
         RANK = 300
@@ -386,11 +410,13 @@ class ModerationModule(Module):
             if user.__class__ == CommandResponse:
                 return user
             try:
-                getLongTime(args[1] if len(args) > 1 else None)
+                getLongTime(args[1] if len(args) > 1 else '')
                 length = args[1]
+                reason = ' '.join(args[2:])
             except ValueError:
                 length = None
-            return await module.punishUser(user, length=length, reason=' '.join(args[2:]), punishment=module.TEMPORARY_BAN, message=message)
+                reason = ' '.join(args[1:])
+            return await module.punishUser(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
 
     class SilentTmpBanCMD(PunishCMD):
         NAME = 'silentTB'
@@ -628,6 +654,12 @@ class ModerationModule(Module):
             'log': database.INT,
             'content': database.TEXT
         })
+        self.muted = database.createSection(self, 'muted', {
+            'id': [database.INT, database.PRIMARY_KEY],
+            'mention_type': database.TEXT,
+            'end_time': database.INT,
+            'end_length': database.TEXT
+        })
 
         self.badWordFilterOn = Config.getModuleSetting('moderation', 'bad_word_filter', True)
         self.badImageFilterOn = Config.getModuleSetting('moderation', 'bad_image_filter', True) and ClarifaiApp
@@ -639,7 +671,10 @@ class ModerationModule(Module):
         self.allowModPunishments = Config.getModuleSetting('moderation', 'allow_mod_punishments', False)
 
         self.scheduledUnbans = []
+        self.scheduledUnmutes = []
+        self.mutedRole = discord.utils.get(self.client.rTTR.roles, name=Config.getModuleSetting('moderation', 'muted_role_name') or 'Muted')
         asyncio.get_event_loop().create_task(self.scheduleUnbans())
+        asyncio.get_event_loop().create_task(self.scheduleUnmutes())
 
         if self.badWordFilterOn:
             self.badWords = [word.lower() for word in Config.getModuleSetting('moderation', 'bad_words')]
@@ -710,8 +745,8 @@ class ModerationModule(Module):
             nextPunishment = punishment
 
         # There's no real need to warn users who aren't on the server,
-        # nor can we kick them if they aren't on the server.
-        if not member and nextPunishment in (self.WARNING, self.KICK):
+        # nor can we kick them if they aren't on the server. Can't mute 'em either.
+        if not member and nextPunishment in (self.WARNING, self.KICK, self.MUTE):
             return CommandResponse(
                 channel, 
                 author.mention + ' ' + PUNISH_FAILURE_NONMEMBER,
@@ -727,7 +762,7 @@ class ModerationModule(Module):
         if length:
             lengthText = getLongTime(length)
             length = getShortTimeLength(length)
-            nextPunishment = self.TEMPORARY_BAN  # Just asserts this if we have a time.
+            nextPunishment = self.TEMPORARY_BAN if nextPunishment not in (self.TEMPORARY_BAN, self.MUTE) else nextPunishment
             if not 15 <= length <= 63113852:
                 return CommandResponse(
                     channel,
@@ -739,7 +774,7 @@ class ModerationModule(Module):
             try:
                 length = getShortTimeLength(reason.split(' ')[0])
                 lengthText = getLongTime(reason.split(' ')[0])
-                nextPunishment = self.TEMPORARY_BAN
+                nextPunishment = self.TEMPORARY_BAN if nextPunishment not in (self.TEMPORARY_BAN, self.MUTE) else nextPunishment
                 if not 15 <= length <= 63113852:
                     return CommandResponse(
                         channel,
@@ -748,8 +783,12 @@ class ModerationModule(Module):
                         priorMessage=priorMessage
                     )
             except ValueError:
-                length = 86400
-                lengthText = '24 hours'
+                if nextPunishment == self.MUTE:
+                    length = 3600
+                    lengthText = '1 hour'
+                else:
+                    length = 86400
+                    lengthText = '24 hours'
 
         # The user tracking module makes things prettier and consistent for displaying
         # information about users (embeds <3). We can fallback to text, though.
@@ -799,6 +838,13 @@ class ModerationModule(Module):
             messageFailed = PERMANENT_BAN_MESSAGE_FAILURE
             punishAction = self.client.rTTR.ban
             actionFailure = BAN_FAILURE
+        elif nextPunishment == self.MUTE:
+            punishmentEntry['end_time'] = time.time() + length
+            punishmentEntry['end_length'] = lengthText
+            punishMessage = MUTE_MESSAGE.format(user.mention, self.client.rTTR.name, lengthText, reason)
+            messageFailed = MUTE_MESSAGE_FAILURE
+            punishAction = None
+            actionFailure = None
 
         if not silent and punishMessage:
             try:
@@ -813,13 +859,18 @@ class ModerationModule(Module):
                 await punishAction(user, reason=str(punishmentEntry['id']))
             elif nextPunishment == self.WARNING:  # Can't do everything cleanly :(
                 await usertracking.on_member_warn(user, punishmentEntry)
-        except discord.HTTPException:
-            await self.client.send_message(author, actionFailure)
+            elif nextPunishment == self.MUTE:
+                if not self.mutedRole:
+                    raise ValueError
+                await user.add_roles(self.mutedRole, reason=str(punishmentEntry['id']))
+        except (discord.HTTPException, ValueError):
+            await self.client.send_message(author, actionFailure if actionFailure else 'The {} failed.'.format(nextPunishment.lower()))
 
         await self.scheduleUnbans()
+        await self.scheduleUnmutes()
 
     async def scheduleUnbans(self):
-        punishments = self.punishments.select(rawWhere='end_time IS NOT NULL')
+        punishments = self.punishments.select(where=['type=?', self.TEMPORARY_BAN])
         for punishment in punishments:
             if punishment['user'] in self.scheduledUnbans or punishment['end_time'] <= time.time():
                 continue  # Don't schedule an unban for someone already scheduled for one, or if the ban hasn't expired.
@@ -835,6 +886,21 @@ class ModerationModule(Module):
             await asyncio.sleep(endTime - time.time())
         await self.client.rTTR.unban(user, reason='The user\'s temporary ban expired.')
         self.scheduledUnbans.remove(userID)
+
+    async def scheduleUnmutes(self):
+        punishments = self.punishments.select(where=['type=?', self.MUTE])
+        for punishment in punishments:
+            if punishment['user'] in self.scheduledUnmutes or punishment['end_time'] <= time.time():
+                continue  # Don't schedule an unmute for someone already scheduled for one, or if the mute hasn't expired.
+            self.scheduledUnmutes.append(punishment['user'])
+            await self.scheduledUnmute(punishment['user'], punishment['end_time'])
+
+    async def scheduledUnmute(self, userID, endTime=None):
+        user = self.client.rTTR.get_member(userID)
+        if endTime:
+            await asyncio.sleep(endTime - time.time())
+        await user.remove_roles(self.mutedRole, reason='The user\'s mute expired.')
+        self.scheduledUnmutes.remove(userID)
 
     def _testForBadWord(self, evadedWord):
         # Tests for a bad word against the provided word.
