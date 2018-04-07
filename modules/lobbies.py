@@ -251,8 +251,8 @@ class LobbyManagement(Module):
                     where=['text_channel_id=?', message.channel.id],
                     limit=1
                 )
-            elif len(module.getLobbies(member=message.author)) == 1:
-                lobby = module.getLobby(member=message.author)
+            elif len(module.getLobbies(member=message.author)) + len(module.getLobbies(owner=message.author)) == 1:
+                lobby = module.getLobby(member=message.author) or module.getLobby(owner=message.author)
             elif len(args) > len(message.mentions):
                 lobby = module.getLobby(name=' '.join(args[:len(args) - len(message.mentions)]))
                 if not lobby:
