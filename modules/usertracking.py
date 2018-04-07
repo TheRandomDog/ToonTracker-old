@@ -506,7 +506,10 @@ class UserTrackingModule(Module):
                     thumbnail=member.avatar_url,
                     footer={'text': '- The mods from the Toontown Rewritten Discord'}
                 )
-                await self.client.send_message(member, embed)
+                try:
+                    await self.client.send_message(member, embed)
+                except discord.HTTPException:
+                    print("Could not send level 7 notification to {} (probably because they have DMs disabled for users/bots who don't share a server they're in).".format(str(member)))
 
     def createDiscordEmbed(self, action, primaryInfo=discord.Embed.Empty, secondaryInfo=discord.Embed.Empty, thumbnail='', fields=[], footer={}, image=None, color=None):
         action = self.ACTIONS[action]
