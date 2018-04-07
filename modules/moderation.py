@@ -213,7 +213,7 @@ class ModerationModule(Module):
                 return module.createDiscordEmbed(info='**{}** is already classified as a bad word exception.'.format(word), color=discord.Color.dark_orange())
             exc.append(word)
             Config.setModuleSetting('moderation', 'word_exceptions', exc)
-            module.pluralExceptions = exc
+            module.wordExceptions = exc
 
             return module.createDiscordEmbed(info='**{}** was added as a bad word exception.'.format(word), color=discord.Color.green())
 
@@ -232,7 +232,7 @@ class ModerationModule(Module):
                 return module.createDiscordEmbed(info='**{}** was never a bad word exception.'.format(word), color=discord.Color.dark_orange())
             exc.remove(word)
             Config.setModuleSetting('moderation', 'word_exceptions', exc)
-            module.pluralExceptions = exc
+            module.wordExceptions = exc
             
             return module.createDiscordEmbed(info='**{}** was removed from the bad word exception list.'.format(word), color=discord.Color.green())
 
