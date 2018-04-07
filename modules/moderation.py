@@ -1026,6 +1026,7 @@ class ModerationModule(Module):
               or text.endswith(' ' + phrase) or text.endswith(' ' + phraseNoPlural)         # If the message ends in the phrase.
               or ' ' + phrase + ' ' in text or ' ' + phraseNoPlural + ' ' in text):         # If the message contains the phrase.
                 textIndex = text.find(phrase)
+                if textIndex == -1: textIndex = text.find(phraseNoPlural)
                 response['word'] = phrase
                 response['evadedWord'] = evadedText[textIndex:textIndex + len(phrase)]
         return response
