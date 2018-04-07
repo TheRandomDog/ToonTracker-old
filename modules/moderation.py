@@ -236,6 +236,71 @@ class ModerationModule(Module):
             
             return module.createDiscordEmbed(info='**{}** was removed from the bad word exception list.'.format(word), color=discord.Color.green())
 
+    class SlowmodeCMD(Command):
+        NAME = 'slowmode'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if message.channel_mentions:
+                channel = message.channel_mentions[0]
+            else:
+                channel = message.channel
+
+            speed = None
+            if not args:
+                speed = -1
+            for arg in args:
+                if arg.isdigit():
+                    speed = -1 if not arg else int(arg)
+                    break
+                elif arg == 'off':
+                    speed = -1
+                    break
+            if not speed:
+                return CommandResponse(
+                    message.channel,
+                    '{} Please use a number to represent how many messages per second can be sent by a user. To turn off slow mode, use `~slowmode off`.'.format(message.author.mention),
+                    deleteIn=5,
+                    priorMessage=message
+                )
+
+            slowmode = module.slowmode
+            oldSpeed = slowmode.get(str(message.channel.id), 0)
+            if speed == -1:
+                if not oldSpeed:
+                    return CommandResponse(
+                        message.channel,
+                        '{} This channel isn\'t in slowmode!'.format(message.author.mention),
+                        deleteIn=5,
+                        priorMessage=message
+                    )
+                del slowmode[str(message.channel.id)]
+                message.nonce = 'silent'
+                await message.delete()
+                await channel.send(embed=module.createDiscordEmbed(
+                    info=':rabbit2: You\'re back up to regular speed! Happy chatting!',
+                    color=discord.Color.green()
+                ))
+            else:
+                slowmode[str(message.channel.id)] = speed
+                message.nonce = 'silent'
+                await message.delete()
+                await channel.send(embed=module.createDiscordEmbed(
+                    info=':turtle: This channel has been slooooooowed doooown.' if oldSpeed <= speed else ':rabbit2: This channel has been sped up, but not completely.',
+                    footer='You may only send a message every {} seconds.'.format(speed),
+                    color=discord.Color.red()
+                ))
+            module.slowmode = slowmode
+            Config.setModuleSetting('moderation', 'slowmode', slowmode)
+    class SlowmodeOffCMD(SlowmodeCMD):
+        NAME = 'slowoff'
+        RANK = 300
+
+        @classmethod
+        async def execute(cls, client, module, message, *args):
+            await super(cls, cls).execute(client, module, message, 'off')
+
     class PunishCMD(Command):
         NAME = 'punish'
         RANK = 300
@@ -756,6 +821,8 @@ class ModerationModule(Module):
         asyncio.get_event_loop().create_task(self.scheduleUnbans())
         asyncio.get_event_loop().create_task(self.scheduleUnmutes())
 
+        self.slowmode = Config.getModuleSetting('moderation', 'slowmode', {})
+
         if self.badWordFilterOn:
             self.badWords = [word.lower() for word in Config.getModuleSetting('moderation', 'bad_words')]
             self.badEmojis = Config.getModuleSetting('moderation', 'bad_emojis')
@@ -994,6 +1061,13 @@ class ModerationModule(Module):
             self.punishments.delete(where=['user=?', channel.id])
         self.scheduledUnmutes.remove(id)
 
+    async def scheduleUnmuteFromSlowmode(self, channel, member, seconds):
+        for _ in range(seconds):
+            await asyncio.sleep(1)
+            if str(channel.id) not in self.slowmode:
+                break
+        await channel.set_permissions(member, overwrite=None, reason='Slowmode expired')
+
     def _testForBadWord(self, evadedWord):
         # Tests for a bad word against the provided word.
         # Runs through the config list after taking out unicode and non-alphabetic characters.
@@ -1226,6 +1300,11 @@ class ModerationModule(Module):
                 await self.filterBadWords(message)
         except discord.errors.NotFound:
             print('Tried to remove message in bad word filter but message wasn\'t found.')
+            return
+
+        if str(message.channel.id) in self.slowmode:
+            await message.channel.set_permissions(message.author, send_messages=False, reason='Slowmode triggered')
+            await self.scheduleUnmuteFromSlowmode(message.channel, message.author, self.slowmode[str(message.channel.id)])
             return
 
         if not self.badImageFilterOn:
