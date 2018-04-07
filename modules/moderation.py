@@ -1019,6 +1019,8 @@ class ModerationModule(Module):
         for phrase in filter(lambda word: ' ' in word, self.badWords):
             phrase = phrase.lower()  # Sanity check, you never know if a mod'll add caps to a bad word entry.
             phraseNoPlural = phrase.rstrip('s').rstrip('e')
+            if phraseNoPlural in self.pluralExceptions:
+                phraseNoPlural = '~-=PLACEHOLDER=-~'
             if (phrase == text or phraseNoPlural == text                                    # If the message is literally the phrase.
               or text.startswith(phrase + ' ') or text.startswith(phraseNoPlural + ' ')     # If the message starts with the phrase.
               or text.endswith(' ' + phrase) or text.endswith(' ' + phraseNoPlural)         # If the message ends in the phrase.
