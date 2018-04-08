@@ -155,6 +155,11 @@ class UserTrackingModule(Module):
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
             'title': 'Message Filtered'
         },
+        'Link': {
+            'color': discord.Color.dark_red(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
+            'title': 'Link Filtered'
+        },
         'Review': {
             'color': discord.Color.dark_red(),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
@@ -664,12 +669,12 @@ class UserTrackingModule(Module):
         return modLogEntry
 
     # Specifically built for moderation module.
-    async def on_message_filter(self, message, word=None, text=None, embed=None):
+    async def on_message_filter(self, message, *, link=False, word=None, text=None, embed=None):
         replaceFrom = text if text else message.content
         await self.client.send_message(
             self.logChannel,
             self.createDiscordEmbed(
-                action='Filter',
+                action='Link' if link else 'Filter',
                 primaryInfo=str(message.author),
                 secondaryInfo='{} in{} {}{}:\n\n{}'.format(
                     message.author.mention,

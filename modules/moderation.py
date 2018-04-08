@@ -2,6 +2,7 @@
 
 import discord
 import asyncio
+import fnmatch
 import time
 import re
 from extra.commands import Command, CommandResponse
@@ -73,6 +74,11 @@ WORD_FILTER_EMBED_ENTRY = "Removed{}message from {} in {}: {}\nThe embed {} cont
 WORD_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've said the blacklisted word `{}`, and to make clear " \
                     "that it's not an allowed word on this server. No automated action has been taken, but continued usage of the word or trying to circumvent the filter may " \
                     "result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
+LINK_FILTER_ENTRY = 'Removed{}message from {} in {}: {}'
+LINK_FILTER_EMBED_ENTRY = "Removed{}message from {} in {}: {}\nThe embed {} contained: {}"
+LINK_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've linked to a website that we don't allow. No automated action has " \
+                    "been taken, but continuing to use the link or trying to circumvent the filter may result in additional punishment, depending " \
+                    "on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
 IMAGE_FILTER_REASON = 'Posting Inappropriate Content **[Rating: {}]**'
 IMAGE_FILTER_REVIEW = '{} posted an image in {} that has been registered as possibly bad. **[Rating: {}]**\n' \
                     '*If the image has bad content in it, please act accordingly.*\n{}'
@@ -84,6 +90,47 @@ class ModerationModule(Module):
     PERMANENT_BAN = 'Permanent Ban'
     MUTE = 'Mute'
 
+    class AddBadLinkCMD(Command):
+        NAME = 'addBadLink'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            link = ' '.join(args).strip().lower()
+            if not link:
+                return
+
+            badlinks = module.badLinks
+            matches = [badlink for badlink in badlinks if fnmatch.fnmatch(link, badlink)]
+            if any([m==link for m in matches]):
+                return module.createDiscordEmbed(info='**{}** is already classified as a bad link format.'.format(link), color=discord.Color.dark_orange())
+            elif matches:
+                return module.createDiscordEmbed(info='**{}** is already matched under **{}**'.format(link, matches[0]), color=discord.Color.dark_orange())
+            badlinks.append(link)
+            Config.setModuleSetting('moderation', 'bad_links', badlinks)
+            module.badLinks = badlinks
+
+            return module.createDiscordEmbed(info='**{}** was added as a bad link format.'.format(link), color=discord.Color.green())
+
+    class RemoveBadLinkCMD(Command):
+        NAME = 'removeBadLink'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            link = ' '.join(args).strip().lower()
+            if not link:
+                return
+
+            badlinks = module.badLinks
+            if link not in badlinks:
+                return module.createDiscordEmbed(info='**{}** is not a bad link format.\nBe sure to use the format that was added exactly.'.format(link), color=discord.Color.dark_orange())
+            badlinks.remove(link)
+            Config.setModuleSetting('moderation', 'bad_links', badlinks)
+            module.badLinks = badlinks
+
+            return module.createDiscordEmbed(info='**{}** was removed from the bad link list.'.format(link), color=discord.Color.green())
+
     class AddBadWordCMD(Command):
         NAME = 'addBadWord'
         RANK = 300
@@ -94,7 +141,7 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = Config.getModuleSetting('moderation', 'bad_words')
+            badwords = module.badWords
             if word in badwords:
                 return module.createDiscordEmbed(info='**{}** is already classified as a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
@@ -113,7 +160,7 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = Config.getModuleSetting('moderation', 'bad_words')
+            badwords = module.badWords
             if word not in badwords:
                 return module.createDiscordEmbed(info='**{}** was never a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
@@ -132,7 +179,7 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = Config.getModuleSetting('moderation', 'bad_emojis')
+            badwords = module.badEmojis
             if word in badwords:
                 return module.createDiscordEmbed(info='**{}** is already classified as a bad emoji.'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
@@ -151,7 +198,7 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = Config.getModuleSetting('moderation', 'bad_emojis')
+            badwords = module.badEmojis
             if word not in badwords:
                 return module.createDiscordEmbed(info='**{}** was never a bad emoji.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
@@ -159,6 +206,44 @@ class ModerationModule(Module):
             module.badEmojis = badwords
 
             return module.createDiscordEmbed(info='**{}** was removed from the bad word emoji list.'.format(word), color=discord.Color.green())
+
+    class AddLinkExceptionCMD(Command):
+        NAME = 'addLinkException'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            word = ' '.join(args).strip()
+            if not word:
+                return
+
+            exc = module.linkExceptions
+            if word in exc:
+                return module.createDiscordEmbed(info='**{}** is already classified as a bad link exception.'.format(word), color=discord.Color.dark_orange())
+            exc.append(word)
+            Config.setModuleSetting('moderation', 'link_exceptions', exc)
+            module.linkExceptions = exc
+
+            return module.createDiscordEmbed(info='**{}** was added as a bad link exception.'.format(word), color=discord.Color.green())
+
+    class RemoveLinkExceptionCMD(Command):
+        NAME = 'removeLinkException'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            word = ' '.join(args).strip()
+            if not word:
+                return
+
+            exc = module.linkExceptions
+            if word not in exc:
+                return module.createDiscordEmbed(info='**{}** was never a bad link exception.'.format(word), color=discord.Color.dark_orange())
+            exc.remove(word)
+            Config.setModuleSetting('moderation', 'link_exceptions', exc)
+            module.linkExceptions = exc
+            
+            return module.createDiscordEmbed(info='**{}** was removed from the bad link exception list.'.format(word), color=discord.Color.green())
 
     class AddPluralExceptionCMD(Command):
         NAME = 'addPluralException'
@@ -170,7 +255,7 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = Config.getModuleSetting('moderation', 'plural_exceptions')
+            exc = module.pluralExceptions
             if word in exc:
                 return module.createDiscordEmbed(info='**{}** is already classified as a plural exception.'.format(word), color=discord.Color.dark_orange())
             exc.append(word)
@@ -189,7 +274,7 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = Config.getModuleSetting('moderation', 'plural_exceptions')
+            exc = module.pluralExceptions
             if word not in exc:
                 return module.createDiscordEmbed(info='**{}** was never a plural exception.'.format(word), color=discord.Color.dark_orange())
             exc.remove(word)
@@ -208,7 +293,7 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = Config.getModuleSetting('moderation', 'word_exceptions')
+            exc = module.wordExceptions
             if word in exc:
                 return module.createDiscordEmbed(info='**{}** is already classified as a bad word exception.'.format(word), color=discord.Color.dark_orange())
             exc.append(word)
@@ -227,7 +312,7 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = Config.getModuleSetting('moderation', 'word_exceptions')
+            exc = module.wordExceptions
             if word not in exc:
                 return module.createDiscordEmbed(info='**{}** was never a bad word exception.'.format(word), color=discord.Color.dark_orange())
             exc.remove(word)
@@ -759,6 +844,23 @@ class ModerationModule(Module):
                 )
                 await client.send_message(message.channel, embed)
 
+    class ViewBadLinksCMD(Command):
+        NAME = 'viewBadLinks'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if not hasattr(module, 'badLinks'):
+                return "{} The bad link filter isn't turned on in the channel".format(message.author.mention)
+            blacklistLength = len(module.badLinks)
+            links = sorted(module.badLinks, key=lambda x: x.lstrip('htps:/*?[!]w.'))
+            for i in range(int(blacklistLength / 100) + 1):
+                embed = module.createDiscordEmbed(
+                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
+                    info='\n'.join(['`' + str(l) + '`' for l in links[100 * i:100 * (i + 1)]])
+                )
+                await client.send_message(message.channel, embed)
+
     class ViewBadEmojisCMD(Command):
         NAME = 'viewBadEmojis'
         RANK = 300
@@ -808,6 +910,7 @@ class ModerationModule(Module):
 
         self.badWordFilterOn = Config.getModuleSetting('moderation', 'bad_word_filter', True)
         self.badImageFilterOn = Config.getModuleSetting('moderation', 'bad_image_filter', True) and ClarifaiApp
+        self.badLinkFilterOn = Config.getModuleSetting('moderation', 'bad_link_filter', True)
         self.spamChannel = Config.getModuleSetting('moderation', 'spam_channel')
         self.logChannel = Config.getModuleSetting('moderation', 'log_channel')
         self.filterBots = Config.getModuleSetting('moderation', 'filter_bots', False)
@@ -824,11 +927,14 @@ class ModerationModule(Module):
         self.slowmode = Config.getModuleSetting('moderation', 'slowmode', {})
 
         if self.badWordFilterOn:
-            self.badWords = [word.lower() for word in Config.getModuleSetting('moderation', 'bad_words')]
-            self.badEmojis = Config.getModuleSetting('moderation', 'bad_emojis')
-            self.filterExceptions = Config.getModuleSetting('moderation', 'filter_exceptions')
-            self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions')
-            self.wordExceptions = Config.getModuleSetting('moderation', 'word_exceptions')
+            self.badWords = [word.lower() for word in Config.getModuleSetting('moderation', 'bad_words', [])]
+            self.badEmojis = Config.getModuleSetting('moderation', 'bad_emojis', [])
+            self.filterExceptions = Config.getModuleSetting('moderation', 'filter_exceptions', [])
+            self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions', [])
+            self.wordExceptions = Config.getModuleSetting('moderation', 'word_exceptions', [])
+        if self.badLinkFilterOn:
+            self.badLinks = [link.lower() for link in Config.getModuleSetting('moderation', 'bad_links', [])]
+            self.linkExceptions = Config.getModuleSetting('moderation', 'link_exceptions', [])
 
         if self.badImageFilterOn:
             gifKey = Config.getModuleSetting('moderation', 'clarifai_mod_key')
@@ -1180,6 +1286,37 @@ class ModerationModule(Module):
                         return True
         return False
 
+    async def filterBadLinks(self, message, edited=' ', silentFilter=False):
+        response = None
+
+        text = message.content.translate(FILTER_EVASION_CHAR_MAP).lower().replace(' ', '')
+        for link in self.badLinks:
+            if fnmatch.fnmatch(text, '*' + link + '*') and not any([linkException in text for linkException in self.linkExceptions]):
+                response = link
+        if not response:
+            return False
+
+        await self.client.delete_message(message)
+        if self.spamChannel:
+            message.nonce = 'filter'  # We're taking this variable because discord.py said it was nonimportant and it won't let me add any more custom attributes.
+            usertracking = self.client.requestModule('usertracking')
+            if usertracking:
+                await usertracking.on_message_filter(message, link=True)
+            else:
+                await self.client.send_message(self.spamChannel, LINK_FILTER_ENTRY.format(
+                    edited,
+                    message.author.mention,
+                    message.channel.mention,
+                    message.content
+                ))
+        try:
+            if silentFilter:
+                return True
+            await self.client.send_message(message.author, LINK_FILTER_MESSAGE.format(message.author.mention))
+        except discord.HTTPException:
+            print('Tried to send bad link filter notification message to a user, but Discord threw an HTTP Error:\n\n{}'.format(format_exc()))
+        return True
+
     async def filterBadImages(self, message):
         # Refreshes embed info from the API.
         try:
@@ -1296,10 +1433,13 @@ class ModerationModule(Module):
 
         timeStart = time.time()
         try:
+            filtered = None
             if self.badWordFilterOn:
-                await self.filterBadWords(message)
+                filtered = await self.filterBadWords(message)
+            if not filtered and self.badLinkFilterOn:
+                await self.filterBadLinks(message)
         except discord.errors.NotFound:
-            print('Tried to remove message in bad word filter but message wasn\'t found.')
+            print('Tried to remove message in bad word/link filter but message wasn\'t found.')
             return
 
         if str(message.channel.id) in self.slowmode:
@@ -1327,10 +1467,13 @@ class ModerationModule(Module):
 
         # We'll only check for edited-in bad words for right now.
         try:
+            filtered = None
             if self.badWordFilterOn:
-                await self.filterBadWords(message, edited=' edited ')
+                filtered = await self.filterBadWords(message, edited=' edited ')
+            if not filtered and self.badLinkFilterOn:
+                await self.filterBadLinks(message)
         except discord.errors.NotFound:
-            print('Tried to remove edited message in bad word filter but message wasn\'t found.')
+            print('Tried to remove edited message in bad word/link filter but message wasn\'t found.')
             return
 
 module = ModerationModule
