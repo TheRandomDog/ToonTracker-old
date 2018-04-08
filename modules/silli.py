@@ -55,7 +55,7 @@ class SilliModule(Module, SubscribeCallback):
     def message(self, pubnub, message):
         if message.message != self.particles:
             if self.advance == None:
-                if message.message['count'] <= 0:
+                if message.message['remaining'] <= 0:
                     self.advance = True
                 else:
                     self.advance = False
@@ -70,7 +70,7 @@ class SilliPermaMsg(PermaMsg):
     def update(module):
         title = 'Silly Particles'
 
-        r, c = str(module.particles['remaining']), str(module.particles['count'])
+        r, c = str(0), str(module.particles['count'])
         particlesRemaining, particleCount = r.translate(digits), c.translate(digits)
         return module.createDiscordEmbed(
             subtitle=title,
