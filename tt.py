@@ -176,6 +176,8 @@ class ToonTracker(discord.Client):
                         await self.send_command_response(response)
                     elif response:
                         await self.send_message(message.channel, response)
+                except discord.errors.HTTPException as e:
+                    print('{} tried to send a response to a message ({}), but Discord threw an HTTPException: {}'.format(command.__name__, message.id, str(e)))
                 except Exception:
                     await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
@@ -186,6 +188,8 @@ class ToonTracker(discord.Client):
                     await self.send_command_response(response)
                 elif response:
                     await self.send_message(message.channel, response)
+            except discord.errors.HTTPException as e:
+                print('{} tried to send a response to a message ({}), but Discord threw an HTTPException: {}'.format(module.__name__, message.id, str(e)))
             except Exception:
                 await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
