@@ -74,7 +74,7 @@ class SilliPermaMsg(PermaMsg):
         particlesRemaining, particleCount = r.translate(digits), c.translate(digits)
         return module.createDiscordEmbed(
             subtitle=title,
-            info=self.advMsg if module.advance else None,
+            info=module.advMsg if module.advance else None,
             fields=[
                 {'name': 'Count', 'value': particleCount},
                 {'name': 'Remaining', 'value': particlesRemaining, 'inline': False}
