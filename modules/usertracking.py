@@ -782,14 +782,17 @@ class UserTrackingModule(Module):
             self.createDiscordEmbed(
                 action='Delete',
                 primaryInfo=str(message.author),
-                secondaryInfo='{} in {}{}:\n\n{}'.format(
+                secondaryInfo='{}{} in {}{}:\n\n{}'.format(
+                    '*This message contained an embed.*\n' if message.embeds else '',
                     message.author.mention,
                     '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
                     message.channel.mention,
                     message.content
                 ),
                 thumbnail=message.author.avatar_url,
-                footer=footer
+                footer=footer,
+                image=message.attachments[0].proxy_url if message.attachments else None
+                # proxy_url is cached, so it is not instantly deleted when a message is deleted
            )
         )
 
