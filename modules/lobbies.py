@@ -910,7 +910,7 @@ class LobbyManagement(Module):
                 )
             # If the lobby was last visited...
             elif lobby['last_visited'] and not lobby['expiry_warning'] and time.time() - lobby['last_visited'] >= self.visitedExpiryWarningTime:
-                self.activeLobbies.update(where=['id=?', lobby['id']], xpiry_warning=time.time())
+                self.activeLobbies.update(where=['id=?', lobby['id']], expiry_warning=time.time())
                 target = discord.utils.get(self.client.rTTR.mebmers, id=lobby['owner_id']) if not lobby['text_channel_id'] else lobby['text_channel_id']
                 await self.client.send_message(target, BUMP_WARNING_VISITED.format(time=getTimeFromSeconds(self.visitedExpiryTime, oneUnitLimit=True))
                 )
