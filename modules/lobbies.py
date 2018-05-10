@@ -919,31 +919,45 @@ class LobbyManagement(Module):
             # If the lobby was not visited and an expiry warning was sent...
             elif lobby['expiry_warning'] and time.time() - lobby['expiry_warning'] >= (self.visitedExpiryTime if lobby['last_visited'] else self.unvisitedExpiryTime):
                 for member in [int(m) for m in lobby['member_ids'].split(',') if m]:
-                    await self.client.send_message(member, BUMP_MEMBER)
+                    try:
+                        await self.client.send_message(member, BUMP_MEMBER)
+                    except discord.errors.DiscordException:
+                        pass
                 owner = discord.utils.get(self.client.rTTR.members, id=lobby['owner_id'])
-                await self.client.send_message(owner, BUMP_OWNER)
-                
-                if lobby['text_channel_id']:
-                    savingMessage = LOG_CONFIRM_4
-                    savingMsgObj = await self.client.send_message(owner, savingMessage)
-                    async with owner.typing():
-                        chatlog = await self.getChatLog(lobby, savingMessage)
+                savingMsgObj = None
+                try:
+                    await self.client.send_message(owner, BUMP_OWNER)
+                    if lobby['text_channel_id']:
+                        savingMessage = LOG_CONFIRM_4
+                        savingMsgObj = await self.client.send_message(owner, savingMessage)
+                        async with owner.typing():
+                            chatlog = await self.getChatLog(lobby, savingMessage)
+                except discord.errors.DiscordException:
+                    pass
 
                 auditLogReason = 'Lobby hit expiration date of {}'.format(
                     getTimeFromSeconds(self.visitedExpiryTime if lobby['last_visited'] else self.unvisitedExpiryTime, oneUnitLimit=True))
                 category = discord.utils.get(self.client.rTTR.categories, id=lobby['category_id'])
+                if not category:
+                    # Something's not right.
+                    self.activeLobbies.delete(where=['id=?', lobby['id']])
+                    continue
+
                 for channel in category.channels:
                     await channel.delete(reason=auditLogReason)
                 await category.delete(reason=auditLogReason)
                 inactiveLobbies.append(lobby)
 
-                if lobby['text_channel_id']:
-                    await savingMsgObj.delete()
-                    confirmationMessage = await self.client.send_message(owner, LOG_CONFIRM_5)
-                    async with owner.typing():
-                        file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(lobby['name']))
-                        await self.client.send_message(owner, file)
-                    await confirmationMessage.edit(content=LOG_CONFIRM_6)
+                if lobby['text_channel_id'] and savingMsgObj:
+                    try:
+                        await savingMsgObj.delete()
+                        confirmationMessage = await self.client.send_message(owner, LOG_CONFIRM_5)
+                        async with owner.typing():
+                            file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(lobby['name']))
+                            await self.client.send_message(owner, file)
+                        await confirmationMessage.edit(content=LOG_CONFIRM_6)
+                    except discord.errors.DiscordException:
+                        pass
 
         for inactiveLobby in inactiveLobbies:
             self.activeLobbies.delete(where=['id=?', inactiveLobby['id']])
@@ -956,6 +970,9 @@ class LobbyManagement(Module):
         participants = []
         creator = discord.utils.get(self.client.rTTR.members, id=lobby['owner_id'])
         textChannel = discord.utils.get(self.client.rTTR.channels, id=lobby['text_channel_id'])
+        if not textChannel:
+            return
+
         messages = await textChannel.history(limit=None).flatten()
         messages.reverse()
         for m in messages:
