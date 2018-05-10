@@ -238,8 +238,8 @@ class UserTrackingModule(Module):
                         discriminator = args[-1].split('#')[-1]
                         if discriminator:
                             name = ' '.join(args).rstrip('#0123456789')
-                        user = discord.utils.get(message.guild.members, display_name=name)
-                        user = discord.utils.get(message.guild.members, name=name, discriminator=discriminator) if not user else user
+                            user = discord.utils.get(message.guild.members, name=name, discriminator=discriminator)
+                        user = discord.utils.get(message.guild.members, display_name=name) if not user else user
                         user = discord.utils.get(message.guild.members, name=name) if not user else user
                         if not user:
                             return 'No known user'
