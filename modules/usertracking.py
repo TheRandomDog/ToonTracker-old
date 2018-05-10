@@ -221,7 +221,7 @@ class UserTrackingModule(Module):
             elif not message.mentions:
                 if not message.raw_mentions:
                     try:
-                        user = await client.get_member(int(args[0])) or await client.get_user_info(int(args[0]))
+                        user = client.rTTR.get_member(int(args[0])) or await client.get_user_info(int(args[0]))
                     except discord.NotFound:
                         moderation = client.requestModule('moderation')
                         if moderation:
@@ -245,7 +245,7 @@ class UserTrackingModule(Module):
                             return 'No known user'
                 else:
                     try:
-                        user = await client.get_member(message.raw_mentions[0]) or await client.get_user_info(message.raw_mentions[0])
+                        user = client.rTTR.get_member(message.raw_mentions[0]) or await client.get_user_info(message.raw_mentions[0])
                     except discord.NotFound:
                         return 'No known user'
             else:
