@@ -471,7 +471,7 @@ class LobbyManagement(Module):
                 category = discord.utils.get(client.rTTR.categories, id=lobby['category_id'])
                 await category.set_permissions(user, overwrite=None, reason='User got kicked from lobby')
 
-                module.activeLobbies.update(where=['id=?', lobby['id']], member_ids=','.join([str(i) for i in lobby['member_ids'] if i and int(i) != user.id]))
+                module.activeLobbies.update(where=['id=?', lobby['id']], member_ids=','.join([str(i) for i in lobby['member_ids'].split(',') if i and int(i) != user.id]))
 
                 if lobby['text_channel_id']:
                     await client.send_message(lobby['text_channel_id'], '{} has left the lobby.'.format(user.mention))
