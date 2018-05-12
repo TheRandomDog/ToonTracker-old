@@ -898,6 +898,16 @@ class LobbyManagement(Module):
                 expiry_warning=None
             )
 
+    async def on_member_remove(self, member):
+        lobbies = self.getLobbies(member=member)
+        for lobby in lobbies:
+            self.activeLobbies.update(
+                where=['id=?', lobby['id']],
+                member_ids=','.join([str(i) for i in lobby['member_ids'].split(',') if i and int(i) != member.id])
+            )
+            if lobby['text_channel_id']:
+                await self.client.send_message(lobby['text_channel_id'], '{} has left the lobby.'.format(member.name))
+
     async def bumpInactiveLobbies(self):
         inactiveLobbies = []
 
