@@ -908,6 +908,28 @@ class LobbyManagement(Module):
             if lobby['text_channel_id']:
                 await self.client.send_message(lobby['text_channel_id'], '{} has left the lobby.'.format(member.name))
 
+        lobbies = self.getLobbies(owner=member)
+        for lobby in lobbies:
+            if lobby['text_channel_id']:
+                chatlog = await self.getChatLog(lobby)
+
+            members = [int(i) for i in lobby['member_ids'].split(',') if i]
+
+            auditLogReason = 'Lobby disbanded due to owner leaving the server'
+            category = discord.utils.get(self.client.rTTR.categories, id=lobby['category_id'])
+            for channel in category.channels:
+                await channel.delete(reason=auditLogReason)
+            await category.delete(reason=auditLogReason)
+            for member in members:
+                await self.client.send_message(member, DISBAND_SUCCESS_MEMBER.format(lobby['name']))
+            self.activeLobbies.delete(where=['id=?', lobby['id']])
+
+            if lobby['text_channel_id'] and self.logChannel:
+                await self.client.send_message(self.logChannel, LOG_CONFIRM_MOD.format(lobby['name']))
+                async with self.logChannel.typing():
+                    file = discord.File(BytesIO(bytes(chatlog, 'utf-8')), filename='lobby-chatlog-{}.txt'.format(lobby['name']))
+                    await self.client.send_message(self.logChannel, file)
+
     async def bumpInactiveLobbies(self):
         inactiveLobbies = []
 
@@ -978,7 +1000,7 @@ class LobbyManagement(Module):
 
         chatlog = ""
         participants = []
-        creator = discord.utils.get(self.client.rTTR.members, id=lobby['owner_id'])
+        creator = self.client.get_user(lobby['owner_id'])
         textChannel = discord.utils.get(self.client.rTTR.channels, id=lobby['text_channel_id'])
         if not textChannel:
             return
