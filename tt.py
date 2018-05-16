@@ -251,70 +251,6 @@ class ToonTracker(discord.Client):
         await asyncio.sleep(delay)
         await message.delete()
 
-    async def announceUpdates(self):
-        self.prevUpdateTime = time.time()
-
-        for module in self.modules.values():
-            for announcement in module.pendingAnnouncements:
-                # announcement[0] = Target
-                # announcement[1] = Message
-                # announcement[2] = Keyword Arguments: (module)
-                try:
-                    await self.send_message(announcement[0], announcement[1])
-                except Exception as e:
-                    e = format_exc()
-                    info = '{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncement: {}\n'.format(
-                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', 
-                        announcement[0],
-                        announcement[1]
-                    )
-                    log = '```{}```'.format(e)
-
-                    print(info + log)
-                    info = info.replace('channel ID {}'.format(announcement[0]), self.get_channel(announcement[0]).mention)
-                    if len(info + log) > 2000:
-                        r = requests.post('https://hastebin.com/documents', data=e)
-                        try:
-                            json = r.json()
-                            key = json['key']
-                            log = 'https://hastebin.com/raw/' + key
-                        except (KeyError, ValueError):
-                            log = '*Unable to post long log to Discord or Hastebin. The log can be found in the console.*'
-
-                    await self.send_message(botspam, info + log)
-
-            # A permanent message is only available as an embed.
-            for update in module.pendingUpdates:
-                # update[0] = Target (only one target)
-                # update[1] = The embed's title, used to find and edit message.
-                # update[2] = Embed (Message)
-                # update[3] = Keyword Arguments: (module)
-                messageSent = False
-                channel = self.get_channel(update[0])
-                try:
-                    async for message in channel.history(limit=10):
-                        for embed in message.embeds:
-                            # Find the message that has a matching title / author to replace with the new message.
-                            if (embed.fields and embed.fields[0].name == update[1]) or embed.author.name == update[1] or embed.title == update[1]:
-                                await message.edit(embed=update[2])
-                                messageSent = True
-                except discord.errors.DiscordException as e:
-                    msg = '**{}** tried to update the **{}** perma-message, but Discord raised an exception: {}'.format(module.__class__.__name__, update[1], str(e))
-                    print(msg)
-                    self.send_message(botspam, msg)
-                    messageSent = True
-                except (asyncio.TimeoutError, aiohttp.client_exceptions.ClientOSError):
-                    msg = '**{}** tried to update the **{}** perma-message, but the async call errored / timed out.'.format(module.__class__.__name__, update[1])
-                    print(msg)
-                    self.send_message(botspam, msg)
-                    messageSent = True
-                if not messageSent:
-                    await self.send_message(channel, update[2])
-
-            # All pending messages sent, clear out the list.
-            module.pendingAnnouncements = []
-            module.pendingUpdates = []
-
     @delegateEvent
     async def on_private_channel_create(self, channel): pass
     @delegateEvent
@@ -469,18 +405,13 @@ class ToonTracker(discord.Client):
             full += '\n'.join([':warning: ' + w for w in warnings])
         await self.send_message(channel, full)
 
-    async def updateLoop(self):
-        while not self.readyToClose:
-            await asyncio.sleep(self.updateInterval)
-            await self.announceUpdates()
-
     async def on_ready(self):
         if self.ready:
             return
 
         await self.load_config(term='start' if not restarted else 'restart')
         self.ready = True
-        loop.create_task(self.updateLoop())
+
 
 token = Config.getSetting('token')
 if not token:
@@ -503,6 +434,7 @@ while True:
     botspam = Config.getSetting('botspam')
     if not botspam:
         print('No bot spam channel specified in the config. You may miss important messages.')
+    TT.botspam = botspam
 
     loop.run_until_complete(TT.connect())
 

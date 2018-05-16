@@ -12,7 +12,6 @@ uaHeader = Config.getSetting('ua_header', getVersion())
 
 class ReleaseModule(Module):
     ROUTE = 'https://www.toontownrewritten.com/api/releasenotes'
-    CHANNEL_ID = Config.getModuleSetting('release', 'announcements')
 
     def __init__(self, client):
         Module.__init__(self, client)
@@ -20,7 +19,9 @@ class ReleaseModule(Module):
         self.releaseData = []
         self.latestReleaseID = None
 
-    def collectData(self):
+        self.releaseAnnouncer = self.create_announcers(NewReleaseAnnouncer)
+
+    async def collectData(self):
         try:
             rn = requests.get(self.ROUTE, headers=uaHeader)
             jsonData = rn.json()
@@ -30,7 +31,7 @@ class ReleaseModule(Module):
         self.releaseData = jsonData
         return self.releaseData
 
-    def handleData(self, data):
+    async def handleData(self, data):
         if not data:
             return
 
@@ -38,7 +39,7 @@ class ReleaseModule(Module):
             ri = self.getReleaseInfo(self.releaseData[0]['noteId'])
             if ri:
                 self.releaseData[0].update(ri)
-            self.announce(NewReleaseAnnouncement, ri['slug'], ri['date'], ri['body'])
+            await self.releaseAnnouncer.announce(ri['slug'], ri['date'], ri['body'])
         self.latestReleaseID = self.releaseData[0]['noteId']
 
     def getReleaseInfo(self, noteId):
@@ -62,8 +63,10 @@ class ReleaseModule(Module):
             return None
 
 
-class NewReleaseAnnouncement(Announcer):
-    def announce(module, version, date, notes):
+class NewReleaseAnnouncer(Announcer):
+    CHANNEL_ID = Config.getModuleSetting('release', 'announcements')
+
+    async def announce(self, version, date, notes):
         html = re.compile(r'(<b>|<\/b>|<i>|<\/i>|<u>|<\/u>|<br \/>|\r|<font size="\d+">)')
         notes = html.sub('', notes).replace('•', '\t•')
         notes = notes.split('\n\n')
@@ -87,6 +90,6 @@ class NewReleaseAnnouncement(Announcer):
             e = Embed(color=color).add_field(name=type, value='\n'.join(s[1:]))
             content.append(e)
 
-        return content
+        return await self.send(content)
 
 module = ReleaseModule

@@ -76,8 +76,6 @@ class Invasion:
 
 
 class InvasionModule(Module):
-    CHANNEL_ID = Config.getModuleSetting('invasion', 'perma')
-
     TOONHQ_ROUTE = ('https://toonhq.org/api/v1/invasion', 'http://toonhq.org/invasions')
     TTR_ROUTE = ('https://toontownrewritten.com/api/invasions', 'https://toontownrewritten.com')
     ROUTES = (TOONHQ_ROUTE, TTR_ROUTE)
@@ -99,7 +97,7 @@ class InvasionModule(Module):
         self.lastDrought = 0  # to the user. If they are mismatched, a drought is in progress and can be marked.
         self.setFirstLoop = False
 
-        self.permaMsgs = [InvPermaMsg]
+        self.invasionMessage = self.create_permanent_messages(InvasionPermaMessage)
 
     def addCollectionSuccess(self):
         self.collectionSuccesses += 1
@@ -161,7 +159,7 @@ class InvasionModule(Module):
             )
         return inv
 
-    def collectData(self):
+    async def collectData(self):
         try:
             r = requests.get(self.route[0], headers=uaHeader)
             json = r.json()
@@ -184,7 +182,7 @@ class InvasionModule(Module):
 
         return self.getInvasions(json)
 
-    def handleData(self, data):
+    async def handleData(self, data):
         if data == None:
             self.updatePermaMsg(InvPermaMsg)
             return
@@ -216,7 +214,7 @@ class InvasionModule(Module):
                 invasionCache.remove(inv)
                 self.invasions.remove(inv)
 
-        self.updatePermaMsg(InvPermaMsg)
+        await self.invasionMessage.update()
 
     # Returns all invasions that match the attributes passed through the method.
     def getInvs(self, **kwargs):
@@ -235,19 +233,18 @@ class InvasionModule(Module):
 
 # ----------------------------------------- Message Handlers -----------------------------------------
 
-class InvPermaMsg(PermaMsg):
+class InvasionPermaMessage(PermaMessage):
     TITLE = 'Invasions'
+    CHANNEL_ID = Config.getModuleSetting('invasion', 'perma')
 
-    def update(module):
-        title = 'Invasions'
-
-        if module.isFirstLoop:
-            msg = module.createDiscordEmbed(title=title, info='Collecting the latest information...', color=Color.light_grey())
-            return msg
+    async def update(self, *args, **kwargs):
+        if self.module.isFirstLoop:
+            msg = self.module.createDiscordEmbed(title=self.TITLE, info='Collecting the latest information...', color=Color.light_grey())
+            return await self.send(msg)
 
         megainvs = []
         invs = []
-        for inv in module.invasions:
+        for inv in self.module.invasions:
             if inv.megaInvasion:
                 megainvs.append(inv)
             else:
@@ -257,9 +254,9 @@ class InvPermaMsg(PermaMsg):
 
         invs = megainvs + invs
 
-        if time.time() >= (assertType(module.lastUpdated, int, otherwise=0) + 300):
+        if time.time() >= (assertType(self.module.lastUpdated, int, otherwise=0) + 300):
             desc = 'We\'re experiencing some technical difficulties.\nInvasion tracking will be made reavailable as soon as possible.'
-            msg = module.createDiscordEmbed(title=title, info=desc, color=Color.light_grey())
+            msg = self.module.createDiscordEmbed(title=self.TITLE, info=desc, color=Color.light_grey())
             msg.set_footer(text='We apologize for the inconvenience.')
         elif len(invs) > 0:
             cogs = []
@@ -284,11 +281,11 @@ class InvPermaMsg(PermaMsg):
                 {'name': 'District', 'value': '\n'.join(districts)},
                 {'name': 'Time Remaining', 'value': '\n'.join(etrs)} if etrs else {'name': 'Progress', 'value': '\n'.join(progress)}
             ]
-            msg = module.createDiscordEmbed(title=title, titleUrl=module.route[1], color=Color.light_grey(), fields=fields)
+            msg = self.module.createDiscordEmbed(title=self.TITLE, titleUrl=self.module.route[1], color=Color.light_grey(), fields=fields)
         else:
             desc = 'No invasions to report.\nThe last invasion seen was __{} ago__.'.format(
-                getTimeFromSeconds(int(time.time()) - module.droughtStart))
-            msg = module.createDiscordEmbed(title=title, info=desc, color=Color.light_grey())
-        return msg
+                getTimeFromSeconds(int(time.time()) - self.module.droughtStart))
+            msg = self.module.createDiscordEmbed(title=self.TITLE, info=desc, color=Color.light_grey())
+        return await self.send(msg)
 
 module = InvasionModule

@@ -8,8 +8,6 @@ from traceback import format_exception, format_exc
 from utils import Config, assertType
 
 class RedditModule(Module):
-    CHANNEL_ID = Config.getModuleSetting('reddit', 'announcements')
-
     def __init__(self, client):
         Module.__init__(self, client)
 
@@ -30,7 +28,9 @@ class RedditModule(Module):
         self.live = None
         self.readyToStop = False
 
-    def streamPosts(self):
+        postAnnouncer, commentAnnouncer, liveAnnouncer = self.create_announcers(NewPostAnnouncer, NewCommentAnnouncer, NewUpdateAnnouncer)
+
+    async def streamPosts(self):
         try:
             newPosts = False
             for submission in self.rTTR.stream.submissions(pause_after=0):
@@ -40,11 +40,11 @@ class RedditModule(Module):
                     newPosts = True
                     continue
                 elif newPosts:
-                    self.announce(NewPostAnnouncement, submission)
+                    await self.postAnnouncer.announce(submission)
         except Exception as e:
             self.handleError()
 
-    def streamComments(self):
+    async def streamComments(self):
         try:
             newComments = False
             for comment in self.rTTR.stream.comments(pause_after=0):
@@ -54,11 +54,11 @@ class RedditModule(Module):
                     newComments = True
                     continue
                 elif newComments:
-                    self.announce(NewCommentAnnouncement, comment)
+                    await self.commentAnnouncer.announce(comment)
         except Exception as e:
             self.handleError()
 
-    def streamLive(self):
+    async def streamLive(self):
         try:
             newUpdate = False
             for update in praw.models.util.stream_generator(self.reddit.live(self.live['id']).updates, pause_after=0):
@@ -68,28 +68,30 @@ class RedditModule(Module):
                     newUpdate = True
                     continue
                 elif newUpdate:
-                    self.announce(NewUpdateAnnouncement, update)
+                    await self.liveAnnouncer.announce(update)
         except Exception as e:
             self.handleError()
 
     def startTracking(self):
         super().startTracking()
-        self.postStream = threading.Thread(target=self.streamPosts, name='PostStream-Thread').start()
-        self.commentStream = threading.Thread(target=self.streamComments, name='CommentStream-Thread').start()
+        self.postStream = self.client.loop.create_task(self.streamPosts())
+        self.commentStream = self.client.loop.create_task(self.streamComments())
 
         self.live = Config.getModuleSetting('reddit', 'live')
         if self.live:
-            NewUpdateAnnouncement.CHANNEL_ID = self.live['announcements']
+            self.liveAnnouncer.CHANNEL_ID = self.live['announcements']
             if self.live['id']:
-                self.liveStream = threading.Thread(target=self.streamLive, name='LiveStream-Thread').start()
+                self.liveStream = self.client.loop.create_task(self.streamLive())
 
     def stopTracking(self):
         super().stopTracking()
         self.readyToStop = True
 
 
-class NewPostAnnouncement(Announcer):
-    def announce(module, submission):
+class NewPostAnnouncer(Announcer):
+    CHANNEL_ID = Config.getModuleSetting('reddit', 'announcements')
+
+    async def announce(self, submission):
         if submission.is_self:
             descList = submission.selftext.split('\n')
             if len(descList) > 1:
@@ -128,7 +130,7 @@ class NewPostAnnouncement(Announcer):
         if 'http' not in thumbnail:
             thumbnail = Embed.Empty
 
-        embed = module.createDiscordEmbed(
+        embed = self.module.createDiscordEmbed(
             title=submission.author,
             icon=authorIcon,
             subtitle=submission.title,
@@ -136,12 +138,14 @@ class NewPostAnnouncement(Announcer):
             subtitleUrl=submission.url,
             color=color,
             thumbnail=thumbnail,
-            footer='/r/{} - New Post'.format(module.subredditName)
+            footer='/r/{} - New Post'.format(self.module.subredditName)
         )
         return embed
 
-class NewCommentAnnouncement(Announcer):
-    def announce(module, comment):
+class NewCommentAnnouncer(Announcer):
+    CHANNEL_ID = Config.getModuleSetting('reddit', 'announcements')
+
+    async def announce(module, comment):
         descList = comment.body.split('\n')
         if len(descList) > 1:
             desc = descList[0]
@@ -172,19 +176,21 @@ class NewCommentAnnouncement(Announcer):
             color = Color.green()
             authorIcon = 'https://cdn.discordapp.com/emojis/338254475674255361.png'
 
-        embed = module.createDiscordEmbed(
+        embed = self.module.createDiscordEmbed(
             title=comment.author,
             icon=authorIcon,
             subtitle='Reply to ' + comment.submission.title,
             info=desc,
             subtitleUrl="https://www.reddit.com" + (comment.permalink if type(comment.permalink) == str else comment.permalink()),
             color=color,
-            footer='/r/{} - New Comment'.format(module.subredditName)
+            footer='/r/{} - New Comment'.format(self.module.subredditName)
         )
         return embed
 
-class NewUpdateAnnouncement(Announcer):
-    def announce(module, update):
-        return update.body
+class NewUpdateAnnouncer(Announcer):
+    CHANNEL_ID = Config.getModuleSetting('reddit', 'announcements')
+
+    async def announce(self, update):
+        return await self.send(update.body)
 
 module = RedditModule

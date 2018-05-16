@@ -11,15 +11,14 @@ uaHeader = Config.getSetting('ua_header', getVersion())
 
 class NewsModule(Module):
     ROUTE = 'https://www.toontownrewritten.com/api/news'
-    CHANNEL_ID = Config.getModuleSetting('news', 'announcements')
 
     def __init__(self, client):
         Module.__init__(self, client)
         self.latestPostID = None
 
-        self.announcers = [NewPostAnnouncement]
+        self.newsAnnouncer = self.create_announcers(NewPostAnnouncer)
 
-    def collectData(self):
+    async def collectData(self):
         try:
             rn = requests.get(self.ROUTE, headers=uaHeader)
             jsonData = rn.json()
@@ -28,16 +27,18 @@ class NewsModule(Module):
 
         return jsonData
 
-    def handleData(self, data):
+    async def handleData(self, data):
         if not data:
             return
 
         if self.latestPostID and self.latestPostID < data['postId']:
-            self.announce(NewPostAnnouncement, data)
+            await self.newsAnnouncer.announce(data)
         self.latestPostID = data['postId']
 
-class NewPostAnnouncement(Announcer):
-    def announce(module, data):
+class NewPostAnnouncer(Announcer):
+    CHANNEL_ID = Config.getModuleSetting('news', 'announcements')
+    
+    async def announce(self, data):
         alphanumeric = re.compile('[^A-Za-z0-9-]')
 
         url = 'https://www.toontownrewritten.com/news/item/' + str(data['postId']) + '/' + alphanumeric.sub('', data['title'].lower().replace(' ', '-'))
@@ -48,8 +49,8 @@ class NewPostAnnouncement(Announcer):
             k = data['image'].rfind('?')
             k = len(data['image']) if k == -1 else k
             image = data['image'][:k]
-        embed = module.createDiscordEmbed(subtitle="New Blog Post!", subtitleUrl=url, info=info, image=image)
+        embed = self.module.createDiscordEmbed(subtitle="New Blog Post!", subtitleUrl=url, info=info, image=image)
 
-        return embed
+        return await self.send(embed)
 
 module = NewsModule
