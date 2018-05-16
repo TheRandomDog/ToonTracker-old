@@ -918,6 +918,11 @@ class ModerationModule(Module):
         self.allowBotPunishments = Config.getModuleSetting('moderation', 'allow_bot_punishments', False)
         self.allowModPunishments = Config.getModuleSetting('moderation', 'allow_mod_punishments', False)
 
+        self.spamProtection = Config.getModuleSetting('moderation', 'spam_protection', False)
+        self.spamTracking = {}
+        self.floodProtection = Config.getModuleSetting('moderation', 'flood_protection', False)
+        self.floodTracking = {}
+
         self.scheduledUnbans = []
         self.scheduledUnmutes = []
         self.mutedRole = discord.utils.get(self.client.rTTR.roles, name=Config.getModuleSetting('moderation', 'muted_role_name') or 'Muted')
@@ -1430,6 +1435,59 @@ class ModerationModule(Module):
             (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
             (message.author.bot and not self.filterBots) or (Config.getRankOfMember(message.author) >= 300 and not self.filterMods):
             return
+
+        if self.spamProtection:
+            spamAuthor = self.spamTracking.get(message.author, {})
+            for msg in spamAuthor.keys():
+                if not spamAuthor[msg]['count'] or time.time() - spamAuthor[msg]['time'] >= (self.spamProtection['minute_duration'] * 60):
+                    del spamAuthor[msg]
+
+            spamMessage = spamAuthor.get(message.content.lower(), {'time': 0, 'count': 0})
+            if spamMessage['count'] == self.spamProtection['message_count'] - 2:
+                await message.channel.send('{} Please stop spamming the same message.'.format(message.author.mention))
+            elif spamMessage['count'] >= self.spamProtection['message_count']:
+                await self.punishUser(
+                    message.author,
+                    punishment=self.spamProtection['action'],
+                    length=self.spamProtection['punish_length'],
+                    reason='Spamming'
+                )
+                spamMessage['count'] = -1
+
+            spamMessage['time'] = time.time()
+            spamMessage['count'] += 1
+            spamAuthor[message.content.lower()] = spamMessage
+            self.spamTracking[message.author] = spamAuthor
+
+        if self.floodProtection:
+            floodMessage = self.floodTracking.get(message.content.lower(), {'time': 0, 'count': 0, 'members': []})
+            if floodMessage['time'] and (not floodMessage['count'] or time.time() - floodMessage['time'] >= (self.floodProtection['minute_duration'] * 60)):
+                del self.floodTracking[message.content.lower()]
+
+            if floodMessage['count'] == self.floodProtection['message_count'] - 3:
+                await message.channel.send('Please stop spamming the same message.')
+            elif floodMessage['count'] >= self.floodProtection['message_count']:
+                for member in floodMessage['members']:
+                    await self.punishUser(
+                        member,
+                        punishment=self.floodProtection['action'],
+                        length=self.floodProtection['punish_length'],
+                        reason='Flooding the server'
+                    )
+                if message.author not in floodMessage['members']:
+                    await self.punishUser(
+                        member,
+                        punishment=self.floodProtection['action'],
+                        length=self.floodProtection['punish_length'],
+                        reason='Flooding the server'
+                    )
+                floodMessage['count'] = -1
+
+            floodMessage['time'] = time.time()
+            floodMessage['count'] += 1
+            if message.author not in floodMessage['members']:
+                floodMessage['members'].append(message.author)
+            self.floodTracking[message.content.lower()] = floodMessage
 
         timeStart = time.time()
         try:
