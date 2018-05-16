@@ -1,5 +1,6 @@
 import discord
 import asyncio
+import aiohttp
 import time
 import sys
 from extra.commands import Command, CommandResponse
@@ -175,6 +176,14 @@ class ToonTracker(discord.Client):
                         await self.send_command_response(response)
                     elif response:
                         await self.send_message(message.channel, response)
+                except discord.errors.HTTPException as e:
+                    msg = '{} tried to send a response to a message ({}), but Discord threw an HTTPException: {}'.format(command.__class__.__name__, message.id, str(e))
+                    print(msg)
+                    await self.send_message(botspam, msg)
+                except aiohttp.client_exceptions.ClientError as e:
+                    msg = '{} tried to send a response to a message ({}), but aiohttp threw an exception: {}'.format(command.__class__.__name__, message.id, str(e))
+                    print(msg)
+                    await self.send_message(botspam, msg)
                 except Exception:
                     await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
@@ -185,6 +194,14 @@ class ToonTracker(discord.Client):
                     await self.send_command_response(response)
                 elif response:
                     await self.send_message(message.channel, response)
+            except discord.errors.HTTPException as e:
+                msg = '{} tried to send a response to a message ({}), but Discord threw an HTTPException: {}'.format(module.__class__.__name__, message.id, str(e))
+                print(msg)
+                await self.send_message(botspam, msg)
+            except aiohttp.client_exceptions.ClientError as e:
+                msg = '{} tried to send a response to a message ({}), but Discord threw an HTTPException: {}'.format(module.__class__.__name__, message.id, str(e))
+                print(msg)
+                await self.send_message(botspam, msg)
             except Exception:
                 await self.send_message(message.channel, '```\n{}```'.format(format_exc()))
 
@@ -205,12 +222,12 @@ class ToonTracker(discord.Client):
             return
         # Gets a channel object from a string (channel ID).
         elif type(target) == int:
-            target = self.get_channel(target)
+            target = self.get_channel(target) or self.get_user(target)
             if not target:
                 return
         # No target? Rip.
         elif type(target) == None:
-            return
+            raise TypeError('target type not recognized')
 
         # Deliver message
         if message.__class__ == discord.File:
@@ -274,12 +291,23 @@ class ToonTracker(discord.Client):
                 # update[3] = Keyword Arguments: (module)
                 messageSent = False
                 channel = self.get_channel(update[0])
-                async for message in channel.history(limit=10):
-                    for embed in message.embeds:
-                        # Find the message that has a matching title / author to replace with the new message.
-                        if (embed.fields and embed.fields[0].name == update[1]) or embed.author.name == update[1] or embed.title == update[1]:
-                            await message.edit(embed=update[2])
-                            messageSent = True
+                try:
+                    async for message in channel.history(limit=10):
+                        for embed in message.embeds:
+                            # Find the message that has a matching title / author to replace with the new message.
+                            if (embed.fields and embed.fields[0].name == update[1]) or embed.author.name == update[1] or embed.title == update[1]:
+                                await message.edit(embed=update[2])
+                                messageSent = True
+                except discord.errors.DiscordException as e:
+                    msg = '**{}** tried to update the **{}** perma-message, but Discord raised an exception: {}'.format(module.__class__.__name__, update[1], str(e))
+                    print(msg)
+                    self.send_message(botspam, msg)
+                    messageSent = True
+                except (asyncio.TimeoutError, aiohttp.client_exceptions.ClientOSError):
+                    msg = '**{}** tried to update the **{}** perma-message, but the async call errored / timed out.'.format(module.__class__.__name__, update[1])
+                    print(msg)
+                    self.send_message(botspam, msg)
+                    messageSent = True
                 if not messageSent:
                     await self.send_message(channel, update[2])
 
@@ -393,13 +421,13 @@ class ToonTracker(discord.Client):
 
             try:
                 modsmod = import_module('modules.' + module)
-            except ImportError:
-                w = 'Could not import Python module of ToonTracker module "{}" (may be misspelled in config).'.format(module)
+            except ImportError as e:
+                w = 'Could not **import** Python module of ToonTracker module "{}"'.format(module)
                 warnings.append(w)
-                print(w)
+                print(w + '\n\n{}'.format(format_exc()))
                 continue
             except Exception as e:
-                w = 'Could not load Python module of ToonTracker module "{}"'.format(module)
+                w = 'Could not **load** Python module of ToonTracker module "{}"'.format(module)
                 warnings.append(w)
                 print(w + '\n\n{}'.format(format_exc()))
                 continue

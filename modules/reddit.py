@@ -106,6 +106,12 @@ class NewPostAnnouncement(Announcer):
         else:
             desc = 'Links to `{}`. [View the post instead.]({})'.format(submission.domain, "https://www.reddit.com" + submission.permalink)
 
+        if len(desc) > 2048:
+            lastValidWordIndex = desc[:2048].rfind(' ')
+            if lastValidWordIndex == -1:
+                lastValidWordIndex = 2045
+            desc = desc[:lastValidWordIndex] + '...'
+
         flair = submission.author_flair_css_class
         color = Color.default()
         authorIcon = Embed.Empty
@@ -148,6 +154,12 @@ class NewCommentAnnouncement(Announcer):
             desc = desc[:(i + 1) or None] + '...'
         else:
             desc = descList[0]
+
+        if len(desc) > 2048:
+            lastValidWordIndex = desc[:2048].rfind(' ')
+            if lastValidWordIndex == -1:
+                lastValidWordIndex = 2045
+            desc = desc[:lastValidWordIndex] + '...'
 
         color = Color.default()
         authorIcon = Embed.Empty

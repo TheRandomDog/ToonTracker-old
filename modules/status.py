@@ -2,7 +2,6 @@ import time
 import socket
 import logging
 import requests
-import regex as re
 
 from .module import *
 from json import JSONDecodeError

@@ -6,3 +6,5 @@ groups.json
 users.json
 /profiles/*.json
 *.bat
+*.db
+.bash_history
