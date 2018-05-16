@@ -1,8 +1,8 @@
 import os
 import sys
 import time
+import asyncio
 import requests
-import threading
 from inspect import isclass
 from discord import Color, Embed
 from extra.commands import Command
@@ -24,7 +24,7 @@ class Module:
         )  
         self.publicModule = assertType(Config.getModuleSetting(moduleName, 'public_module'), bool, otherwise=True)
         self.isFirstLoop = True
-        self.isTracking = False
+        self.runningLoop = None
 
         self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
         self.pendingAnnouncements = []
@@ -33,33 +33,23 @@ class Module:
         self.restarts = 0
         self.restartTime = 0
 
-    # --------------------------------------------- TRACKING ---------------------------------------------
-
-    def collectData(self):
+    async def collectData(self):
         pass
 
-    def handleData(self, data):
+    async def handleData(self, data):
         pass
 
-    def loopIteration(self):
+    async def loopIteration(self):
         pass
 
-    def __sleepAndTestForBreak(self, period):
-        self.isFirstLoop = False
-        for _ in range(period):
-            if not self.isTracking:
-                return True
-            time.sleep(1)
-
-    def _loop(self):
+    async def _loop(self):
         try:
-            while self.isTracking:
+            while True:
                 data = self.collectData()
                 self.handleData(data)
                 self.loopIteration()
-                
-                self.__sleepAndTestForBreak(self.cooldownInterval)
-
+        except asyncio.CancelledError:
+            pass
         except Exception as e:
             self.handleError()
 
@@ -68,10 +58,11 @@ class Module:
             return
 
         self.isTracking = True
-        threading.Thread(target=self._loop, name='{}-Thread'.format(self.__class__.__name__)).start()
+        self.runningLoop = self.client.loop.create_task(self._loop)
 
     def stopTracking(self):
-        self.isTracking = False
+        if self.runningLoop:
+            self.runningLoop.cancel()
 
     async def _handleMsg(self, message):
         for command in self.commands:
