@@ -810,7 +810,7 @@ class LobbyManagement(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             # If the user is a mod and wants to lookup the lobbies of another user...
-            mod = (Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles]))
+            mod = (Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles]))
             if not args or not mod:
                 user = message.author
             elif not message.mentions:
