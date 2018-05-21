@@ -800,6 +800,59 @@ class LobbyManagement(Module):
     class LobbyChatLogCMD_Variant1(LobbyChatLogCMD): NAME = 'getchatlog'
     class LobbyChatLogCMD_Variant2(LobbyChatLogCMD): NAME = 'chatlog'
 
+    class LobbyListCMD(Command):
+        """~listLobbies
+
+            Lists the lobbies you're participating in. The lobbies that you own will be bolded.
+        """
+        NAME = 'listLobbies'
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            # If the user is a mod and wants to lookup the lobbies of another user...
+            mod = (Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles]))
+            if not args or not mod:
+                user = message.author
+            elif not message.mentions:
+                if not message.raw_mentions:
+                    try:
+                        user = client.rTTR.get_member(int(args[0])) or await client.get_user_info(int(args[0]))
+                    except discord.NotFound:
+                        return 'No known user'
+                    except (ValueError, IndexError):
+                        name = ' '.join(args)
+                        discriminator = args[-1].split('#')[-1]
+                        if discriminator:
+                            name = ' '.join(args).rstrip('#0123456789')
+                            user = discord.utils.get(message.guild.members, name=name, discriminator=discriminator)
+                        user = discord.utils.get(message.guild.members, display_name=name) if not user else user
+                        user = discord.utils.get(message.guild.members, name=name) if not user else user
+                        if not user:
+                            return 'No known user'
+                else:
+                    try:
+                        user = client.rTTR.get_member(message.raw_mentions[0]) or await client.get_user_info(message.raw_mentions[0])
+                    except discord.NotFound:
+                        return 'No known user'
+            else:
+                user = message.mentions[0]
+
+            lobbiesOwned = module.getLobbies(owner=user)
+            lobbiesJoined = module.getLobbies(member=user)
+
+            if not lobbiesOwned or lobbiesJoined:
+                return message.author.mention + ' ' + '{} not participating in any lobbies.'.format("You're" if user==message.author else user.mention + ' is')
+            return module.createDiscordEmbed(
+                subtitle='Lobbies',
+                info='{}\n{}'.format(
+                    user.mention, 
+                    '\n'.join(['**' + lobby['name'] + '**' for lobby in lobbiesOwned]),
+                    '\n'.join([lobby['name'] for lobby in lobbiesJoined])
+                ),
+                color=discord.Color.blurple(),
+                footer=('Bolded lobbies indicate {} own the lobby.'.format('you' if user==message.author else 'they') if lobbiesOwned else discord.Embed.Empty)
+            )
+
     def __init__(self, client):
         Module.__init__(self, client)
         
