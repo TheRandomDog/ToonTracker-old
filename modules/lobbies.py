@@ -246,13 +246,16 @@ class LobbyManagement(Module):
                 return
 
             lobby = None
+            oneLobby = module.getLobby(member=message.author) or module.getLobby(owner=message.author)
             if module.channelInLobby(message.channel):
                 lobby = module.activeLobbies.select(
                     where=['text_channel_id=?', message.channel.id],
                     limit=1
                 )
+            elif not oneLobby:
+                return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
             elif len(module.getLobbies(member=message.author)) + len(module.getLobbies(owner=message.author)) == 1:
-                lobby = module.getLobby(member=message.author) or module.getLobby(owner=message.author)
+                lobby = oneLobby
             elif len(args) > len(message.mentions):
                 lobby = module.getLobby(name=' '.join(args[:len(args) - len(message.mentions)]))
                 if not lobby:
@@ -326,27 +329,30 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not module.channelInLobby(message.channel):
+            if message.channel.id != module.lobbyChannel and not module.channelIsDM(message.channel) and not module.channelInLobby(message.channel):
                 return
             message.author = client.rTTR.get_member(message.author.id)
             if not message.author:
                 return LOBBY_FAILURE_GUILD
 
             lobby = None
+            oneLobby = module.getLobby(owner=message.author)
             if module.channelInLobby(message.channel):
                 lobby = module.activeLobbies.select(
                     where=['text_channel_id=?', message.channel.id],
                     limit=1
                 )
+            elif not oneLobby:
+                return LOBBY_FAILURE_MISSING_LOBBY
             elif len(module.getLobbies(owner=message.author)) == 1:
-                lobby = module.getLobby(owner=message.author)
+                lobby = oneLobby
             elif len(args) > len(message.mentions):
                 lobby = module.getLobby(name=' '.join(args[:len(args) - len(message.mentions)]))
                 if not lobby:
                     return message.author.mention + ' ' + UNINVITE_FAILURE_NAME
 
             if not lobby:
-                return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
+                return message.author.mention + ' ' + UNINVITE_FAILURE_MISSING_LOBBY
             elif message.author.id != lobby['owner_id']:
                 return message.author.mention + ' ' + UNINVITE_FAILURE_MEMBER
             elif not message.mentions:
