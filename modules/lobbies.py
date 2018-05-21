@@ -676,7 +676,7 @@ class LobbyManagement(Module):
             if not module.channelInLobby(message.channel):
                 return
 
-            lobby = module.getLobby(member=message.author) or module.getLobby(owner=message.author)
+            lobby = module.getLobby(channel=message.author)
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
                 # Ironic, since it shouldn't get here.
@@ -730,7 +730,7 @@ class LobbyManagement(Module):
             if not module.channelInLobby(message.channel):
                 return
 
-            lobby = module.getLobby(member=message.author) or module.getLobby(owner=message.author)
+            lobby = module.getLobby(channel=message.author)
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
                 # Ironic, since it shouldn't get here.
@@ -781,7 +781,7 @@ class LobbyManagement(Module):
             if not module.channelInLobby(message.channel):
                 return
 
-            lobby = module.getLobby(member=message.author) or module.getLobby(owner=message.author)
+            lobby = module.getLobby(channel=message.channel)
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
             elif not lobby['text_channel_id']:
@@ -857,6 +857,8 @@ class LobbyManagement(Module):
             lobbies = self.activeLobbies.select(where=['id=?', kwargs['id']], limit=limit)
         elif kwargs.get('name', None):
             lobbies = self.activeLobbies.select(where=['name=?', kwargs['name']], limit=1)
+        elif kwargs.get('channel', None):
+            lobbies = self.activeLobbies.select(where=['text_channel_id=? OR voice_channel_id=?', kwargs['channel'].id, kwargs['channel'].id], limit=1)
         elif kwargs.get('member', None):
             lobbies = self.activeLobbies.select(where=['member_ids LIKE ?', '%{}%'.format(kwargs['member'].id)], limit=limit)
         elif kwargs.get('owner', None):
