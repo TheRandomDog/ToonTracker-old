@@ -53,6 +53,7 @@ INVITATION_MESSAGE_FILTER = 'Note that the bad word filter in this lobby is **di
 INVITATION_SUCCESS = 'Invite{plural} sent!'
 INVITATION_SUCCESS_PARTIAL = 'But otherwise, invites sent!'
 
+UNINVITE_FAILURE_MISSING_LOBBY = "I'm not sure which lobby you're referring to. Please provide the lobby name first and then the users, or you can use the command in the lobby you're referring to."
 UNINVITE_FAILURE_MEMBER = "You must be the owner of the lobby to uninvite another user."
 UNINVITE_FAILURE_SELF = "You can't uninvite yourself to a lobby, please use `~leaveLobby` *(or `~disbandLobby` if you created the lobby)* to leave."
 UNINVITE_FAILURE_NOT_INVITED = 'Could not uninvite any of the mentioned users, because either none of them were invited to start with or they already accepted.'
@@ -858,6 +859,7 @@ class LobbyManagement(Module):
                 color=discord.Color.blurple(),
                 footer=('Bolded lobbies indicate {} own the lobby.'.format('you' if user==message.author else 'they') if lobbiesOwned else discord.Embed.Empty)
             )
+    class LobbyListCMD_Variant1(LobbyListCMD): NAME = 'listlobbies'
 
     def __init__(self, client):
         Module.__init__(self, client)
