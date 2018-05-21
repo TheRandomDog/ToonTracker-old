@@ -851,7 +851,7 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + '{} not participating in any lobbies.'.format("You're" if user==message.author else user.mention + ' is')
             return module.createDiscordEmbed(
                 subtitle='Lobbies',
-                info='{}\n{}'.format(
+                info='{}\n{}\n{}'.format(
                     user.mention, 
                     '\n'.join(['**' + lobby['name'] + '**' for lobby in lobbiesOwned]),
                     '\n'.join([lobby['name'] for lobby in lobbiesJoined])
