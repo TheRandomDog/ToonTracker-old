@@ -682,7 +682,7 @@ class LobbyManagement(Module):
                 # Ironic, since it shouldn't get here.
 
             # The number of filter votes needed is the number of users
-            filterVotesNeeded = (makeCountOfString(lobby['member_ids']) - makeCountOfString(lobby['filter_vote_ids'])) / 2
+            filterVotesNeeded = int((makeCountOfString(lobby['member_ids']) - makeCountOfString(lobby['filter_vote_ids'])) / 2)
 
             moderation = client.requestModule('moderation')
             if not moderation:
