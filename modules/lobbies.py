@@ -28,7 +28,7 @@ class Lobby:
 
 LOBBY_FAILURE_GUILD = 'Sorry, but you need to be in the Toontown Rewritten Discord to use lobbies.'
 LOBBY_FAILURE_MISSING_LOBBY = "You're not currently in a lobby."
-LOBBY_FAILURE_MISSING_NAME = "I'm not sure which lobby you're refrering to. Please make sure you've typed the lobby name correctly -- casing counts!"
+LOBBY_FAILURE_MISSING_NAME = "I'm not sure which lobby you're referring to. Please make sure you've typed the lobby name correctly -- casing counts!"
 
 CREATION_FAILURE_OWNER = "You own too many lobbies right now. You'll have to `~disbandLobby` to create a new one."
 CREATION_FAILURE_NAME_LENGTH = 'Your lobby name must be 30 characters or less.'
