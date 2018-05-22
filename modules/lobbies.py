@@ -413,7 +413,7 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + RSVP_FAILURE_UNINVITED
 
             category = discord.utils.get(client.rTTR.categories, id=lobby['category_id'])
-            await category.set_permissions(message.author, read_messages=True, send_messages=True)
+            await category.set_permissions(message.author, read_messages=True, send_messages=True, speak=True)
 
             module.activeLobbies.update(
                 where=['id=?', lobby['id']],
