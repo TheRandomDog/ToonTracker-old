@@ -77,8 +77,8 @@ RSVP_FAILURE_MEMBER = 'Sorry, but you cannot join another lobby until you have l
 RSVP_FAILURE_UNINVITED = "Sorry, but you weren't invited to that lobby or the invite was rescinded."
 RSVP_SUCCESS = "You're now in the **{name}** lobby! Have fun!"
 
-LEAVE_FAILURE_NO_NAME = "You own multiple lobbies right now. Please use the name of the lobby you wish to leave."
-LEAVE_FAILURE_OWNER = "You own all the lobbies you're participating in, meaning you need to use `~disbandLobby <lobby name>` to ensure you actually want to disband a lobby."
+LEAVE_FAILURE_NO_NAME = "You're participating in multiple lobbies right now. Please use the name of the lobby you wish to leave."
+#LEAVE_FAILURE_OWNER = "You own all the lobbies you're participating in, meaning you need to use `~disbandLobby <lobby name>` to ensure you actually want to disband a lobby."
 LEAVE_FAILURE_OWNER_SPECIFIC = 'You own the **{name}** lobby, meaning you need to use `~disbandLobby` to ensure you actually want to disband the lobby.'
 
 DISBAND_FAILURE_NO_NAME = "You own multiple lobbies right now. Please use the name of the lobby you wish to disband."
@@ -529,8 +529,8 @@ class LobbyManagement(Module):
 
             if lobby and message.author.id == lobby['owner_id']:
                 return message.author.mention + ' ' + LEAVE_FAILURE_OWNER_SPECIFIC.format(name=lobby['name'])
-            elif module.getLobby(owner=message.author):
-                return message.author.mention + ' ' + LEAVE_FAILURE_OWNER
+            #elif module.getLobby(owner=message.author):
+            #    return message.author.mention + ' ' + LEAVE_FAILURE_OWNER
             elif not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
 
