@@ -683,7 +683,7 @@ class LobbyManagement(Module):
             if not module.channelInLobby(message.channel):
                 return
 
-            lobby = module.getLobby(channel=message.author)
+            lobby = module.getLobby(channel=message.channel)
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
                 # Ironic, since it shouldn't get here.
@@ -737,7 +737,7 @@ class LobbyManagement(Module):
             if not module.channelInLobby(message.channel):
                 return
 
-            lobby = module.getLobby(channel=message.author)
+            lobby = module.getLobby(channel=message.channel)
             if not lobby:
                 return message.author.mention + ' ' + LOBBY_FAILURE_MISSING_LOBBY
                 # Ironic, since it shouldn't get here.
