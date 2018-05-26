@@ -386,6 +386,46 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             await super(cls, cls).execute(client, module, message, 'off')
 
+    class ClearCMD(Command):
+        """~clear <number of messages to check> [by author | containing *w?rds*]
+
+            Clears a specified number of messages from the channel the command is used in.
+
+            If a filter is specified as the second argument, the first specified number of
+            messages will be checked to see if they match the given filter...
+                either by author (@mention),
+                or a pattern-matched word sequence
+        """
+        NAME = 'clear'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            await message.delete()
+
+            if len(args) is 0 or not args[0].isdigit():
+                return CommandResponse(message.channel, message.author.mention + ' ~clear requires a number of messages to check.', deleteIn=5)
+            else:
+                msgs = int(args[0])
+
+            if message.mentions:
+                matches = lambda m: m.author in message.mentions
+            elif len(args) > 1:
+                matches = lambda m: True if fnmatch.fnmatch(m.content, '*' + ' '.join(args[1:]) + '*') else False
+            else:
+                matches = lambda m: True
+
+            async with message.channel.typing():
+                try:
+                    await message.channel.purge(limit=msgs, check=matches)
+                    return CommandResponse(message.channel, message.author.mention + " I've cleared the messages you requested.", deleteIn=5)
+                except discord.HTTPException:
+                    print('Tried to execute {}, but Discord raised an exception:\n\n{}'.format(
+                        message.content, format_exc()
+                    ))
+                    return CommandResponse(message.channel, message.author.mention + " I couldn't get to all the messages, but I did the best I could.", deleteIn=5)
+
+
     class PunishCMD(Command):
         NAME = 'punish'
         RANK = 300
