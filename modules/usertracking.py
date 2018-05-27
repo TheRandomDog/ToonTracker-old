@@ -776,6 +776,8 @@ class UserTrackingModule(Module):
             elif entry.created_at >= datetime.utcnow() - timedelta(seconds=2) or \
               (entry.extra.channel == message.channel and entry.target == message.author and entry.extra.count > prevDeletionCount):
                 footer={'text': 'Message deleted by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
+            elif message.nonce == 'cleared':
+                footer={'text': 'Message deleted via ~clear'}
             self.auditLogEntries[entry.id] = entry.extra.count
         await self.client.send_message(
             self.spamChannel,

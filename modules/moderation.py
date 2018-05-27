@@ -398,22 +398,22 @@ class ModerationModule(Module):
         """
         NAME = 'clear'
         RANK = 300
+        DELETE_PRIOR_MESSAGE = True
 
         @staticmethod
         async def execute(client, module, message, *args):
-            await message.delete()
-
             if len(args) is 0 or not args[0].isdigit():
                 return CommandResponse(message.channel, message.author.mention + ' ~clear requires a number of messages to check.', deleteIn=5)
             else:
                 msgs = int(args[0])
 
-            if message.mentions:
-                matches = lambda m: m.author in message.mentions
-            elif len(args) > 1:
-                matches = lambda m: True if fnmatch.fnmatch(m.content, '*' + ' '.join(args[1:]) + '*') else False
-            else:
-                matches = lambda m: True
+            def matches(m):
+                m.nonce = 'cleared'
+                if message.mentions:
+                    return m.author in message.mentions
+                elif len(args) > 1:
+                    return True if fnmatch.fnmatch(m.content, '*' + ' '.join(args[1:]) + '*') else False
+                return True
 
             async with message.channel.typing():
                 try:
