@@ -5,25 +5,6 @@ from io import BytesIO
 from datetime import datetime
 from extra.commands import Command
 from modules.module import Module
-
-class Lobby:
-    def __init__(self):
-        self.id = None                              # The channel category's lobby ID, it's consistent and easy to restore.
-        self.category = None                        # The channel category object.
-        self.textChannel = None                     # The text channel object.
-        self.voiceChannel = None                    # The voice channel object.
-        self.role = None                            # The member role object.
-        self.ownerRole = None                       # The owner role object.
-        self.modRole = None                         # The lobby mod role object.
-        self.created = time.mktime(time.gmtime())   # The time when the lobby was created, in UTC.
-        self.customName = ""                        # The name of the lobby.
-        self.invited = []                           # The members that have been invited to the lobby. It is not persistent.
-        self.lastVisited = None                     # The time when the last message was sent or when a voice channel was joined.
-        self.expiryWarning = None                   # The time when a warning was given that the lobby would soon expire.
-        self.filter = True                          # The status of the bad word filter... "True" if it's applied to the lobby.
-        self.filterVotes = []                       # A list of members who have voted to toggle the bad word filter.
-        self.filterVotesNeeded = 0                  # The total amount of votes needed to toggle the filter.
-        self.filterWarning = False                  # "True" if a notification has been given that the bad word filter can be toggled.
 from utils import Config, assert_type, assert_class, get_time_from_seconds, database, make_count_of_string, make_list_from_string
 
 LOBBY_FAILURE_GUILD = 'Sorry, but you need to be in the Toontown Rewritten Discord to use lobbies.'
