@@ -14,10 +14,10 @@ class DatabaseManager:
     TYPES = [NULL, INT, REAL, TEXT, BLOB]
     PARAMS = [PRIMARY_KEY, NOT_NULL, DEFAULT]
 
-    def __init__(self, fileName, tables=[]):
-        self.fileName = fileName
+    def __init__(self, file_name, tables=[]):
+        self.file_name = file_name
 
-        self.conn = sqlite3.connect(fileName, check_same_thread=False)
+        self.conn = sqlite3.connect(file_name, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.c = self.conn.cursor()
 
@@ -28,11 +28,11 @@ class DatabaseManager:
             table.create()
             self.tables[table.name] = table
 
-    def createTable(self, tableName, arguments={}, errorIfExisting=False):
-        table = DatabaseTable(tableName, arguments)
+    def create_table(self, table_name, arguments={}, error_if_existing=False):
+        table = DatabaseTable(table_name, arguments)
         table.conn = self.conn
         table.c = self.c
-        table.create(errorIfExisting)
+        table.create(error_if_existing)
         return table
 
     def __del__(self):
@@ -40,23 +40,23 @@ class DatabaseManager:
 
 
 class DatabaseTable:
-    def __init__(self, tableName, arguments={}):
+    def __init__(self, table_name, arguments={}):
         self.conn = None
         self.c = None
-        self.name = tableName
+        self.name = table_name
         self.arguments = arguments
 
     @staticmethod
-    def getWhereSanitization(rawWhere, where):
+    def get_where_sanitization(raw_where, where):
         """
             SQL Operation methods have two options for inputting WHERE clauses:
-                They can do it with `rawWhere`, no sanitization, if the value is hard-coded or trusted.
+                They can do it with `raw_where`, no sanitization, if the value is hard-coded or trusted.
                 Or it can be sanitized with `where`, if the value is variable or untrusted.
 
-            When using `rawWhere`, you can enter a string or a list of WHERE clauses (that will be joined together by ANDs).
-                e.g. table.select(rawWhere='id=1')
-                e.g. table.select(rawWhere='id=1' AND 'name="Monty"')
-                e.g. table.select(rawWhere=['id=1', 'name="Monty"'])
+            When using `raw_where`, you can enter a string or a list of WHERE clauses (that will be joined together by ANDs).
+                e.g. table.select(raw_where='id=1')
+                e.g. table.select(raw_where='id=1' AND 'name="Monty"')
+                e.g. table.select(raw_where=['id=1', 'name="Monty"'])
             When using `where`, you create a list or a list of lists (that will be joined together by ANDs).
             You enter the column information first with the values substituted with a question mark, then the rest of the list contains the values.
                 e.g. table.select(where=['id=?', 1])
@@ -67,100 +67,81 @@ class DatabaseTable:
         """
 
         sanitize = bool(where)  # are we sanitzing? (is there something in where?)
-        whereKeys = []  # the where queries, columns and scuh
-        whereValues = []  # the values that are being substituted
+        where_keys = []  # the where queries, columns and scuh
+        where_values = []  # the values that are being substituted
 
         if sanitize:
             if type(where[0]) == str:  # If it's not a list of lists, make it one 
                 where = [where]
             for w in where:  # For every list in major list, take the where query and extend the values list
-                whereKeys.append(w[0])
-                whereValues.extend(w[1:])
+                where_keys.append(w[0])
+                where_values.extend(w[1:])
         else:
-            if type(rawWhere) == str: rawWhere = [rawWhere]  # if it's not a list, make it one
-            whereKeys = rawWhere  # we're not sanitizing, so just put in the keys, and not values
-        return whereKeys, whereValues
+            if type(raw_where) == str: raw_where = [raw_where]  # if it's not a list, make it one
+            where_keys = raw_where  # we're not sanitizing, so just put in the keys, and not values
+        return where_keys, where_values
         
-    def create(self, errorIfExisting=False):
-        listArgs = []
-        for argName, argType in self.arguments.items():
-            if type(argType) == list:
-                argTypeParams = []
-                for param in argType:
+    def create(self, error_if_existing=False):
+        list_args = []
+        for arg_name, arg_type in self.arguments.items():
+            if type(arg_type) == list:
+                arg_type_params = []
+                for param in arg_type:
                     if param in DatabaseManager.TYPES or param in DatabaseManager.PARAMS:
-                        argTypeParams.append(param)
-                    elif argTypeParams[0] in [DatabaseManager.TEXT, DatabaseManager.BLOB]:
-                        argTypeParams.append('DEFAULT "{}"'.format(param))
+                        arg_type_params.append(param)
+                    elif arg_type_params[0] in [DatabaseManager.TEXT, DatabaseManager.BLOB]:
+                        arg_type_params.append('DEFAULT "{}"'.format(param))
                     else:
-                        argTypeParams.append('DEFAULT {}'.format(param))
-                argType = ' '.join(argTypeParams)
+                        arg_type_params.append('DEFAULT {}'.format(param))
+                arg_type = ' '.join(arg_type_params)
 
-            arg = f'{argName} {argType}'
-            listArgs.append(arg)
+            arg = f'{arg_name} {arg_type}'
+            list_args.append(arg)
         try:
-            command = 'CREATE TABLE {}({})'.format(self.name, ', '.join(listArgs))
+            command = 'CREATE TABLE {}({})'.format(self.name, ', '.join(list_args))
             self.c.execute(command)
             self.conn.commit()
         except sqlite3.OperationalError as e:
-            if errorIfExisting or 'exists' not in str(e):
+            if error_if_existing or 'exists' not in str(e):
                 raise e
 
-    def cleanSelect(self, columns='*', *, rawWhere=[], where=[], limit=10):
-        result = []
-        rowFormat = ''
-        for argument in self.arguments.keys():
-            self.c.execute('SELECT MAX(LENGTH({1})) AS MLS FROM {0}'.format(self.name, argument))
-            selection = self.c.fetchone()
-            valueLength = selection['MLS'] if selection else 0
-            #argLengths[argument] = max(len(argument), valueLength)
-
-            rowFormat += '{:>%d}' % max(len(argument), valueLength)
-        result.append(rowFormat.format(*tuple(self.arguments.keys())))
-
-        selection = self.select(columns, rawWhere, limit)
-        if limit == 1: selection = [selection]
-        for row in selection:
-            result.append(rowFormat.format(*[row[arg] for arg in self.arguments.keys()]))
-
-        return '\n'.join(result)
-
-    def select(self, columns='*', *, rawWhere=[], where=[], limit=None):
+    def select(self, columns='*', *, raw_where=[], where=[], limit=None):
         fetch = self.c.fetchone if limit == 1 else self.c.fetchall
 
         if type(columns) == list:
             columns = ', '.join(columns)
-        whereKeys, whereValues = self.getWhereSanitization(rawWhere, where)
+        where_keys, where_values = self.get_where_sanitization(raw_where, where)
 
         command = 'SELECT {} FROM {}'.format(columns, self.name)
-        if whereKeys:
+        if where_keys:
             command += ' WHERE '
-            command += ' AND '.join(whereKeys)
+            command += ' AND '.join(where_keys)
         if limit:
             command += ' LIMIT {}'.format(limit)
-        self.c.execute(command, whereValues)
+        self.c.execute(command, where_values)
         return fetch()
 
-    def delete(self, *, rawWhere=[], where=[], limit=None):
-        whereKeys, whereValues = self.getWhereSanitization(rawWhere, where)
+    def delete(self, *, raw_where=[], where=[], limit=None):
+        where_keys, where_values = self.get_where_sanitization(raw_where, where)
 
         command = 'DELETE FROM {} WHERE '.format(self.name)
-        command += ' AND '.join(whereKeys)
+        command += ' AND '.join(where_keys)
         if limit:
             command += ' LIMIT {}'.format(limit)
-        self.c.execute(command, whereValues)
+        self.c.execute(command, where_values)
         self.conn.commit()
 
-    def update(self, *, rawWhere=[], where=[], **kwargs):
-        whereKeys, whereValues = self.getWhereSanitization(rawWhere, where)
+    def update(self, *, raw_where=[], where=[], **kwargs):
+        where_keys, where_values = self.get_where_sanitization(raw_where, where)
 
         command = 'UPDATE {} SET {}'.format(
             self.name,
             ', '.join([column + '=?' for column in kwargs.keys()])
         )
-        if whereKeys:
+        if where_keys:
             command += ' WHERE '
-            command += ' AND '.join(whereKeys)
-        self.c.execute(command, list(kwargs.values()) + whereValues)
+            command += ' AND '.join(where_keys)
+        self.c.execute(command, list(kwargs.values()) + where_values)
         self.conn.commit()
 
     def insert(self, **kwargs):

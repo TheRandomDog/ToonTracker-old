@@ -6,8 +6,8 @@ import requests
 from .module import *
 from json import JSONDecodeError
 from discord import Embed, Color
-from utils import Config, getVersion
-uaHeader = Config.getSetting('ua_header', getVersion())
+from utils import Config, get_version
+ua_header = Config.get_setting('ua_header', get_version())
 
 class StatusModule(Module):
     GOOD = ':white_check_mark: The **{}** looks good!'
@@ -21,30 +21,30 @@ class StatusModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.gameserverAddress = '162.243.14.152'
-        self.lastUpdated = time.time()
+        self.gameserver_address = '162.243.14.152'
+        self.last_updated = time.time()
         self.account = None
         self.game = None
         self.open = None
         self.banner = False
 
-        self.statusMessage = self.create_permanent_messages(StatusMessage)
+        self.status_message = self.create_permanent_messages(StatusMessage)
 
-    def checkAccountServer(self):
+    def check_account_server(self):
         url = 'https://www.toontownrewritten.com/api/status'
         try:
-            r = requests.get(url, headers=uaHeader)
-            jsonData = r.json()
+            r = requests.get(url, headers=ua_header)
+            json_data = r.json()
         except (JSONDecodeError, requests.ConnectionError):
             self.account = False
             self.open = True
             return
         self.account = True
-        self.open = jsonData['open']
-        self.banner = jsonData.get('banner', False)
+        self.open = json_data['open']
+        self.banner = json_data.get('banner', False)
 
-    def checkGameServer(self):
-        address = self.gameserverAddress
+    def check_game_server(self):
+        address = self.gameserver_address
         try:
             s = socket.socket()
             try:
@@ -60,39 +60,39 @@ class StatusModule(Module):
         finally:
             s.close()
 
-    async def loopIteration(self):
-        self.checkAccountServer()
-        self.checkGameServer()
-        self.lastUpdated = time.time()
-        await self.statusMessage.update()
+    async def loop_iteration(self):
+        self.check_account_server()
+        self.check_game_server()
+        self.last_updated = time.time()
+        await self.status_message.update()
 
 
 class StatusMessage(PermaMessage):
     TITLE = 'Server Status'
-    CHANNEL_ID = Config.getModuleSetting('status', 'perma')
+    CHANNEL_ID = Config.get_module_setting('status', 'perma')
 
     async def update(self, *args, **kwargs):
-        if self.module.isFirstLoop:
-            msg = self.module.createDiscordEmbed(subtitle=self.TITLE, info='Collecting the latest information...', color=Color.light_grey())
+        if self.module.is_first_loop:
+            msg = self.module.create_discord_embed(subtitle=self.TITLE, info='Collecting the latest information...', color=Color.light_grey())
             return await self.send(msg)
 
-        gameMsg = (self.module.GOOD if self.module.game else self.module.UNREACHABLE).format('game server')
+        game_msg = (self.module.GOOD if self.module.game else self.module.UNREACHABLE).format('game server')
         if not self.module.open:
-            accMsg = self.module.CLOSED
-            statuses = [accMsg]
+            acc_msg = self.module.CLOSED
+            statuses = [acc_msg]
         else:
-            accMsg = (self.module.GOOD if self.module.account else self.module.UNREACHABLE).format('account server')
-            statuses = [gameMsg, accMsg]
-        banMsg = self.module.BANNER.format(self.module.banner) if self.module.banner else None
-        if banMsg:
-            statuses.append(banMsg)
+            acc_msg = (self.module.GOOD if self.module.account else self.module.UNREACHABLE).format('account server')
+            statuses = [game_msg, acc_msg]
+        ban_msg = self.module.BANNER.format(self.module.banner) if self.module.banner else None
+        if ban_msg:
+            statuses.append(ban_msg)
 
         color = Color.green()
         color = Color.blue() if self.module.banner and self.module.account else color
         color = Color.gold() if (not self.module.open and not self.module.banner) or not self.module.account else color
         color = Color.red() if not self.module.game else color
 
-        return await self.send(self.module.createDiscordEmbed(subtitle=self.TITLE, info='\n\n'.join(statuses), color=color))
+        return await self.send(self.module.create_discord_embed(subtitle=self.TITLE, info='\n\n'.join(statuses), color=color))
 
 # ---------------------------------------------- Module ----------------------------------------------
 

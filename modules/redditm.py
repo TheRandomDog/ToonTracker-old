@@ -20,7 +20,7 @@ class TFRedditModule(Module):
         )
 
         self.subredditName = Config.getModuleSetting('reddit', 'subreddit')
-        self.rTTR = reddit.subreddit(self.subredditName)
+        self.focused_guild = reddit.subreddit(self.subredditName)
         self.toonfestStream = threading.Thread(target=self.streamPosts, name='ToonfestStream-Thread').start()
 
         self.readyToStop = False
@@ -29,7 +29,7 @@ class TFRedditModule(Module):
         time.sleep(10)
         
         newPosts = False
-        for submission in self.rTTR.stream.submissions(pause_after=0):
+        for submission in self.focused_guild.stream.submissions(pause_after=0):
             if self.client.readyToClose or self.readyToStop:
                 break
             elif submission is None:

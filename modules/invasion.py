@@ -8,71 +8,71 @@ from modules.module import *
 from math import ceil, floor
 from extra.toontown import *
 from discord import Embed, Color
-from utils import Config, getTimeFromSeconds, getAttributeFromMatch, assertType
-uaHeader = Config.getSetting('ua_header', getVersion())
+from utils import Config, get_time_from_seconds, get_attribute_from_match, assert_type
+ua_header = Config.get_setting('ua_header', get_version())
 
-invasionCache = []
+invasion_cache = []
 
 class Invasion:
     def __new__(cls, *args, **kwargs):
-        for inv in invasionCache:
+        for inv in invasion_cache:
             if (
                 (kwargs.get('district', None) == inv.district) and
                 (kwargs.get('cog', None) == inv.cog) and
-                (kwargs.get('startTime', None) == inv.startTime) and
+                (kwargs.get('start_time', None) == inv.start_time) and
                 (kwargs.get('total', None) == inv.total)
             ): return inv
 
         return super(Invasion, cls).__new__(cls)
 
-    def __init__(self, district, cog, asOf, defeated, total, defeatRate=None, startTime=None):
-        global invasionCache
-        if self in invasionCache:
+    def __init__(self, district, cog, as_of, defeated, total, defeat_rate=None, start_time=None):
+        global invasion_cache
+        if self in invasion_cache:
             return
         else:
-            invasionCache.append(self)
+            invasion_cache.append(self)
 
         self.district = district
         self.cog = cog
-        self.asOf = asOf
-        self.startTime = startTime
+        self.as_of = as_of
+        self.start_time = start_time
         self.defeated = defeated
-        self.defeatRate = defeatRate
+        self.defeat_rate = defeat_rate
         self.total = total
 
-        self.megaInvasion = self.total == 1000000
+        self.mega_invasion = self.total == 1000000
         self.department = cog.type
         self._etr = None
         self._remaining = None
 
-    def updateInformation(self, inv):
-        for attr in ('asOf', 'defeated', 'defeatRate'):
+    def update_information(self, inv):
+        for attr in ('as_of', 'defeated', 'defeat_rate'):
             if hasattr(self, attr) and hasattr(inv, attr):
                 setattr(self, attr, getattr(inv, attr))
 
     # Determines the new Estimated Time Remaining
     # and returns the value after setting it.
-    def getETR(self):
-        if self.defeatRate:
-            etr = self._etr = ((self.total - self.defeated) / self.defeatRate - (time.time() - self.asOf))    
+    def get_etr(self):
+        if self.defeat_rate:
+            etr = self._etr = ((self.total - self.defeated) / self.defeat_rate - (time.time() - self.as_of))    
         else:
             etr = -1
         return etr
 
     # Determines and returns the current length.
-    def getLength(self):
-        return (time.time() - self.startTime) if self.startTime else 'unknown time'
+    def get_length(self):
+        return (time.time() - self.start_time) if self.start_time else 'unknown time'
 
     # Determines the amount of Cogs remaining
     # and returns the value after setting it.
-    def getRemaining(self):
+    def get_remaining(self):
         self._remaining = self.total - self.defeated
         
         return locale.format('%d', self._remaining, grouping=True)
 
-    etr = property(getETR)
-    length = property(getLength)
-    remaining = property(getRemaining)
+    etr = property(get_etr)
+    length = property(get_length)
+    remaining = property(get_remaining)
 
 
 class InvasionModule(Module):
@@ -83,122 +83,122 @@ class InvasionModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.defaultRoute = self.ROUTES[0]
-        self.route = self.defaultRoute
-        self.collectionSuccesses = 0
-        self.collectionFailures = 0
-        self.testingRoute = False
-        self.lastKnownWorkingRoute = self.route
-        self.lastUpdated = None
+        self.default_route = self.ROUTES[0]
+        self.route = self.default_route
+        self.collection_successes = 0
+        self.collection_failures = 0
+        self.testing_route = False
+        self.last_known_working_route = self.route
+        self.last_updated = None
 
         self.invasions = []
-        self.droughtStart = int(time.time())
+        self.drought_start = int(time.time())
         self.droughts = 0  # These two variables help determine when a drought starts, so a time can be set and returned 
-        self.lastDrought = 0  # to the user. If they are mismatched, a drought is in progress and can be marked.
-        self.setFirstLoop = False
+        self.last_drought = 0  # to the user. If they are mismatched, a drought is in progress and can be marked.
+        self.set_first_loop = False
 
-        self.invasionMessage = self.create_permanent_messages(InvasionPermaMessage)
+        self.invasion_message = self.create_permanent_messages(InvasionPermaMessage)
 
-    def addCollectionSuccess(self):
-        self.collectionSuccesses += 1
-        self.collectionFailures = 0
+    def add_collection_success(self):
+        self.collection_successes += 1
+        self.collection_failures = 0
 
-    def addCollectionFailure(self):
-        self.collectionSuccesses = 0
-        self.collectionFailures += 1
+    def add_collection_failure(self):
+        self.collection_successes = 0
+        self.collection_failures += 1
 
-    def switchRoutes(self, route=None):
+    def switch_routes(self, route=None):
         if route:
             self.route = route
         else:
             index = self.ROUTES.index(self.route) + 1
             self.route = self.ROUTES[index if index < len(self.ROUTES) else 0]
 
-    def getLastUpdated(self, json):
+    def get_last_updated(self, json):
         if self.route == self.TOONHQ_ROUTE:
             return int(json['meta']['last_updated'])
         else:
-            return int(json['lastUpdated'])
+            return int(json['last_updated'])
 
-    def getInvasions(self, json):
+    def get_invasions(self, json):
         return json['invasions']
 
-    def getIterableData(self, data):
+    def get_iterable_data(self, data):
         if self.route == self.TTR_ROUTE:
-            newData = []
+            new_data = []
             for district, data in data.items():
                 data.update({'district': district})
-                newData.append(data)
-            return newData
+                new_data.append(data)
+            return new_data
         else:
             return data
 
-    def getInvasionObject(self, invData):
+    def get_invasion_object(self, inv_data):
         if self.route == self.TOONHQ_ROUTE:
-            s, v = '(Skelecog)' in invData['cog'], 'Version 2.0' in invData['cog']
-            cog = getAttributeFromMatch({(k.lower(),): v for k, v in zip(cogsStr, cogs)}, invData['cog'].replace('\x03', '').replace(' (Skelecog)', '').replace('Version 2.0 ', '').lower())(isV2=v, isSkelecog=s)
+            s, v = '(Skelecog)' in inv_data['cog'], 'Version 2.0' in inv_data['cog']
+            cog = get_attribute_from_match({(k.lower(),): v for k, v in zip(cogs_str, cogs)}, inv_data['cog'].replace('\x03', '').replace(' (Skelecog)', '').replace('Version 2.0 ', '').lower())(is_v2=v, is_skelecog=s)
             inv = Invasion(
-                district=invData['district'],
+                district=inv_data['district'],
                 cog=cog,
-                asOf=invData['as_of'],
-                startTime=invData['start_time'],
-                defeated=invData['defeated'],
-                defeatRate=invData['defeat_rate'],
-                total=invData['total'],
+                as_of=inv_data['as_of'],
+                start_time=inv_data['start_time'],
+                defeated=inv_data['defeated'],
+                defeat_rate=inv_data['defeat_rate'],
+                total=inv_data['total'],
             )
         elif self.route == self.TTR_ROUTE:
-            s, v = '(Skelecog)' in invData['type'], 'Version 2.0' in invData['type']
-            cog = getAttributeFromMatch({(k.lower(),): v for k, v in zip(cogsStr, cogs)}, invData['type'].replace('\x03', '').replace(' (Skelecog)', '').replace('Version 2.0 ', '').lower())(isV2=v, isSkelecog=s)
-            defeated, total = [int(p) for p in invData['progress'].split('/')]
+            s, v = '(Skelecog)' in inv_data['type'], 'Version 2.0' in inv_data['type']
+            cog = get_attribute_from_match({(k.lower(),): v for k, v in zip(cogs_str, cogs)}, inv_data['type'].replace('\x03', '').replace(' (Skelecog)', '').replace('Version 2.0 ', '').lower())(is_v2=v, is_skelecog=s)
+            defeated, total = [int(p) for p in inv_data['progress'].split('/')]
             inv = Invasion(
-                district=invData['district'],
+                district=inv_data['district'],
                 cog=cog,
-                asOf=invData['asOf'],
+                as_of=inv_data['as_of'],
                 defeated=defeated,
                 total=total
             )
         return inv
 
-    async def collectData(self):
+    async def collect_data(self):
         try:
-            r = requests.get(self.route[0], headers=uaHeader)
+            r = requests.get(self.route[0], headers=ua_header)
             json = r.json()
-            self.lastUpdated = self.getLastUpdated(json)
+            self.last_updated = self.get_last_updated(json)
 
-            self.addCollectionSuccess()
-            if self.collectionSuccesses % 150 == 0 and self.route != self.defaultRoute:
-                self.testingRoute = True
-                self.lastKnownWorkingRoute = self.route
-                self.switchRoutes(self.defaultRoute)
+            self.add_collection_success()
+            if self.collection_successes % 150 == 0 and self.route != self.default_route:
+                self.testing_route = True
+                self.last_known_working_route = self.route
+                self.switch_routes(self.default_route)
         except (ValueError, requests.ConnectionError):
-            if self.testingRoute:
-                self.testingRoute = False
-                self.switchRoutes(self.lastKnownWorkingRoute)
+            if self.testing_route:
+                self.testing_route = False
+                self.switch_routes(self.last_known_working_route)
             else:
-                self.addCollectionFailure()
-                if self.collectionFailures % 5 == 0:
-                    self.switchRoutes()
+                self.add_collection_failure()
+                if self.collection_failures % 5 == 0:
+                    self.switch_routes()
             return None
 
-        return self.getInvasions(json)
+        return self.get_invasions(json)
 
-    async def handleData(self, data):
+    async def handle_data(self, data):
         if data == None:
-            self.updatePermaMsg(InvPermaMsg)
+            self.update_perma_msg(InvPermaMsg)
             return
 
-        if not data and self.lastDrought == self.droughts:
+        if not data and self.last_drought == self.droughts:
             self.droughts += 1
-            self.droughtStart = int(time.time())
-        elif data and self.droughts > self.lastDrought:
-            self.lastDrought += 1
+            self.drought_start = int(time.time())
+        elif data and self.droughts > self.last_drought:
+            self.last_drought += 1
 
-        data = self.getIterableData(data)
-        for invData in data:
-            inv = self.getInvasionObject(invData)
+        data = self.get_iterable_data(data)
+        for inv_data in data:
+            inv = self.get_invasion_object(inv_data)
 
             if inv in self.invasions:
-                inv.updateInformation(inv)
+                inv.update_information(inv)
             else:
                 populateDistricts(inv.district)
                 # Accounts for an invasion that immediately started in the same district after one just ended.
@@ -210,53 +210,53 @@ class InvasionModule(Module):
         districts = [di['district'] for di in data]
         for inv in self.invasions:
             if inv.district not in districts:
-                global invasionCache
-                invasionCache.remove(inv)
+                global invasion_cache
+                invasion_cache.remove(inv)
                 self.invasions.remove(inv)
 
-        await self.invasionMessage.update()
+        await self.invasion_message.update()
 
     # Returns all invasions that match the attributes passed through the method.
-    def getInvs(self, **kwargs):
+    def get_invs(self, **kwargs):
         modules = [module for module in ([kwargs['module']] if kwargs.get('module', None) else self.modules)]
-        allInvasions = {module: module.invasions for module in modules}
+        all_invasions = {module: module.invasions for module in modules}
 
         kwargs.pop('module', None)
-        matchingInvs = {module: [] for module in modules}
-        for module, invs in allInvasions.items():
+        matching_Invs = {module: [] for module in modules}
+        for module, invs in all_invasions.items():
             for inv in invs:
                 if all(getattr(inv, k, None) == v for k, v in kwargs.items()):
-                    matchingInvs[module].append(inv)
+                    matching_Invs[module].append(inv)
 
-        return matchingInvs
+        return matching_Invs
 
 
 # ----------------------------------------- Message Handlers -----------------------------------------
 
 class InvasionPermaMessage(PermaMessage):
     TITLE = 'Invasions'
-    CHANNEL_ID = Config.getModuleSetting('invasion', 'perma')
+    CHANNEL_ID = Config.get_module_setting('invasion', 'perma')
 
     async def update(self, *args, **kwargs):
-        if self.module.isFirstLoop:
-            msg = self.module.createDiscordEmbed(title=self.TITLE, info='Collecting the latest information...', color=Color.light_grey())
+        if self.module.is_first_loop:
+            msg = self.module.create_discord_embed(title=self.TITLE, info='Collecting the latest information...', color=Color.light_grey())
             return await self.send(msg)
 
         megainvs = []
         invs = []
         for inv in self.module.invasions:
-            if inv.megaInvasion:
+            if inv.mega_invasion:
                 megainvs.append(inv)
             else:
                 invs.append(inv)
-        megainvs = sorted(megainvs, key=lambda k: -k.startTime)
+        megainvs = sorted(megainvs, key=lambda k: -k.start_time)
         invs = sorted(invs, key=lambda k: (-k.etr if k.etr != -1 else (k.defeated/k.total)))
 
         invs = megainvs + invs
 
-        if time.time() >= (assertType(self.module.lastUpdated, int, otherwise=0) + 300):
+        if time.time() >= (assert_type(self.module.last_updated, int, otherwise=0) + 300):
             desc = 'We\'re experiencing some technical difficulties.\nInvasion tracking will be made reavailable as soon as possible.'
-            msg = self.module.createDiscordEmbed(title=self.TITLE, info=desc, color=Color.light_grey())
+            msg = self.module.create_discord_embed(title=self.TITLE, info=desc, color=Color.light_grey())
             msg.set_footer(text='We apologize for the inconvenience.')
         elif len(invs) > 0:
             cogs = []
@@ -265,10 +265,10 @@ class InvasionPermaMessage(PermaMessage):
             progress = []
             for inv in invs:
                 if inv.etr != -1:
-                    etr = getTimeFromSeconds(inv.etr)
+                    etr = get_time_from_seconds(inv.etr)
                     etr = 'A few seconds' if inv.etr < 0 else etr
-                    etr = 'Calculating...' if time.time() - inv.startTime < 60 else etr
-                    etr = 'Mega Invasion!' if inv.megaInvasion else etr
+                    etr = 'Calculating...' if time.time() - inv.start_time < 60 else etr
+                    etr = 'Mega Invasion!' if inv.mega_invasion else etr
                     etrs.append(etr)
                 else:
                     p = int((inv.defeated/inv.total) * 10)
@@ -281,11 +281,11 @@ class InvasionPermaMessage(PermaMessage):
                 {'name': 'District', 'value': '\n'.join(districts)},
                 {'name': 'Time Remaining', 'value': '\n'.join(etrs)} if etrs else {'name': 'Progress', 'value': '\n'.join(progress)}
             ]
-            msg = self.module.createDiscordEmbed(title=self.TITLE, titleUrl=self.module.route[1], color=Color.light_grey(), fields=fields)
+            msg = self.module.create_discord_embed(title=self.TITLE, title_url=self.module.route[1], color=Color.light_grey(), fields=fields)
         else:
             desc = 'No invasions to report.\nThe last invasion seen was __{} ago__.'.format(
-                getTimeFromSeconds(int(time.time()) - self.module.droughtStart))
-            msg = self.module.createDiscordEmbed(title=self.TITLE, info=desc, color=Color.light_grey())
+                get_time_from_seconds(int(time.time()) - self.module.drought_start))
+            msg = self.module.create_discord_embed(title=self.TITLE, info=desc, color=Color.light_grey())
         return await self.send(msg)
 
 module = InvasionModule

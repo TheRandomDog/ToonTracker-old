@@ -8,12 +8,12 @@ import re
 from extra.commands import Command, CommandResponse
 from extra.startmessages import Warning
 from modules.module import Module
-from utils import Config, database, getShortTimeLength, getLongTime
+from utils import Config, database, get_short_time_length, get_long_time
 from traceback import format_exc
 
 messages = []
 
-if Config.getModuleSetting('moderation', 'bad_image_filter'):
+if Config.get_module_setting('moderation', 'bad_image_filter'):
     try:
         from clarifai.rest import ClarifaiApp, Image, Video
     except ImportError:
@@ -100,17 +100,17 @@ class ModerationModule(Module):
             if not link:
                 return
 
-            badlinks = module.badLinks
+            badlinks = module.bad_links
             matches = [badlink for badlink in badlinks if fnmatch.fnmatch(link, badlink)]
             if any([m==link for m in matches]):
-                return module.createDiscordEmbed(info='**{}** is already classified as a bad link format.'.format(link), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** is already classified as a bad link format.'.format(link), color=discord.Color.dark_orange())
             elif matches:
-                return module.createDiscordEmbed(info='**{}** is already matched under **{}**'.format(link, matches[0]), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** is already matched under **{}**'.format(link, matches[0]), color=discord.Color.dark_orange())
             badlinks.append(link)
-            Config.setModuleSetting('moderation', 'bad_links', badlinks)
-            module.badLinks = badlinks
+            Config.set_module_setting('moderation', 'bad_links', badlinks)
+            module.bad_links = badlinks
 
-            return module.createDiscordEmbed(info='**{}** was added as a bad link format.'.format(link), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was added as a bad link format.'.format(link), color=discord.Color.green())
 
     class RemoveBadLinkCMD(Command):
         NAME = 'removeBadLink'
@@ -122,14 +122,14 @@ class ModerationModule(Module):
             if not link:
                 return
 
-            badlinks = module.badLinks
+            badlinks = module.bad_links
             if link not in badlinks:
-                return module.createDiscordEmbed(info='**{}** is not a bad link format.\nBe sure to use the format that was added exactly.'.format(link), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** is not a bad link format.\nBe sure to use the format that was added exactly.'.format(link), color=discord.Color.dark_orange())
             badlinks.remove(link)
-            Config.setModuleSetting('moderation', 'bad_links', badlinks)
-            module.badLinks = badlinks
+            Config.set_module_setting('moderation', 'bad_links', badlinks)
+            module.bad_links = badlinks
 
-            return module.createDiscordEmbed(info='**{}** was removed from the bad link list.'.format(link), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was removed from the bad link list.'.format(link), color=discord.Color.green())
 
     class AddBadWordCMD(Command):
         NAME = 'addBadWord'
@@ -141,14 +141,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = module.badWords
+            badwords = module.bad_words
             if word in badwords:
-                return module.createDiscordEmbed(info='**{}** is already classified as a bad word.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** is already classified as a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
-            Config.setModuleSetting('moderation', 'bad_words', badwords)
-            module.badWords = badwords
+            Config.set_module_setting('moderation', 'bad_words', badwords)
+            module.bad_words = badwords
 
-            return module.createDiscordEmbed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
 
     class RemoveBadWordCMD(Command):
         NAME = 'removeBadWord'
@@ -160,14 +160,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = module.badWords
+            badwords = module.bad_words
             if word not in badwords:
-                return module.createDiscordEmbed(info='**{}** was never a bad word.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** was never a bad word.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
-            Config.setModuleSetting('moderation', 'bad_words', badwords)
-            module.badWords = badwords
+            Config.set_module_setting('moderation', 'bad_words', badwords)
+            module.bad_words = badwords
 
-            return module.createDiscordEmbed(info='**{}** was removed from the bad word list.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was removed from the bad word list.'.format(word), color=discord.Color.green())
 
     class AddBadEmojiCMD(Command):
         NAME = 'addBadEmoji'
@@ -179,14 +179,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = module.badEmojis
+            badwords = module.bad_emojis
             if word in badwords:
-                return module.createDiscordEmbed(info='**{}** is already classified as a bad emoji.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** is already classified as a bad emoji.'.format(word), color=discord.Color.dark_orange())
             badwords.append(word)
-            Config.setModuleSetting('moderation', 'bad_emojis', badwords)
-            module.badEmojis = badwords
+            Config.set_module_setting('moderation', 'bad_emojis', badwords)
+            module.bad_emojis = badwords
 
-            return module.createDiscordEmbed(info='**{}** was added as a bad emoji.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was added as a bad emoji.'.format(word), color=discord.Color.green())
 
     class RemoveBadEmojiCMD(Command):
         NAME = 'removeBadEmoji'
@@ -198,14 +198,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            badwords = module.badEmojis
+            badwords = module.bad_emojis
             if word not in badwords:
-                return module.createDiscordEmbed(info='**{}** was never a bad emoji.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** was never a bad emoji.'.format(word), color=discord.Color.dark_orange())
             badwords.remove(word)
-            Config.setModuleSetting('moderation', 'bad_emojis', badwords)
-            module.badEmojis = badwords
+            Config.set_module_setting('moderation', 'bad_emojis', badwords)
+            module.bad_emojis = badwords
 
-            return module.createDiscordEmbed(info='**{}** was removed from the bad word emoji list.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was removed from the bad word emoji list.'.format(word), color=discord.Color.green())
 
     class AddLinkExceptionCMD(Command):
         NAME = 'addLinkException'
@@ -217,14 +217,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = module.linkExceptions
+            exc = module.link_exceptions
             if word in exc:
-                return module.createDiscordEmbed(info='**{}** is already classified as a bad link exception.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** is already classified as a bad link exception.'.format(word), color=discord.Color.dark_orange())
             exc.append(word)
-            Config.setModuleSetting('moderation', 'link_exceptions', exc)
-            module.linkExceptions = exc
+            Config.set_module_setting('moderation', 'link_exceptions', exc)
+            module.link_exceptions = exc
 
-            return module.createDiscordEmbed(info='**{}** was added as a bad link exception.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was added as a bad link exception.'.format(word), color=discord.Color.green())
 
     class RemoveLinkExceptionCMD(Command):
         NAME = 'removeLinkException'
@@ -236,14 +236,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = module.linkExceptions
+            exc = module.link_exceptions
             if word not in exc:
-                return module.createDiscordEmbed(info='**{}** was never a bad link exception.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** was never a bad link exception.'.format(word), color=discord.Color.dark_orange())
             exc.remove(word)
-            Config.setModuleSetting('moderation', 'link_exceptions', exc)
-            module.linkExceptions = exc
+            Config.set_module_setting('moderation', 'link_exceptions', exc)
+            module.link_exceptions = exc
             
-            return module.createDiscordEmbed(info='**{}** was removed from the bad link exception list.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was removed from the bad link exception list.'.format(word), color=discord.Color.green())
 
     class AddPluralExceptionCMD(Command):
         NAME = 'addPluralException'
@@ -255,14 +255,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = module.pluralExceptions
+            exc = module.plural_exceptions
             if word in exc:
-                return module.createDiscordEmbed(info='**{}** is already classified as a plural exception.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** is already classified as a plural exception.'.format(word), color=discord.Color.dark_orange())
             exc.append(word)
-            Config.setModuleSetting('moderation', 'plural_exceptions', exc)
-            module.pluralExceptions = exc
+            Config.set_module_setting('moderation', 'plural_exceptions', exc)
+            module.plural_exceptions = exc
 
-            return module.createDiscordEmbed(info='**{}** was added as a plural exception.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was added as a plural exception.'.format(word), color=discord.Color.green())
 
     class RemovePluralExceptionCMD(Command):
         NAME = 'removePluralException'
@@ -274,14 +274,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = module.pluralExceptions
+            exc = module.plural_exceptions
             if word not in exc:
-                return module.createDiscordEmbed(info='**{}** was never a plural exception.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** was never a plural exception.'.format(word), color=discord.Color.dark_orange())
             exc.remove(word)
-            Config.setModuleSetting('moderation', 'plural_exceptions', exc)
-            module.pluralExceptions = exc
+            Config.set_module_setting('moderation', 'plural_exceptions', exc)
+            module.plural_exceptions = exc
             
-            return module.createDiscordEmbed(info='**{}** was removed from the plural exception list.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was removed from the plural exception list.'.format(word), color=discord.Color.green())
 
     class AddWordExceptionCMD(Command):
         NAME = 'addWordException'
@@ -293,14 +293,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = module.wordExceptions
+            exc = module.word_exceptions
             if word in exc:
-                return module.createDiscordEmbed(info='**{}** is already classified as a bad word exception.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** is already classified as a bad word exception.'.format(word), color=discord.Color.dark_orange())
             exc.append(word)
-            Config.setModuleSetting('moderation', 'word_exceptions', exc)
-            module.wordExceptions = exc
+            Config.set_module_setting('moderation', 'word_exceptions', exc)
+            module.word_exceptions = exc
 
-            return module.createDiscordEmbed(info='**{}** was added as a bad word exception.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was added as a bad word exception.'.format(word), color=discord.Color.green())
 
     class RemoveWordExceptionCMD(Command):
         NAME = 'removeWordException'
@@ -312,14 +312,14 @@ class ModerationModule(Module):
             if not word:
                 return
 
-            exc = module.wordExceptions
+            exc = module.word_exceptions
             if word not in exc:
-                return module.createDiscordEmbed(info='**{}** was never a bad word exception.'.format(word), color=discord.Color.dark_orange())
+                return module.create_discord_embed(info='**{}** was never a bad word exception.'.format(word), color=discord.Color.dark_orange())
             exc.remove(word)
-            Config.setModuleSetting('moderation', 'word_exceptions', exc)
-            module.wordExceptions = exc
+            Config.set_module_setting('moderation', 'word_exceptions', exc)
+            module.word_exceptions = exc
             
-            return module.createDiscordEmbed(info='**{}** was removed from the bad word exception list.'.format(word), color=discord.Color.green())
+            return module.create_discord_embed(info='**{}** was removed from the bad word exception list.'.format(word), color=discord.Color.green())
 
     class SlowmodeCMD(Command):
         NAME = 'slowmode'
@@ -346,24 +346,24 @@ class ModerationModule(Module):
                 return CommandResponse(
                     message.channel,
                     '{} Please use a number to represent how many messages per second can be sent by a user. To turn off slow mode, use `~slowmode off`.'.format(message.author.mention),
-                    deleteIn=5,
-                    priorMessage=message
+                    delete_in=5,
+                    prior_message=message
                 )
 
             slowmode = module.slowmode
-            oldSpeed = slowmode.get(str(message.channel.id), 0)
+            old_speed = slowmode.get(str(message.channel.id), 0)
             if speed == -1:
-                if not oldSpeed:
+                if not old_speed:
                     return CommandResponse(
                         message.channel,
                         '{} This channel isn\'t in slowmode!'.format(message.author.mention),
-                        deleteIn=5,
-                        priorMessage=message
+                        delete_in=5,
+                        prior_message=message
                     )
                 del slowmode[str(message.channel.id)]
                 message.nonce = 'silent'
                 await message.delete()
-                await channel.send(embed=module.createDiscordEmbed(
+                await channel.send(embed=module.create_discord_embed(
                     info=':rabbit2: You\'re back up to regular speed! Happy chatting!',
                     color=discord.Color.green()
                 ))
@@ -371,13 +371,13 @@ class ModerationModule(Module):
                 slowmode[str(message.channel.id)] = speed
                 message.nonce = 'silent'
                 await message.delete()
-                await channel.send(embed=module.createDiscordEmbed(
-                    info=':turtle: This channel has been slooooooowed doooown.' if oldSpeed <= speed else ':rabbit2: This channel has been sped up, but not completely.',
+                await channel.send(embed=module.create_discord_embed(
+                    info=':turtle: This channel has been slooooooowed doooown.' if old_speed <= speed else ':rabbit2: This channel has been sped up, but not completely.',
                     footer='You may only send a message every {} seconds.'.format(speed),
                     color=discord.Color.red()
                 ))
             module.slowmode = slowmode
-            Config.setModuleSetting('moderation', 'slowmode', slowmode)
+            Config.set_module_setting('moderation', 'slowmode', slowmode)
     class SlowmodeOffCMD(SlowmodeCMD):
         NAME = 'slowoff'
         RANK = 300
@@ -392,26 +392,26 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), message=message)
+            return await module.punish_user(user, reason=' '.join(args[1:]), message=message)
 
         @classmethod
-        async def getUserInPunishCMD(cls, client, message, *args):
+        async def get_user_in_punish_cmd(cls, client, message, *args):
             if not message.mentions:
                 if not message.raw_mentions:
                     try:
                         user = await client.get_user_info(int(args[0]))
                     except (ValueError, IndexError):
-                        return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                        return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), delete_in=5, prior_message=message)
                     except discord.NotFound:
-                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, args[0]), deleteIn=5, priorMessage=message)
+                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, args[0]), delete_in=5, prior_message=message)
                 else:
                     try:
                         user = await client.get_user_info(message.raw_mentions[0])
                     except discord.NotFound:
-                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)   
+                        return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), delete_in=5, prior_message=message)   
             else:
                 user = message.mentions[0]
             return user
@@ -422,10 +422,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), silent=True, message=message)
+            return await module.punish_user(user, reason=' '.join(args[1:]), silent=True, message=message)
 
     class MuteCMD(PunishCMD):
         NAME = 'mute'
@@ -433,7 +433,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             channel = None
             if user.__class__ == CommandResponse:
                 if message.channel_mentions:
@@ -444,50 +444,50 @@ class ModerationModule(Module):
                     response.message = '{} Please use a mention to refer to a user or channel.'.format(message.author.mention)
                     return response
             try:
-                getLongTime(args[1] if len(args) > 1 else '')
+                get_long_time(args[1] if len(args) > 1 else '')
                 length = args[1]
-                lengthText = None
+                length_text = None
                 reason = ' '.join(args[2:])
             except ValueError:
                 length = None
-                lengthText = None
+                length_text = None
                 reason = ' '.join(args[1:])
 
             if user:
-                return await module.punishUser(user, length=length, reason=reason, punishment=module.MUTE, message=message)
+                return await module.punish_user(user, length=length, reason=reason, punishment=module.MUTE, message=message)
             elif channel:
                 punishment = module.punishments.select(where=['user=?', channel.id], limit=1)
                 if punishment:
                     return CommandResponse(
                         message.channel,
                         "{} That channel is already muted.".format(message.author.mention),
-                        deleteIn=5,
-                        priorMessage=message
+                        delete_in=5,
+                        prior_message=message
                     )
                 if length:
-                    lengthText = getLongTime(length)
-                    length = getShortTimeLength(length)
+                    length_text = get_long_time(length)
+                    length = get_short_time_length(length)
                     if not 15 <= length <= 63113852:
                         return CommandResponse(
                             message.channel,
                             author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
-                            deleteIn=5,
-                            priorMessage=priorMessage
+                            delete_in=5,
+                            prior_message=prior_message
                         )
-                punishmentEntry = {
+                punishment_entry = {
                     'user': channel.id,
                     'type': module.MUTE,
                     'mod': message.author.id,
                     'created': time.time(),
                     'end_time': time.time() + length if length else None,
-                    'end_length': lengthText
+                    'end_length': length_text
                 }
-                module.punishments.insert(**punishmentEntry)
-                discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
-                await channel.set_permissions(discordModRole, send_messages=True)
-                await channel.set_permissions(client.rTTR.default_role, send_messages=False)
-                await channel.send(embed=module.createDiscordEmbed(info=':mute: This channel has been temporarily muted.', color=discord.Color.red()))
-                await module.scheduleUnmutes()
+                module.punishments.insert(**punishment_entry)
+                mod_role = discord.utils.get(client.focused_guild.roles, name='Moderators')
+                await channel.set_permissions(mod_role, send_messages=True)
+                await channel.set_permissions(client.focused_guild.default_role, send_messages=False)
+                await channel.send(embed=module.create_discord_embed(info=':mute: This channel has been temporarily muted.', color=discord.Color.red()))
+                await module.schedule_unmutes()
 
     class UnmuteCMD(Command):
         NAME = 'unmute'
@@ -505,23 +505,23 @@ class ModerationModule(Module):
                 return CommandResponse(
                     message.channel,
                     '{} Please use a mention to refer to a channel. If you meant to unmute a user, please use `~removePunishment`.'.format(message.author.mention),
-                    deleteIn=5,
-                    priorMessage=message
+                    delete_in=5,
+                    prior_message=message
                 )
 
             punishment = module.punishments.select(where=['user=?', channel.id], limit=1)
             if not punishment:
-                return CommandResponse(message.channel, "{} That channel isn't muted!".format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, "{} That channel isn't muted!".format(message.author.mention), delete_in=5, prior_message=message)
 
             module.punishments.delete(where=['id=?', punishment['id']])
-            await channel.set_permissions(client.rTTR.default_role, send_messages=True, reason='The channel was unmuted by a mod via ~unmute')
-            await channel.send(embed=module.createDiscordEmbed(
+            await channel.set_permissions(client.focused_guild.default_role, send_messages=True, reason='The channel was unmuted by a mod via ~unmute')
+            await channel.send(embed=module.create_discord_embed(
                 info=':loud_sound: This channel is now unmuted.',
                 footer='Please avoid flooding the channel and follow the rules set in #welcome.',
                 color=discord.Color.green()
             ))
-            if channel.id in module.scheduledUnmutes:
-                module.scheduledUnmutes.remove(channel.id)
+            if channel.id in module.scheduled_unmutes:
+                module.scheduled_unmutes.remove(channel.id)
 
     class NoteCMD(PunishCMD):
         NAME = 'note'
@@ -529,32 +529,32 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
 
-            member = client.rTTR.get_member(user.id)
+            member = client.focused_guild.get_member(user.id)
             reason = ' '.join(args[1:])
             if not reason:
                 return CommandResponse(
                     message.channel,
                     message.author.mention + ' ' + NOTE_FAILURE_CONTENT,
-                    deleteIn=5,
-                    priorMessage=message
+                    delete_in=5,
+                    prior_message=message
                 )
-            if user.bot and not module.allowBotPunishments:
+            if user.bot and not module.allow_bot_punishments:
                 return CommandResponse(
                     message.channel,
                     message.author.mention + ' ' + NOTE_FAILURE_BOT,
-                    deleteIn=5,
-                    priorMessage=message
+                    delete_in=5,
+                    prior_message=message
                 )
-            if Config.getRankOfMember(user) >= 300 and not module.allowModPunishments:
+            if Config.get_rank_of_member(user) >= 300 and not module.allow_mod_punishments:
                 return CommandResponse(
                     message.channel,
                     message.author.mention + ' ' + NOTE_FAILURE_MOD,
-                    deleteIn=5,
-                    priorMessage=message
+                    delete_in=5,
+                    prior_message=message
                 )
 
             i = module.notes.insert(
@@ -568,21 +568,21 @@ class ModerationModule(Module):
 
             # The user tracking module makes things prettier and consistent for displaying
             # information about users (embeds <3). We can fallback to text, though.
-            usertracking = module.client.requestModule('usertracking')
-            modLogEntry = None
-            if module.logChannel:
+            usertracking = module.client.request_module('usertracking')
+            mod_log_entry = None
+            if module.log_channel:
                 if not usertracking:
-                    modLogEntry = await client.send_message(module.logChannel, NOTE_LOG_ENTRY.format(
+                    mod_log_entry = await client.send_message(module.log_channel, NOTE_LOG_ENTRY.format(
                         str(user),
                         author.mention,
                         reason,
                         note['id']
                         )
                     )
-                    module.notes.update(where=['id=?', note['id']], log=modLogEntry.id)
+                    module.notes.update(where=['id=?', note['id']], log=mod_log_entry.id)
                 else:
-                    modLogEntry = await usertracking.on_member_note(user, note)
-            return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+                    mod_log_entry = await usertracking.on_member_note(user, note)
+            return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
 
     class WarnCMD(PunishCMD):
         NAME = 'warn'
@@ -590,10 +590,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
+            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
 
     class SilentWarnCMD(PunishCMD):
         NAME = 'silentWarn'
@@ -601,10 +601,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
+            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
 
     class KickCMD(PunishCMD):
         NAME = 'kick'
@@ -612,10 +612,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
+            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
 
     class SilentKickCMD(PunishCMD):
         NAME = 'silentKick'
@@ -623,10 +623,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
+            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
 
     class TmpBanCMD(PunishCMD):
         NAME = 'tb'
@@ -634,17 +634,17 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             try:
-                getLongTime(args[1] if len(args) > 1 else '')
+                get_long_time(args[1] if len(args) > 1 else '')
                 length = args[1]
                 reason = ' '.join(args[2:])
             except ValueError:
                 length = None
                 reason = ' '.join(args[1:])
-            return await module.punishUser(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
+            return await module.punish_user(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
 
     class SilentTmpBanCMD(PunishCMD):
         NAME = 'silentTB'
@@ -652,17 +652,17 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
             try:
-                getLongTime(args[1] if len(args) > 1 else '')
+                get_long_time(args[1] if len(args) > 1 else '')
                 length = args[1]
                 reason = ' '.join(args[2:])
             except ValueError:
                 length = None
                 reason = ' '.join(args[1:])
-            return await module.punishUser(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, silent=True, message=message)
+            return await module.punish_user(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, silent=True, message=message)
     class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
         NAME = 'silentTb'
     class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
@@ -674,10 +674,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, message=message)
+            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, message=message)
 
     class SilentPermBanCMD(PunishCMD):
         NAME = 'silentBan'
@@ -685,10 +685,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args)
             if user.__class__ == CommandResponse:
                 return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
+            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
 
     class EditPunishReasonCMD(Command):
         NAME = 'editReason'
@@ -699,41 +699,41 @@ class ModerationModule(Module):
             try:
                 int(args[0])
             except (ValueError, IndexError) as e:
-                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if not args[1:]:
-                return CommandResponse(message.channel, '{} A reason must be given.'.format(message.author.mention), deleteIn=5, priorMessage=message)
-            newReason = ' '.join(args[1:])
+                return CommandResponse(message.channel, '{} A reason must be given.'.format(message.author.mention), delete_in=5, prior_message=message)
+            new_reason = ' '.join(args[1:])
 
             punishment = module.punishments.select(where=['id=?', args[0]], limit=1)
             if not punishment:
-                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if punishment['log']:
-                logEntry = await client.get_channel(module.logChannel).get_message(punishment['log'])
-                if logEntry:
-                    editedMessage = logEntry.embeds[0].fields[0].value if logEntry.embeds else logEntry.content
-                    if str(punishment['mod']) not in editedMessage:
-                        editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(punishment['mod']), '**Mod:** <@!{}> (edited by <@!{}>)'.format(punishment['mod'], message.author.id))
+                log_entry = await client.get_channel(module.log_channel).get_message(punishment['log'])
+                if log_entry:
+                    edited_message = log_entry.embeds[0].fields[0].value if log_entry.embeds else log_entry.content
+                    if str(punishment['mod']) not in edited_message:
+                        edited_message = edited_message.replace('**Mod:** <@!{}>'.format(punishment['mod']), '**Mod:** <@!{}> (edited by <@!{}>)'.format(punishment['mod'], message.author.id))
                     if punishment['reason'] == NO_REASON:
-                        editedMessage = re.sub(NO_REASON_ENTRY_REGEX, newReason, editedMessage)
+                        edited_message = re.sub(NO_REASON_ENTRY_REGEX, new_reason, edited_message)
                     else:
-                        editedMessage = editedMessage.replace('**Reason:** ' + punishment['reason'], '**Reason:** ' + newReason)
-                    if logEntry.embeds:
-                        logEntry.embeds[0].set_field_at(0, name=logEntry.embeds[0].fields[0].name, value=editedMessage)
-                        await logEntry.edit(embed=logEntry.embeds[0])
+                        edited_message = edited_message.replace('**Reason:** ' + punishment['reason'], '**Reason:** ' + new_reason)
+                    if log_entry.embeds:
+                        log_entry.embeds[0].set_field_at(0, name=log_entry.embeds[0].fields[0].name, value=edited_message)
+                        await log_entry.edit(embed=log_entry.embeds[0])
                     else:
-                        await logEntry.edit(content=editedMessage)
+                        await log_entry.edit(content=edited_message)
             if punishment['notice']:
                 user = await client.get_user_info(punishment['user'])
                 if not user.dm_channel:
                     await user.create_dm()
                 notice = await user.dm_channel.get_message(punishment['notice'])
                 if notice:
-                    editedMessage = notice.content.replace('```' + punishment['reason'] + '```', '```' + newReason + '```')
-                    await notice.edit(content=editedMessage)
-            module.punishments.update(where=['id=?', args[0]], reason=newReason)
-            return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+                    edited_message = notice.content.replace('```' + punishment['reason'] + '```', '```' + new_reason + '```')
+                    await notice.edit(content=edited_message)
+            module.punishments.update(where=['id=?', args[0]], reason=new_reason)
+            return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
 
     class EditNoteReasonCMD(Command):
         NAME = 'editNote'
@@ -744,30 +744,30 @@ class ModerationModule(Module):
             try:
                 int(args[0])
             except (ValueError, IndexError) as e:
-                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if not args[1:]:
-                return CommandResponse(message.channel, '{} A reason must be given.'.format(message.author.mention), deleteIn=5, priorMessage=message)
-            newReason = ' '.join(args[1:])
+                return CommandResponse(message.channel, '{} A reason must be given.'.format(message.author.mention), delete_in=5, prior_message=message)
+            new_reason = ' '.join(args[1:])
 
             note = module.notes.select(where=['id=?', args[0]], limit=1)
             if not note:
-                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if note['log']:
-                logEntry = await client.get_channel(module.logChannel).get_message(note['log'])
-                if logEntry:
-                    editedMessage = logEntry.embeds[0].fields[0].value if logEntry.embeds else logEntry.content
-                    if str(note['mod']) not in editedMessage:
-                        editedMessage = editedMessage.replace('**Mod:** <@!{}>'.format(note['mod']), '**Mod:** <@!{}> (edited by <@!{}>)'.format(note['mod'], message.author.id))
-                    editedMessage = editedMessage.replace('\n\n' + note['content'], '\n\n' + newReason)
-                    if logEntry.embeds:
-                        logEntry.embeds[0].set_field_at(0, name=logEntry.embeds[0].fields[0].name, value=editedMessage)
-                        await logEntry.edit(embed=logEntry.embeds[0])
+                log_entry = await client.get_channel(module.log_channel).get_message(note['log'])
+                if log_entry:
+                    edited_message = log_entry.embeds[0].fields[0].value if log_entry.embeds else log_entry.content
+                    if str(note['mod']) not in edited_message:
+                        edited_message = edited_message.replace('**Mod:** <@!{}>'.format(note['mod']), '**Mod:** <@!{}> (edited by <@!{}>)'.format(note['mod'], message.author.id))
+                    edited_message = edited_message.replace('\n\n' + note['content'], '\n\n' + new_reason)
+                    if log_entry.embeds:
+                        log_entry.embeds[0].set_field_at(0, name=log_entry.embeds[0].fields[0].name, value=edited_message)
+                        await log_entry.edit(embed=log_entry.embeds[0])
                     else:
-                        await logEntry.edit(content=editedMessage)
-            module.notes.update(where=['id=?', args[0]], content=newReason)
-            return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+                        await log_entry.edit(content=edited_message)
+            module.notes.update(where=['id=?', args[0]], content=new_reason)
+            return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
 
     class RemovePunishmentCMD(Command):
         NAME = 'removePunishment'
@@ -778,16 +778,16 @@ class ModerationModule(Module):
             try:
                 int(args[0])
             except (ValueError, IndexError) as e:
-                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             punishment = module.punishments.select(where=['id=?', args[0]], limit=1)
             if not punishment:
-                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if punishment['log']:
-                logEntry = await client.get_channel(module.logChannel).get_message(punishment['log'])
-                if logEntry:
-                    await logEntry.delete()
+                log_entry = await client.get_channel(module.log_channel).get_message(punishment['log'])
+                if log_entry:
+                    await log_entry.delete()
             if punishment['notice']:
                 user = await client.get_user_info(punishment['user'])
                 if not user.dm_channel:
@@ -797,10 +797,10 @@ class ModerationModule(Module):
                     await notice.delete()
             module.punishments.delete(where=['id=?', args[0]])
 
-            usertracking = client.requestModule('usertracking')
+            usertracking = client.request_module('usertracking')
             await usertracking.on_member_unpunish(user, punishment)
 
-            return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+            return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
     class RevokePunishmentCMD(RemovePunishmentCMD):
         NAME = 'revokePunishment'
 
@@ -813,19 +813,19 @@ class ModerationModule(Module):
             try:
                 int(args[0])
             except (ValueError, IndexError) as e:
-                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} Please use a proper edit ID.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             note = module.notes.select(where=['id=?', args[0]], limit=1)
             if not note:
-                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), deleteIn=5, priorMessage=message)
+                return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if note['log']:
-                logEntry = await client.get_channel(module.logChannel).get_message(note['log'])
-                if logEntry:
-                    await logEntry.delete()
+                log_entry = await client.get_channel(module.log_channel).get_message(note['log'])
+                if log_entry:
+                    await log_entry.delete()
             module.notes.delete(where=['id=?', args[0]])
 
-            return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
+            return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
 
     class ViewBadWordsCMD(Command):
         NAME = 'viewBadWords'
@@ -833,13 +833,13 @@ class ModerationModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not hasattr(module, 'badWords'):
+            if not hasattr(module, 'bad_words'):
                 return "{} The bad word filter isn't turned on in the channel".format(message.author.mention)
-            blacklistLength = len(module.badWords)
-            words = sorted(module.badWords)
-            for i in range(int(blacklistLength / 100) + 1):
-                embed = module.createDiscordEmbed(
-                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
+            blacklist_length = len(module.bad_words)
+            words = sorted(module.bad_words)
+            for i in range(int(blacklist_length / 100) + 1):
+                embed = module.create_discord_embed(
+                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklist_length / 100) + 1), 
                     info='\n'.join(words[100 * i:100 * (i + 1)])
                 )
                 await client.send_message(message.channel, embed)
@@ -850,13 +850,13 @@ class ModerationModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not hasattr(module, 'badLinks'):
+            if not hasattr(module, 'bad_links'):
                 return "{} The bad link filter isn't turned on in the channel".format(message.author.mention)
-            blacklistLength = len(module.badLinks)
-            links = sorted(module.badLinks, key=lambda x: x.lstrip('htps:/*?[!]w.'))
-            for i in range(int(blacklistLength / 100) + 1):
-                embed = module.createDiscordEmbed(
-                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
+            blacklist_length = len(module.bad_links)
+            links = sorted(module.bad_links, key=lambda x: x.lstrip('htps:/*?[!]w.'))
+            for i in range(int(blacklist_length / 100) + 1):
+                embed = module.create_discord_embed(
+                    subtitle='Bad Words (Page {} of {})'.format(i + 1, int(blacklist_length / 100) + 1), 
                     info='\n'.join(['`' + str(l) + '`' for l in links[100 * i:100 * (i + 1)]])
                 )
                 await client.send_message(message.channel, embed)
@@ -867,13 +867,13 @@ class ModerationModule(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if not hasattr(module, 'badWords'):
+            if not hasattr(module, 'bad_words'):
                 return "{} The bad word filter isn't turned on in the channel".format(message.author.mention)
-            blacklistLength = len(module.badEmojis)
-            words = sorted(module.badEmojis)
-            for i in range(int(blacklistLength / 100) + 1):
-                embed = module.createDiscordEmbed(
-                    subtitle='Bad Emojis (Page {} of {})'.format(i + 1, int(blacklistLength / 100) + 1), 
+            blacklist_length = len(module.bad_emojis)
+            words = sorted(module.bad_emojis)
+            for i in range(int(blacklist_length / 100) + 1):
+                embed = module.create_discord_embed(
+                    subtitle='Bad Emojis (Page {} of {})'.format(i + 1, int(blacklist_length / 100) + 1), 
                     info='\n'.join(words[100 * i:100 * (i + 1)])
                 )
                 await client.send_message(message.channel, embed)
@@ -881,7 +881,7 @@ class ModerationModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.punishments = database.createSection(self, 'punishments', {
+        self.punishments = database.create_section(self, 'punishments', {
             'id': [database.INT, database.PRIMARY_KEY],
             'created': database.INT,
             'mod': database.INT,
@@ -893,7 +893,7 @@ class ModerationModule(Module):
             'reason': database.TEXT,
             'type': database.TEXT
         })
-        self.notes = database.createSection(self, 'notes', {
+        self.notes = database.create_section(self, 'notes', {
             'id': [database.INT, database.PRIMARY_KEY],
             'created': database.INT,
             'mod': database.INT,
@@ -901,115 +901,115 @@ class ModerationModule(Module):
             'log': database.INT,
             'content': database.TEXT
         })
-        self.muted = database.createSection(self, 'muted', {
+        self.muted = database.create_section(self, 'muted', {
             'id': [database.INT, database.PRIMARY_KEY],
             'mention_type': database.TEXT,
             'end_time': database.INT,
             'end_length': database.TEXT
         })
 
-        self.badWordFilterOn = Config.getModuleSetting('moderation', 'bad_word_filter', True)
-        self.badImageFilterOn = Config.getModuleSetting('moderation', 'bad_image_filter', True) and ClarifaiApp
-        self.badLinkFilterOn = Config.getModuleSetting('moderation', 'bad_link_filter', True)
-        self.spamChannel = Config.getModuleSetting('moderation', 'spam_channel')
-        self.logChannel = Config.getModuleSetting('moderation', 'log_channel')
-        self.filterBots = Config.getModuleSetting('moderation', 'filter_bots', False)
-        self.filterMods = Config.getModuleSetting('moderation', 'filter_mods', True)
-        self.allowBotPunishments = Config.getModuleSetting('moderation', 'allow_bot_punishments', False)
-        self.allowModPunishments = Config.getModuleSetting('moderation', 'allow_mod_punishments', False)
+        self.bad_word_filter_on = Config.get_module_setting('moderation', 'bad_word_filter', True)
+        self.bad_image_filter_on = Config.get_module_setting('moderation', 'bad_image_filter', True) and ClarifaiApp
+        self.bad_link_filter_on = Config.get_module_setting('moderation', 'bad_link_filter', True)
+        self.spam_channel = Config.get_module_setting('moderation', 'spam_channel')
+        self.log_channel = Config.get_module_setting('moderation', 'log_channel')
+        self.filter_bots = Config.get_module_setting('moderation', 'filter_bots', False)
+        self.filter_mods = Config.get_module_setting('moderation', 'filter_mods', True)
+        self.allow_bot_punishments = Config.get_module_setting('moderation', 'allow_bot_punishments', False)
+        self.allow_mod_punishments = Config.get_module_setting('moderation', 'allow_mod_punishments', False)
 
-        self.spamProtection = Config.getModuleSetting('moderation', 'spam_protection', False)
-        self.spamTracking = {}
-        self.floodProtection = Config.getModuleSetting('moderation', 'flood_protection', False)
-        self.floodTracking = {}
+        self.spam_protection = Config.get_module_setting('moderation', 'spam_protection', False)
+        self.spam_tracking = {}
+        self.flood_protection = Config.get_module_setting('moderation', 'flood_protection', False)
+        self.flood_tracking = {}
 
-        self.scheduledUnbans = []
-        self.scheduledUnmutes = []
-        self.mutedRole = discord.utils.get(self.client.rTTR.roles, name=Config.getModuleSetting('moderation', 'muted_role_name') or 'Muted')
-        asyncio.get_event_loop().create_task(self.scheduleUnbans())
-        asyncio.get_event_loop().create_task(self.scheduleUnmutes())
+        self.scheduled_unbans = []
+        self.scheduled_unmutes = []
+        self.muted_role = discord.utils.get(self.client.focused_guild.roles, name=Config.get_module_setting('moderation', 'muted_role_name') or 'Muted')
+        asyncio.get_event_loop().create_task(self.schedule_unbans())
+        asyncio.get_event_loop().create_task(self.schedule_unmutes())
 
-        self.slowmode = Config.getModuleSetting('moderation', 'slowmode', {})
+        self.slowmode = Config.get_module_setting('moderation', 'slowmode', {})
 
-        if self.badWordFilterOn:
-            self.badWords = [word.lower() for word in Config.getModuleSetting('moderation', 'bad_words', [])]
-            self.badEmojis = Config.getModuleSetting('moderation', 'bad_emojis', [])
-            self.filterExceptions = Config.getModuleSetting('moderation', 'filter_exceptions', [])
-            self.pluralExceptions = Config.getModuleSetting('moderation', 'plural_exceptions', [])
-            self.wordExceptions = Config.getModuleSetting('moderation', 'word_exceptions', [])
-        if self.badLinkFilterOn:
-            self.badLinks = [link.lower() for link in Config.getModuleSetting('moderation', 'bad_links', [])]
-            self.linkExceptions = Config.getModuleSetting('moderation', 'link_exceptions', [])
+        if self.bad_word_filter_on:
+            self.bad_words = [word.lower() for word in Config.get_module_setting('moderation', 'bad_words', [])]
+            self.bad_emojis = Config.get_module_setting('moderation', 'bad_emojis', [])
+            self.filter_exceptions = Config.get_module_setting('moderation', 'filter_exceptions', [])
+            self.plural_exceptions = Config.get_module_setting('moderation', 'plural_exceptions', [])
+            self.word_exceptions = Config.get_module_setting('moderation', 'word_exceptions', [])
+        if self.bad_link_filter_on:
+            self.bad_links = [link.lower() for link in Config.get_module_setting('moderation', 'bad_links', [])]
+            self.link_exceptions = Config.get_module_setting('moderation', 'link_exceptions', [])
 
-        if self.badImageFilterOn:
-            gifKey = Config.getModuleSetting('moderation', 'clarifai_mod_key')
-            if not gifKey:
+        if self.bad_image_filter_on:
+            gif_key = Config.get_module_setting('moderation', 'clarifai_mod_key')
+            if not gif_key:
                 raise ValueError('Clarifai API Key could not be found ["clarifai_mod_key" in config.json]')
-            self.imageFilterApp = ClarifaiApp(api_key=gifKey)
-            self.generalImageFilter = self.imageFilterApp.models.get('moderation')
-            self.nsfwImageFilter = self.imageFilterApp.models.get('nsfw-v1.0')
+            self.image_filter_app = ClarifaiApp(api_key=gif_key)
+            self.general_image_filter = self.image_filter_app.models.get('moderation')
+            self.nsfw_image_filter = self.image_filter_app.models.get('nsfw-v1.0')
 
-    async def punishUser(self, user, punishment=None, length=None, reason=NO_REASON, silent=False, message=None, snowflake=None):
-        member = self.client.rTTR.get_member(user.id)
+    async def punish_user(self, user, punishment=None, length=None, reason=NO_REASON, silent=False, message=None, snowflake=None):
+        member = self.client.focused_guild.get_member(user.id)
 
         if message:
             channel = message.channel
             author = message.author
             feedback = message.author.mention
-            priorMessage = message
+            prior_message = message
             snowflake = message.id
             message.nonce = 'silent'
             await message.delete()
         else:
-            channel = self.logChannel
-            author = self.client.rTTR.me
-            feedback = self.logChannel
-            priorMessage = None
+            channel = self.log_channel
+            author = self.client.focused_guild.me
+            feedback = self.log_channel
+            prior_message = None
             snowflake = snowflake
 
-        if user.bot and not self.allowBotPunishments:
+        if user.bot and not self.allow_bot_punishments:
             return CommandResponse(
                 channel,
                 author.mention + ' ' + PUNISH_FAILURE_BOT,
-                deleteIn=5,
-                priorMessage=priorMessage
+                delete_in=5,
+                prior_message=prior_message
             )
-        if Config.getRankOfMember(user) >= 300 and not self.allowModPunishments:
+        if Config.get_rank_of_member(user) >= 300 and not self.allow_mod_punishments:
             return CommandResponse(
                 channel,
                 author.mention + ' ' + PUNISH_FAILURE_MOD,
-                deleteIn=5,
-                priorMessage=priorMessage
+                delete_in=5,
+                prior_message=prior_message
             )
 
         # If a specific punishment isn't provided, use the next level of punishment
         # above the highest level of punishment they've already received.
         if not punishment:
-            punishmentScale = [None, self.WARNING, self.KICK, self.TEMPORARY_BAN, self.PERMANENT_BAN]
-            highestPunishment = None
-            highestPunishmentJSON = None
+            punishment_scale = [None, self.WARNING, self.KICK, self.TEMPORARY_BAN, self.PERMANENT_BAN]
+            highest_punishment = None
+            highest_punishment_json = None
 
             punishments = self.punishments.select('type', where=['user=?', user.id])
             for punishment in punishments:
-                if punishment['type'] in punishmentScale and punishmentScale.index(punishment['type']) > punishmentScale.index(highestPunishment):
-                    highestPunishment = punishment['type']
-                    highestPunishmentJSON = punishment
+                if punishment['type'] in punishment_scale and punishment_scale.index(punishment['type']) > punishment_scale.index(highest_punishment):
+                    highest_punishment = punishment['type']
+                    highest_punishment_json = punishment
             try:
-                nextPunishment = punishmentScale[punishmentScale.index(highestPunishment) + 1]
+                next_punishment = punishment_scale[punishment_scale.index(highest_punishment) + 1]
             except IndexError:
-                nextPunishment = punishmentScale[-1]
+                next_punishment = punishment_scale[-1]
         # Otherwise, just go along with the specific punishment.
         else:
-            nextPunishment = punishment
+            next_punishment = punishment
 
         # There's no real need to warn users who aren't on the server,
         # nor can we kick them if they aren't on the server. Can't mute 'em either.
-        if not member and nextPunishment in (self.WARNING, self.KICK, self.MUTE):
+        if not member and next_punishment in (self.WARNING, self.KICK, self.MUTE):
             return CommandResponse(
                 channel, 
                 author.mention + ' ' + PUNISH_FAILURE_NONMEMBER,
-                deleteIn=5,
-                priorMessage=priorMessage
+                delete_in=5,
+                prior_message=prior_message
             )
 
         # In case the reason provided by a command returns an empty string,
@@ -1018,311 +1018,311 @@ class ModerationModule(Module):
             reason = NO_REASON
 
         if length:
-            lengthText = getLongTime(length)
-            length = getShortTimeLength(length)
-            nextPunishment = self.TEMPORARY_BAN if nextPunishment not in (self.TEMPORARY_BAN, self.MUTE) else nextPunishment
+            length_text = get_long_time(length)
+            length = get_short_time_length(length)
+            next_punishment = self.TEMPORARY_BAN if next_punishment not in (self.TEMPORARY_BAN, self.MUTE) else next_punishment
             if not 15 <= length <= 63113852:
                 return CommandResponse(
                     channel,
                     author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
-                    deleteIn=5,
-                    priorMessage=priorMessage
+                    delete_in=5,
+                    prior_message=prior_message
                 )
         else:
             try:
-                length = getShortTimeLength(reason.split(' ')[0])
-                lengthText = getLongTime(reason.split(' ')[0])
-                nextPunishment = self.TEMPORARY_BAN if nextPunishment not in (self.TEMPORARY_BAN, self.MUTE) else nextPunishment
+                length = get_short_time_length(reason.split(' ')[0])
+                length_text = get_long_time(reason.split(' ')[0])
+                next_punishment = self.TEMPORARY_BAN if next_punishment not in (self.TEMPORARY_BAN, self.MUTE) else next_punishment
                 if not 15 <= length <= 63113852:
                     return CommandResponse(
                         channel,
                         author.mention + ' ' + PUNISH_FAILURE_TIMEFRAME,
-                        deleteIn=5,
-                        priorMessage=priorMessage
+                        delete_in=5,
+                        prior_message=prior_message
                     )
             except ValueError:
-                if nextPunishment == self.MUTE:
+                if next_punishment == self.MUTE:
                     length = 3600
-                    lengthText = '1 hour'
+                    length_text = '1 hour'
                 else:
                     length = 86400
-                    lengthText = '24 hours'
+                    length_text = '24 hours'
 
         # The user tracking module makes things prettier and consistent for displaying
         # information about users (embeds <3). We can fallback to text, though.
-        usertracking = self.client.requestModule('usertracking')
-        modLogEntry = None
-        if self.logChannel:
+        usertracking = self.client.request_module('usertracking')
+        mod_log_entry = None
+        if self.log_channel:
             if not usertracking:
-                modLogEntry = await self.client.send_message(self.logChannel, MOD_LOG_ENTRY.format(
+                mod_log_entry = await self.client.send_message(self.log_channel, MOD_LOG_ENTRY.format(
                     str(user),
                     author.mention,
-                    nextPunishment + (' ({})'.format(lengthText) if lengthText else ''),
-                    NO_REASON_ENTRY.format(self.client.commandPrefix, snowflake) if reason == NO_REASON else reason,
+                    next_punishment + (' ({})'.format(length_text) if length_text else ''),
+                    NO_REASON_ENTRY.format(self.client.command_prefix, snowflake) if reason == NO_REASON else reason,
                     snowflake
                     )
                 )
 
-        punishmentEntry = {
+        punishment_entry = {
             'user': user.id,
-            'type': nextPunishment,
+            'type': next_punishment,
             'mod': author.id,
             'reason': reason,
-            'log': modLogEntry.id if modLogEntry else None,
+            'log': mod_log_entry.id if mod_log_entry else None,
             'created': time.time(),
             'notice': None,
             'end_time': None,
             'end_length': None
         }
-        if nextPunishment == self.WARNING:
-            punishMessage = WARNING_MESSAGE.format(user.mention, reason)
-            messageFailed = WARNING_MESSAGE_FAILURE
-            punishAction = None
-            actionFailure = None
-        elif nextPunishment == self.KICK:
-            punishMessage = KICK_MESSAGE.format(user.mention, self.client.rTTR.name, reason)
-            messageFailed = KICK_MESSAGE_FAILURE
-            punishAction = self.client.rTTR.kick
-            actionFailure = KICK_FAILURE
-        elif nextPunishment == self.TEMPORARY_BAN:
-            punishmentEntry['end_time'] = time.time() + length
-            punishmentEntry['end_length'] = lengthText
-            punishMessage = TEMPORARY_BAN_MESSAGE.format(user.mention, self.client.rTTR.name, lengthText, reason)
-            messageFailed = TEMPORARY_BAN_MESSAGE_FAILURE
-            punishAction = self.client.rTTR.ban
-            actionFailure = BAN_FAILURE
-        elif nextPunishment == self.PERMANENT_BAN:
-            punishMessage = PERMANENT_BAN_MESSAGE.format(user.mention, self.client.rTTR.name, reason)
-            messageFailed = PERMANENT_BAN_MESSAGE_FAILURE
-            punishAction = self.client.rTTR.ban
-            actionFailure = BAN_FAILURE
-        elif nextPunishment == self.MUTE:
-            punishmentEntry['end_time'] = time.time() + length
-            punishmentEntry['end_length'] = lengthText
-            punishMessage = MUTE_MESSAGE.format(user.mention, self.client.rTTR.name, lengthText, reason)
-            messageFailed = MUTE_MESSAGE_FAILURE
-            punishAction = None
-            actionFailure = None
+        if next_punishment == self.WARNING:
+            punish_message = WARNING_MESSAGE.format(user.mention, reason)
+            message_failed = WARNING_MESSAGE_FAILURE
+            punish_action = None
+            action_failure = None
+        elif next_punishment == self.KICK:
+            punish_message = KICK_MESSAGE.format(user.mention, self.client.focused_guild.name, reason)
+            message_failed = KICK_MESSAGE_FAILURE
+            punish_action = self.client.focused_guild.kick
+            action_failure = KICK_FAILURE
+        elif next_punishment == self.TEMPORARY_BAN:
+            punishment_entry['end_time'] = time.time() + length
+            punishment_entry['end_length'] = length_text
+            punish_message = TEMPORARY_BAN_MESSAGE.format(user.mention, self.client.focused_guild.name, length_text, reason)
+            message_failed = TEMPORARY_BAN_MESSAGE_FAILURE
+            punish_action = self.client.focused_guild.ban
+            action_failure = BAN_FAILURE
+        elif next_punishment == self.PERMANENT_BAN:
+            punish_message = PERMANENT_BAN_MESSAGE.format(user.mention, self.client.focused_guild.name, reason)
+            message_failed = PERMANENT_BAN_MESSAGE_FAILURE
+            punish_action = self.client.focused_guild.ban
+            action_failure = BAN_FAILURE
+        elif next_punishment == self.MUTE:
+            punishment_entry['end_time'] = time.time() + length
+            punishment_entry['end_length'] = length_text
+            punish_message = MUTE_MESSAGE.format(user.mention, self.client.focused_guild.name, length_text, reason)
+            message_failed = MUTE_MESSAGE_FAILURE
+            punish_action = None
+            action_failure = None
 
-        if not silent and punishMessage:
+        if not silent and punish_message:
             try:
-                notice = await self.client.send_message(user, punishMessage)
-                punishmentEntry['notice'] = notice.id
+                notice = await self.client.send_message(user, punish_message)
+                punishment_entry['notice'] = notice.id
             except Exception as e:
-                await self.client.send_message(author, messageFailed)
-                print('Could not send {} notification message to {}'.format(nextPunishment.lower(), user.id))
+                await self.client.send_message(author, message_failed)
+                print('Could not send {} notification message to {}'.format(next_punishment.lower(), user.id))
         try:
-            punishmentEntry['id'] = self.punishments.insert(**punishmentEntry)
-            if punishAction:
-                await punishAction(user, reason=str(punishmentEntry['id']))
-            elif nextPunishment == self.WARNING:  # Can't do everything cleanly :(
-                await usertracking.on_member_warn(user, punishmentEntry)
-            elif nextPunishment == self.MUTE:
-                if not self.mutedRole:
+            punishment_entry['id'] = self.punishments.insert(**punishment_entry)
+            if punish_action:
+                await punish_action(user, reason=str(punishment_entry['id']))
+            elif next_punishment == self.WARNING:  # Can't do everything cleanly :(
+                await usertracking.on_member_warn(user, punishment_entry)
+            elif next_punishment == self.MUTE:
+                if not self.muted_role:
                     raise ValueError
-                await user.add_roles(self.mutedRole, reason=str(punishmentEntry['id']))
+                await user.add_roles(self.muted_role, reason=str(punishment_entry['id']))
         except (discord.HTTPException, ValueError):
-            await self.client.send_message(author, actionFailure if actionFailure else 'The {} failed.'.format(nextPunishment.lower()))
+            await self.client.send_message(author, action_failure if action_failure else 'The {} failed.'.format(next_punishment.lower()))
 
-        await self.scheduleUnbans()
-        await self.scheduleUnmutes()
+        await self.schedule_unbans()
+        await self.schedule_unmutes()
 
-    async def scheduleUnbans(self):
+    async def schedule_unbans(self):
         punishments = self.punishments.select(where=['type=?', self.TEMPORARY_BAN])
         for punishment in punishments:
-            if punishment['user'] in self.scheduledUnbans or punishment['end_time'] <= time.time():
+            if punishment['user'] in self.scheduled_unbans or punishment['end_time'] <= time.time():
                 continue  # Don't schedule an unban for someone already scheduled for one, or if the ban hasn't expired.
-            permaBanned = self.punishments.select(where=['user=? AND type=?', punishment['user'], self.PERMANENT_BAN], limit=1)
-            if permaBanned:
+            perma_banned = self.punishments.select(where=['user=? AND type=?', punishment['user'], self.PERMANENT_BAN], limit=1)
+            if perma_banned:
                 continue  # Don't schedule an unban for someone who was since permanently banned.
-            self.scheduledUnbans.append(punishment['user'])
-            await self.scheduledUnban(punishment['user'], punishment['end_time'])
+            self.scheduled_unbans.append(punishment['user'])
+            await self.scheduled_unban(punishment['user'], punishment['end_time'])
 
-    async def scheduledUnban(self, userID, endTime=None):
-        user = await self.client.get_user_info(userID)
-        if endTime:
-            await asyncio.sleep(endTime - time.time())
-        await self.client.rTTR.unban(user, reason='The user\'s temporary ban expired.')
-        self.scheduledUnbans.remove(userID)
+    async def scheduled_unban(self, user_id, end_time=None):
+        user = await self.client.get_user_info(user_id)
+        if end_time:
+            await asyncio.sleep(end_time - time.time())
+        await self.client.focused_guild.unban(user, reason='The user\'s temporary ban expired.')
+        self.scheduled_unbans.remove(user_id)
 
-    async def scheduleUnmutes(self):
+    async def schedule_unmutes(self):
         punishments = self.punishments.select(where=['type=?', self.MUTE])
         for punishment in punishments:
-            if punishment['user'] in self.scheduledUnmutes or not punishment['end_time'] or punishment['end_time'] <= time.time():
+            if punishment['user'] in self.scheduled_unmutes or not punishment['end_time'] or punishment['end_time'] <= time.time():
                 continue  # Don't schedule an unmute for someone already scheduled for one, or if the mute hasn't or won't expire(d).
-            self.scheduledUnmutes.append(punishment['user'])
-            await self.scheduledUnmute(punishment['user'], punishment['end_time'])
+            self.scheduled_unmutes.append(punishment['user'])
+            await self.scheduled_unmute(punishment['user'], punishment['end_time'])
 
-    async def scheduledUnmute(self, id, endTime=None):
-        user = self.client.rTTR.get_member(id)
-        channel = self.client.rTTR.get_channel(id)
-        if endTime:
-            await asyncio.sleep(endTime - time.time())
-        if id not in self.scheduledUnmutes:  # The channel was prematurely unmuted.
+    async def scheduled_unmute(self, id, end_time=None):
+        user = self.client.focused_guild.get_member(id)
+        channel = self.client.focused_guild.get_channel(id)
+        if end_time:
+            await asyncio.sleep(end_time - time.time())
+        if id not in self.scheduled_unmutes:  # The channel was prematurely unmuted.
             return
         if user:
-            await user.remove_roles(self.mutedRole, reason='The user\'s mute expired.')
+            await user.remove_roles(self.muted_role, reason='The user\'s mute expired.')
         elif channel:
-            await channel.set_permissions(self.client.rTTR.default_role, send_messages=True, reason='The channel\'s mute expired.')
-            await channel.send(embed=self.createDiscordEmbed(
+            await channel.set_permissions(self.client.focused_guild.default_role, send_messages=True, reason='The channel\'s mute expired.')
+            await channel.send(embed=self.create_discord_embed(
                 info=':loud_sound: This channel is now unmuted.',
                 footer='Please avoid flooding the channel and follow the rules set in #welcome.',
                 color=discord.Color.green()
             ))
             self.punishments.delete(where=['user=?', channel.id])
-        self.scheduledUnmutes.remove(id)
+        self.scheduled_unmutes.remove(id)
 
-    async def scheduleUnmuteFromSlowmode(self, channel, member, seconds):
+    async def schedule_unmute_from_slowmode(self, channel, member, seconds):
         for _ in range(seconds):
             await asyncio.sleep(1)
             if str(channel.id) not in self.slowmode:
                 break
         await channel.set_permissions(member, overwrite=None, reason='Slowmode expired')
 
-    def _testForBadWord(self, evadedWord):
+    def _testForBadWord(self, evaded_word):
         # Tests for a bad word against the provided word.
         # Runs through the config list after taking out unicode and non-alphabetic characters.
-        response = {'word': None, 'evadedWord': evadedWord}
+        response = {'word': None, 'evaded_word': evaded_word}
 
-        word = evadedWord.translate(FILTER_EVASION_CHAR_MAP).lower()
-        if word in self.wordExceptions:  # For example, "he'll" or "who're"
+        word = evaded_word.translate(FILTER_EVASION_CHAR_MAP).lower()
+        if word in self.word_exceptions:  # For example, "he'll" or "who're"
             return response
 
         word = re.sub(r'\W+', '', word)
-        wordNoPlural = word.rstrip('s').rstrip('e')
-        if word in self.badWords or (wordNoPlural in self.badWords and word not in self.pluralExceptions):
+        word_no_plural = word.rstrip('s').rstrip('e')
+        if word in self.bad_words or (word_no_plural in self.bad_words and word not in self.plural_exceptions):
             response['word'] = word
         return response
 
-    def _testForBadPhrase(self, evadedText):
+    def _testForBadPhrase(self, evaded_text):
         # This tests the text for bad phrases.
         # Bad phrases are essentially bad words with spaces in them.
-        response = {'word': None, 'evadedWord': None}
+        response = {'word': None, 'evaded_word': None}
 
-        evadedText = evadedText.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
-        text = evadedText.translate(FILTER_EVASION_CHAR_MAP).lower()
-        for phrase in filter(lambda word: ' ' in word, self.badWords):
+        evaded_text = evaded_text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+        text = evaded_text.translate(FILTER_EVASION_CHAR_MAP).lower()
+        for phrase in filter(lambda word: ' ' in word, self.bad_words):
             phrase = phrase.lower()  # Sanity check, you never know if a mod'll add caps to a bad word entry.
-            phraseNoPlural = phrase.rstrip('s').rstrip('e')
-            if phraseNoPlural in self.pluralExceptions:
-                phraseNoPlural = '~-=PLACEHOLDER=-~'
-            if (phrase == text or phraseNoPlural == text                                    # If the message is literally the phrase.
-              or text.startswith(phrase + ' ') or text.startswith(phraseNoPlural + ' ')     # If the message starts with the phrase.
-              or text.endswith(' ' + phrase) or text.endswith(' ' + phraseNoPlural)         # If the message ends in the phrase.
-              or ' ' + phrase + ' ' in text or ' ' + phraseNoPlural + ' ' in text):         # If the message contains the phrase.
-                textIndex = text.find(phrase)
-                if textIndex == -1: textIndex = text.find(phraseNoPlural)
+            phrase_no_plural = phrase.rstrip('s').rstrip('e')
+            if phrase_no_plural in self.plural_exceptions:
+                phrase_no_plural = '~-=PLACEHOLDER=-~'
+            if (phrase == text or phrase_no_plural == text                                    # If the message is literally the phrase.
+              or text.startswith(phrase + ' ') or text.startswith(phrase_no_plural + ' ')     # If the message starts with the phrase.
+              or text.endswith(' ' + phrase) or text.endswith(' ' + phrase_no_plural)         # If the message ends in the phrase.
+              or ' ' + phrase + ' ' in text or ' ' + phrase_no_plural + ' ' in text):         # If the message contains the phrase.
+                text_index = text.find(phrase)
+                if text_index == -1: text_index = text.find(phrase_no_plural)
                 response['word'] = phrase
-                response['evadedWord'] = evadedText[textIndex:textIndex + len(phrase)]
+                response['evaded_word'] = evaded_text[text_index:text_index + len(phrase)]
         return response
 
-    def _testForBadWhole(self, evadedText):
+    def _testForBadWhole(self, evaded_text):
         # This smooshes the whole message together (no spaces) and tests if it matches a bad word.
-        text = evadedText.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
-        return self._testForBadWord(evadedText)
+        text = evaded_text.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
+        return self._testForBadWord(evaded_text)
 
-    def _testForBadEmoji(self, evadedText):
+    def _testForBadEmoji(self, evaded_text):
         # A simple check, naturally.
-        response = {'word': None, 'evadedWord': None}
+        response = {'word': None, 'evaded_word': None}
 
-        evadedText = evadedText.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
-        for emoji in self.badEmojis:
-            if emoji in evadedText:
+        evaded_text = evaded_text.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
+        for emoji in self.bad_emojis:
+            if emoji in evaded_text:
                 response['word'] = emoji
-                response['evadedWord'] = emoji
+                response['evaded_word'] = emoji
         return response
 
-    async def _filterBadWords(self, message, evadedText, edited=' ', silentFilter=False, embed=None):
+    async def _filter_bad_words(self, message, evaded_text, edited=' ', silent_filter=False, embed=None):
         response = {}
-        for word in evadedText.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').split(' '):
-            wordResponse = self._testForBadWord(word)
-            if wordResponse['word']:
-                response = wordResponse
-        phraseResponse = self._testForBadPhrase(evadedText)
-        if not response and phraseResponse['word']:
-            response = phraseResponse
-        wholeResponse = self._testForBadWhole(evadedText)
-        if not response and wholeResponse['word']:
-            response = wholeResponse
-        emojiResponse = self._testForBadEmoji(evadedText)
-        if not response and emojiResponse['word']:
-            response = emojiResponse
+        for word in evaded_text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').split(' '):
+            word_response = self._testForBadWord(word)
+            if word_response['word']:
+                response = word_response
+        phrase_response = self._testForBadPhrase(evaded_text)
+        if not response and phrase_response['word']:
+            response = phrase_response
+        whole_response = self._testForBadWhole(evaded_text)
+        if not response and whole_response['word']:
+            response = whole_response
+        emoji_response = self._testForBadEmoji(evaded_text)
+        if not response and emoji_response['word']:
+            response = emoji_response
         if not response:
             return False
 
         await self.client.delete_message(message)
-        if self.spamChannel:
+        if self.spam_channel:
             message.nonce = 'filter'  # We're taking this variable because discord.py said it was nonimportant and it won't let me add any more custom attributes.
-            usertracking = self.client.requestModule('usertracking')
+            usertracking = self.client.request_module('usertracking')
             if usertracking:
-                await usertracking.on_message_filter(message, word=response['evadedWord'], text=evadedText, embed=embed)
+                await usertracking.on_message_filter(message, word=response['evaded_word'], text=evaded_text, embed=embed)
             else:
-                wordFilterFormat = WORD_FILTER_EMBED_ENTRY if embed else WORD_FILTER_ENTRY
-                await self.client.send_message(self.spamChannel, wordFilterFormat.format(
+                word_filter_format = WORD_FILTER_EMBED_ENTRY if embed else WORD_FILTER_ENTRY
+                await self.client.send_message(self.spam_channel, word_filter_format.format(
                     edited,
                     message.author.mention,
                     message.channel.mention,
-                    message.content.replace(response['evadedWord'], '**' + response['evadedWord'] + '**'),
+                    message.content.replace(response['evaded_word'], '**' + response['evaded_word'] + '**'),
                     embed,
-                    '**' + response['evadedWord'] + '**' if embed else ''
+                    '**' + response['evaded_word'] + '**' if embed else ''
                 ))
         try:
-            if silentFilter:
+            if silent_filter:
                 return True
             await self.client.send_message(message.author, WORD_FILTER_MESSAGE.format(message.author.mention, response['word']))
         except discord.HTTPException:
             print('Tried to send bad word filter notification message to a user, but Discord threw an HTTP Error:\n\n{}'.format(format_exc()))
         return True
 
-    async def filterBadWords(self, message, edited=' ', silentFilter=False):
-        if await self._filterBadWords(message, message.content, edited, silentFilter):
+    async def filter_bad_words(self, message, edited=' ', silent_filter=False):
+        if await self._filter_bad_words(message, message.content, edited, silent_filter):
             return True
         for embed in message.embeds:
             for attr in [(embed.title, 'title'), (embed.description, 'description'), (embed.footer, 'footer'), (embed.author, 'author')]:
                 if type(attr[0]) != str:
                     continue
-                if await self._filterBadWords(message, attr[0], edited, silentFilter, embed=attr[1]):
+                if await self._filter_bad_words(message, attr[0], edited, silent_filter, embed=attr[1]):
                     return True
             for field in embed.fields:
                 for fieldattr in [(field.name, 'field name'), (field.value, 'field value')]:
                     if type(fieldattr[0]) != str:
                         continue
-                    if await self._filterBadWords(message, fieldattr[0], edited, silentFilter, embed=fieldattr[1]):
+                    if await self._filter_bad_words(message, fieldattr[0], edited, silent_filter, embed=fieldattr[1]):
                         return True
         return False
 
-    async def filterBadLinks(self, message, edited=' ', silentFilter=False):
+    async def filter_bad_links(self, message, edited=' ', silent_filter=False):
         response = None
 
         text = message.content.translate(FILTER_EVASION_CHAR_MAP).lower().replace(' ', '')
-        for link in self.badLinks:
-            if fnmatch.fnmatch(text, '*' + link + '*') and not any([linkException in text for linkException in self.linkExceptions]):
+        for link in self.bad_links:
+            if fnmatch.fnmatch(text, '*' + link + '*') and not any([link_exception in text for link_exception in self.link_exceptions]):
                 response = link
         if not response:
             return False
 
         await self.client.delete_message(message)
-        if self.spamChannel:
+        if self.spam_channel:
             message.nonce = 'filter'  # We're taking this variable because discord.py said it was nonimportant and it won't let me add any more custom attributes.
-            usertracking = self.client.requestModule('usertracking')
+            usertracking = self.client.request_module('usertracking')
             if usertracking:
                 await usertracking.on_message_filter(message, link=True)
             else:
-                await self.client.send_message(self.spamChannel, LINK_FILTER_ENTRY.format(
+                await self.client.send_message(self.spam_channel, LINK_FILTER_ENTRY.format(
                     edited,
                     message.author.mention,
                     message.channel.mention,
                     message.content
                 ))
         try:
-            if silentFilter:
+            if silent_filter:
                 return True
             await self.client.send_message(message.author, LINK_FILTER_MESSAGE.format(message.author.mention))
         except discord.HTTPException:
             print('Tried to send bad link filter notification message to a user, but Discord threw an HTTP Error:\n\n{}'.format(format_exc()))
         return True
 
-    async def filterBadImages(self, message):
+    async def filter_bad_images(self, message):
         # Refreshes embed info from the API.
         try:
             message = await message.channel.get_message(message.id)
@@ -1334,15 +1334,15 @@ class ModerationModule(Module):
 
         for embed in message.embeds:
             if embed.type in ['image', 'gif', 'gifv']:
-                rating = self.runImageFilter(embed.thumbnail.url, gif=True if embed.type in ['gif', 'gifv'] or embed.url.endswith('gif') else False)
-                await self.determineImageRatingAction(message, rating, embed.url)
+                rating = self.run_image_filter(embed.thumbnail.url, gif=True if embed.type in ['gif', 'gifv'] or embed.url.endswith('gif') else False)
+                await self.determine_image_rating_action(message, rating, embed.url)
 
         for attachment in message.attachments:
             if any([attachment.filename.endswith(extension) for extension in ('.jpg', '.png', '.gif', '.bmp')]):
-                rating = self.runImageFilter(attachment.url, gif=True if attachment.filename.endswith('.gif') or attachment.filename.endswith('.gifv') else False)
-                await self.determineImageRatingAction(message, rating, attachment.url)
+                rating = self.run_image_filter(attachment.url, gif=True if attachment.filename.endswith('.gif') or attachment.filename.endswith('.gifv') else False)
+                await self.determine_image_rating_action(message, rating, attachment.url)
 
-    def runImageFilter(self, url, gif=False):
+    def run_image_filter(self, url, gif=False):
         # The image content is based on a scale from 0-2.
         #
         # 0  .2  .4  .6  .8   1   1.2  1.4  1.6  1.8  2
@@ -1361,46 +1361,46 @@ class ModerationModule(Module):
         rating = 0
 
         image = Video(url=url) if gif else Image(url=url)
-        generalFilterResponse = self.generalImageFilter.predict([image])
-        nsfwFilterResponse = self.nsfwImageFilter.predict([image])
+        general_filter_response = self.general_image_filter.predict([image])
+        nsfw_filter_response = self.nsfw_image_filter.predict([image])
 
         if gif:
             ratings = []
             i = 0
-            for frame in generalFilterResponse['outputs'][0]['data']['frames']:
-                nframe = nsfwFilterResponse['outputs'][0]['data']['frames'][i]
-                ratings.append(self.getImageRating(frame['data']['concepts'], nframe['data']['concepts']))
+            for frame in general_filter_response['outputs'][0]['data']['frames']:
+                nframe = nsfw_filter_response['outputs'][0]['data']['frames'][i]
+                ratings.append(self.get_image_rating(frame['data']['concepts'], nframe['data']['concepts']))
                 i += 1
             return max(ratings)
         else:
-            return self.getImageRating(generalFilterResponse['outputs'][0]['data']['concepts'], nsfwFilterResponse['outputs'][0]['data']['concepts'])
+            return self.get_image_rating(general_filter_response['outputs'][0]['data']['concepts'], nsfw_filter_response['outputs'][0]['data']['concepts'])
 
-        for concept in generalFilterResponse['outputs'][0]['data']['concepts']:
+        for concept in general_filter_response['outputs'][0]['data']['concepts']:
             if concept['name'] == 'explicit':
                 rating += concept['value']
             elif concept['name'] in ['suggestive', 'drug', 'gore']:
                 rating += concept['value'] / 2
-        for concept in nsfwFilterResponse['outputs'][0]['data']['concepts']:
+        for concept in nsfw_filter_response['outputs'][0]['data']['concepts']:
             if concept['name'] == 'nsfw':
                 rating += concept['value']
 
         return rating
 
-    def getImageRating(self, generalConcepts, nsfwConcepts):
+    def get_image_rating(self, general_concepts, nsfw_concepts):
         rating = 0
-        for concept in generalConcepts:
+        for concept in general_concepts:
             if concept['name'] == 'explicit':
                 rating += concept['value']
             elif concept['name'] in ['suggestive', 'drug', 'gore']:
                 rating += concept['value'] / 2
-        for concept in nsfwConcepts:
+        for concept in nsfw_concepts:
             if concept['name'] == 'nsfw':
                 rating += concept['value']
 
         return rating
 
-    async def determineImageRatingAction(self, message, rating, url):
-        usertracking = self.client.requestModule('usertracking')
+    async def determine_image_rating_action(self, message, rating, url):
+        usertracking = self.client.request_module('usertracking')
 
         if rating > 1.5:
             rating = round(rating, 2)
@@ -1410,126 +1410,126 @@ class ModerationModule(Module):
                 # We'll unhack it up later and figure out a better way. For the rest of them too.
                 message.nonce = 'filter'  # See other code that edits `nonce` for explanation.
                 await usertracking.on_message_filter(message)
-            await self.punishUser(message.author, punishment=self.PERMANENT_BAN, reason=IMAGE_FILTER_REASON.format(rating), snowflake=message.id)
+            await self.punish_user(message.author, punishment=self.PERMANENT_BAN, reason=IMAGE_FILTER_REASON.format(rating), snowflake=message.id)
         elif rating > 1:
             rating = round(rating, 2)
             await self.client.delete_message(message)
             if usertracking:
                 message.nonce = 'filter'
                 await usertracking.on_message_filter(message)
-            await self.punishUser(message.author, punishment=self.KICK, reason=IMAGE_FILTER_REASON.format(rating), snowflake=message.id)
+            await self.punish_user(message.author, punishment=self.KICK, reason=IMAGE_FILTER_REASON.format(rating), snowflake=message.id)
         elif rating > .5:
             rating = round(rating, 2)
             if usertracking:
                 await usertracking.on_message_review_filter(message, rating, url)
             else:
-                await self.client.send_message(self.logChannel, IMAGE_FILTER_REVIEW.format(
+                await self.client.send_message(self.log_channel, IMAGE_FILTER_REVIEW.format(
                     message.author.mention, message.channel.mention, rating, url))
         # For debug.
         #else:
         #    rating = round(rating, 2)
-        #   await self.client.send_message(self.spamChannel, "Image posted was fine. **[Rating: {}]**".format(rating))
+        #   await self.client.send_message(self.spam_channel, "Image posted was fine. **[Rating: {}]**".format(rating))
 
     async def on_message(self, message):
-        if message.channel.id in self.filterExceptions or message.author.id in self.filterExceptions or \
+        if message.channel.id in self.filter_exceptions or message.author.id in self.filter_exceptions or \
             (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
-            (message.author.bot and not self.filterBots) or (Config.getRankOfMember(message.author) >= 300 and not self.filterMods):
+            (message.author.bot and not self.filter_bots) or (Config.get_rank_of_member(message.author) >= 300 and not self.filter_mods):
             return
 
-        if self.spamProtection:
-            spamAuthor = self.spamTracking.get(message.author, {})
-            for msg in spamAuthor.keys():
-                if not spamAuthor[msg]['count'] or time.time() - spamAuthor[msg]['time'] >= (self.spamProtection['minute_duration'] * 60):
-                    del spamAuthor[msg]
+        if self.spam_protection:
+            spam_author = self.spam_tracking.get(message.author, {})
+            for msg in spam_author.keys():
+                if not spam_author[msg]['count'] or time.time() - spam_author[msg]['time'] >= (self.spam_protection['minute_duration'] * 60):
+                    del spam_author[msg]
 
-            spamMessage = spamAuthor.get(message.content.lower(), {'time': 0, 'count': 0})
-            if spamMessage['count'] == self.spamProtection['message_count'] - 2:
+            spam_message = spam_author.get(message.content.lower(), {'time': 0, 'count': 0})
+            if spam_message['count'] == self.spam_protection['message_count'] - 2:
                 await message.channel.send('{} Please stop spamming the same message.'.format(message.author.mention))
-            elif spamMessage['count'] >= self.spamProtection['message_count']:
-                await self.punishUser(
+            elif spam_message['count'] >= self.spam_protection['message_count']:
+                await self.punish_user(
                     message.author,
-                    punishment=self.spamProtection['action'],
-                    length=self.spamProtection['punish_length'],
+                    punishment=self.spam_protection['action'],
+                    length=self.spam_protection['punish_length'],
                     reason='Spamming'
                 )
-                spamMessage['count'] = -1
+                spam_message['count'] = -1
 
-            spamMessage['time'] = time.time()
-            spamMessage['count'] += 1
-            spamAuthor[message.content.lower()] = spamMessage
-            self.spamTracking[message.author] = spamAuthor
+            spam_message['time'] = time.time()
+            spam_message['count'] += 1
+            spam_author[message.content.lower()] = spam_message
+            self.spam_tracking[message.author] = spam_author
 
-        if self.floodProtection:
-            floodMessage = self.floodTracking.get(message.content.lower(), {'time': 0, 'count': 0, 'members': []})
-            if floodMessage['time'] and (not floodMessage['count'] or time.time() - floodMessage['time'] >= (self.floodProtection['minute_duration'] * 60)):
-                del self.floodTracking[message.content.lower()]
+        if self.flood_protection:
+            flood_message = self.flood_tracking.get(message.content.lower(), {'time': 0, 'count': 0, 'members': []})
+            if flood_message['time'] and (not flood_message['count'] or time.time() - flood_message['time'] >= (self.flood_protection['minute_duration'] * 60)):
+                del self.flood_tracking[message.content.lower()]
 
-            if floodMessage['count'] == self.floodProtection['message_count'] - 3:
+            if flood_message['count'] == self.flood_protection['message_count'] - 3:
                 await message.channel.send('Please stop spamming the same message.')
-            elif floodMessage['count'] >= self.floodProtection['message_count']:
-                for member in floodMessage['members']:
-                    await self.punishUser(
+            elif flood_message['count'] >= self.flood_protection['message_count']:
+                for member in flood_message['members']:
+                    await self.punish_user(
                         member,
-                        punishment=self.floodProtection['action'],
-                        length=self.floodProtection['punish_length'],
+                        punishment=self.flood_protection['action'],
+                        length=self.flood_protection['punish_length'],
                         reason='Flooding the server'
                     )
-                if message.author not in floodMessage['members']:
-                    await self.punishUser(
+                if message.author not in flood_message['members']:
+                    await self.punish_user(
                         member,
-                        punishment=self.floodProtection['action'],
-                        length=self.floodProtection['punish_length'],
+                        punishment=self.flood_protection['action'],
+                        length=self.flood_protection['punish_length'],
                         reason='Flooding the server'
                     )
-                floodMessage['count'] = -1
+                flood_message['count'] = -1
 
-            floodMessage['time'] = time.time()
-            floodMessage['count'] += 1
-            if message.author not in floodMessage['members']:
-                floodMessage['members'].append(message.author)
-            self.floodTracking[message.content.lower()] = floodMessage
+            flood_message['time'] = time.time()
+            flood_message['count'] += 1
+            if message.author not in flood_message['members']:
+                flood_message['members'].append(message.author)
+            self.flood_tracking[message.content.lower()] = flood_message
 
-        timeStart = time.time()
+        time_start = time.time()
         try:
             filtered = None
-            if self.badWordFilterOn:
-                filtered = await self.filterBadWords(message)
-            if not filtered and self.badLinkFilterOn:
-                await self.filterBadLinks(message)
+            if self.bad_word_filter_on:
+                filtered = await self.filter_bad_words(message)
+            if not filtered and self.bad_link_filter_on:
+                await self.filter_bad_links(message)
         except discord.errors.NotFound:
             print('Tried to remove message in bad word/link filter but message wasn\'t found.')
             return
 
         if str(message.channel.id) in self.slowmode:
             await message.channel.set_permissions(message.author, send_messages=False, reason='Slowmode triggered')
-            await self.scheduleUnmuteFromSlowmode(message.channel, message.author, self.slowmode[str(message.channel.id)])
+            await self.schedule_unmute_from_slowmode(message.channel, message.author, self.slowmode[str(message.channel.id)])
             return
 
-        if not self.badImageFilterOn:
+        if not self.bad_image_filter_on:
             return
 
         # This is for the bad image filter. Discord's servers usually needs a
         # moment to process embedded / attached images before the API can use it.
-        if time.time() - timeStart < 1:
+        if time.time() - time_start < 1:
             await asyncio.sleep(2)
         else:
             await asyncio.sleep(1)
-        await self.filterBadImages(message)
+        await self.filter_bad_images(message)
 
     async def on_message_edit(self, before, after):
         message = after
-        if message.channel.id in self.filterExceptions or message.author.id in self.filterExceptions or \
+        if message.channel.id in self.filter_exceptions or message.author.id in self.filter_exceptions or \
             (message.channel.__class__ == discord.DMChannel or (message.channel.category and message.channel.category.name.startswith('Lobby'))) or \
-            (message.author.bot and not self.filterBots) or (Config.getRankOfMember(message.author) >= 300 and not self.filterMods):
+            (message.author.bot and not self.filter_bots) or (Config.get_rank_of_member(message.author) >= 300 and not self.filter_mods):
             return
 
         # We'll only check for edited-in bad words for right now.
         try:
             filtered = None
-            if self.badWordFilterOn:
-                filtered = await self.filterBadWords(message, edited=' edited ')
-            if not filtered and self.badLinkFilterOn:
-                await self.filterBadLinks(message)
+            if self.bad_word_filter_on:
+                filtered = await self.filter_bad_words(message, edited=' edited ')
+            if not filtered and self.bad_link_filter_on:
+                await self.filter_bad_links(message)
         except discord.errors.NotFound:
             print('Tried to remove edited message in bad word/link filter but message wasn\'t found.')
             return

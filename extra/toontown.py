@@ -24,20 +24,20 @@ class Cog:
     type = CogType
     def plural(self): 
         if self.name:
-            if self.isSkelecog:
+            if self.is_skelecog:
                 return self.name + 's (Skelecogs)'
             else:
                 return str(self) + 's'
-    def __init__(self, isV2=False, isSkelecog=False):
-        self.isV2 = isV2
-        self.isSkelecog = isSkelecog
+    def __init__(self, is_v2=False, is_skelecog=False):
+        self.is_v2 = is_v2
+        self.is_skelecog = is_skelecog
     def __str__(self):
-        v = 'Version 2.0 ' if self.isV2 else ''
-        s = ' (Skelecog)' if self.isSkelecog else ''
+        v = 'Version 2.0 ' if self.is_v2 else ''
+        s = ' (Skelecog)' if self.is_skelecog else ''
         return v + self.name + s if self.name else repr(self)
     def __eq__(self, other): 
         if isinstance(other, Cog): 
-            return self.name == other.name and self.isV2 == other.isV2 and self.isSkelecog == other.isSkelecog
+            return self.name == other.name and self.is_v2 == other.is_v2 and self.is_skelecog == other.is_skelecog
         else:
             return self is other
 
@@ -218,7 +218,7 @@ cogs = (
     CorporateRaiderCog,
     TheBigCheeseCog
 )
-cogsStr = [cog.name for cog in cogs]
+cogs_str = [cog.name for cog in cogs]
 
 districts = [
     District("Acrylic Acres"),
@@ -238,11 +238,11 @@ districts = [
     District("Vibrant Valley"),
     District("Watercolor Woods")
 ]
-districtsStr = [district.name for district in districts]
+districts_str = [district.name for district in districts]
 
 def populateDistricts(district):
     districts.append(District(district))
-    districtsStr.append(district)
+    districts_str.append(district)
 
 def checkForDistrict(msg):
     return
@@ -257,7 +257,7 @@ departments = (
     CashbotType,
     SellbotType
 )
-departmentsStr = [dep.name for dep in departments]
+departments_str = [dep.name for dep in departments]
 
 companyLimit = 100
 

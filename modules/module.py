@@ -8,66 +8,66 @@ from inspect import isclass
 from discord import Color, Embed
 from extra.commands import Command
 from traceback import format_exc
-from utils import Config, assertType, getVersion
-uaHeader = Config.getSetting('ua_header', getVersion())
+from utils import Config, assert_type, get_version
+ua_header = Config.get_setting('ua_header', get_version())
 
 class Module:
     def __init__(self, client):
         self.client = client
 
-        moduleName = os.path.basename(sys.modules[self.__module__].__file__).replace('.py', '')
-        self.runWithoutRestoredSession = assertType(Config.getModuleSetting(moduleName, 'run_wo_restored_session'), bool, otherwise=False)
-        self.restartOnException = assertType(Config.getModuleSetting(moduleName, 'restart_on_exception'), bool, otherwise=True)
-        self.cooldownInterval = assertType(Config.getModuleSetting(moduleName, 'cooldown_interval'), int, otherwise=60)
-        self.restartLimit = assertType(Config.getModuleSetting(moduleName, 'restart_limit'), int, otherwise=3)
-        self.restartLimitResetInterval = assertType(
-            Config.getModuleSetting(moduleName, 'restart_limit_reset_interval'), int, otherwise=1800  # 30 minutes
+        module_name = os.path.basename(sys.modules[self.__module__].__file__).replace('.py', '')
+        self.run_without_restored_session = assert_type(Config.get_module_setting(module_name, 'run_wo_restored_session'), bool, otherwise=False)
+        self.restart_on_exception = assert_type(Config.get_module_setting(module_name, 'restart_on_exception'), bool, otherwise=True)
+        self.cooldown_interval = assert_type(Config.get_module_setting(module_name, 'cooldown_interval'), int, otherwise=60)
+        self.restart_limit = assert_type(Config.get_module_setting(module_name, 'restart_limit'), int, otherwise=3)
+        self.restart_limit_reset_interval = assert_type(
+            Config.get_module_setting(module_name, 'restart_limit_reset_interval'), int, otherwise=1800  # 30 minutes
         )  
-        self.publicModule = assertType(Config.getModuleSetting(moduleName, 'public_module'), bool, otherwise=True)
-        self.isFirstLoop = True
-        self.runningLoop = None
+        self.public_module = assert_type(Config.get_module_setting(module_name, 'public_module'), bool, otherwise=True)
+        self.is_first_loop = True
+        self.running_loop = None
 
         self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
 
         self.restarts = 0
-        self.restartTime = 0
+        self.restart_time = 0
 
-    async def collectData(self):
+    async def collect_data(self):
         pass
 
-    async def handleData(self, data):
+    async def handle_data(self, data):
         pass
 
-    async def loopIteration(self):
+    async def loop_iteration(self):
         pass
 
     async def _loop(self):
         try:
             while True:
-                data = await self.collectData()
-                await self.handleData(data)
-                await self.loopIteration()
+                data = await self.collect_data()
+                await self.handle_data(data)
+                await self.loop_iteration()
 
-                self.isFirstLoop = False
-                await asyncio.sleep(self.cooldownInterval)
+                self.is_first_loop = False
+                await asyncio.sleep(self.cooldown_interval)
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            await self.handleError()
+            await self.handle_error()
 
-    def startTracking(self):
-        if self.runningLoop:
+    def start_tracking(self):
+        if self.running_loop:
             return
-        self.runningLoop = self.client.loop.create_task(self._loop())
+        self.running_loop = self.client.loop.create_task(self._loop())
 
-    def stopTracking(self):
-        if self.runningLoop:
-            self.runningLoop.cancel()
+    def stop_tracking(self):
+        if self.running_loop:
+            self.running_loop.cancel()
 
-    async def _handleMsg(self, message):
+    async def _handle_message(self, message):
         for command in self.commands:
-            if message.content and message.content.split(' ')[0] == self.client.commandPrefix + command.NAME and \
-                    (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
+            if message.content and message.content.split(' ')[0] == self.client.command_prefix + command.NAME and \
+                    (Config.get_rank_of_user(message.author.id) >= command.RANK or any([Config.get_rank_of_role(role.id) >= command.RANK for role in message.author.roles])):
                 response = await command.execute(self.client, self, message, *message.content.split(' ')[1:])
                 return response
 
@@ -95,13 +95,13 @@ class Module:
             instanced_perma_messages.append(perma_message(self, channel))
         return instanced_perma_messages[0] if len(perma_messages) is 1 else instanced_perma_messages
 
-    async def handleError(self):
+    async def handle_error(self):
         e = format_exc()
 
-        if self.restartLimitResetInterval and self.restartTime + self.restartLimitResetInterval < time.time():
+        if self.restart_limit_reset_interval and self.restart_time + self.restart_limit_reset_interval < time.time():
             self.restarts = 0
 
-        if self.restarts > self.restartLimit:
+        if self.restarts > self.restart_limit:
             n = 'The module has encountered a high number of exceptions. It will be disabled until the issue can be resolved.'
             print('{} was disabled for encountering a high number of exceptions.\n\n{}'.format(self.__class__.__name__, e))
         else:
@@ -124,40 +124,40 @@ class Module:
         except Exception as e:
             pass
         print(info + log)
-        self.stopTracking()
+        self.stop_tracking()
 
-        if self.restarts > self.restartLimit:
+        if self.restarts > self.restart_limit:
             return
 
-        if self.restartOnException:
+        if self.restart_on_exception:
             r = int(self.restarts) + 1  # int() creates a separate int detached from the about-to-be-updated attribute
             time.sleep(5)
             self.__init__(self.client)  # "Restarts" the module, cleans out pending messages, sets first loop, etc.
             self.restarts = r
-            self.restartTime = time.time()
-            self.startTracking()
+            self.restart_time = time.time()
+            self.start_tracking()
 
     # Creates a Discord Embed.
     # This is preferred over simply creating a new instance of discord.Embed because there 
     # are some properties that require method input due to containing multiple sub-values.
-    def createDiscordEmbed(self, **kwargs):
+    def create_discord_embed(self, **kwargs):
         title = kwargs.get('title', None)
         subtitle = kwargs.get('subtitle', Embed.Empty)
         info = kwargs.get('info', Embed.Empty)
-        titleUrl = kwargs.get('titleUrl', Embed.Empty)
-        subtitleUrl = kwargs.get('subtitleUrl', Embed.Empty)
+        title_url = kwargs.get('title_url', Embed.Empty)
+        subtitle_url = kwargs.get('subtitle_url', Embed.Empty)
         image = kwargs.get('image', Embed.Empty)
         icon = kwargs.get('icon', Embed.Empty)
         thumbnail = kwargs.get('thumbnail', Embed.Empty)
         fields = kwargs.get('fields', [])
         footer = kwargs.get('footer', Embed.Empty)
-        footerIcon = kwargs.get('footerIcon', Embed.Empty)
+        footer_icon = kwargs.get('footer_icon', Embed.Empty)
         color = kwargs.get('color', Embed.Empty)
 
-        embed = Embed(title=subtitle, description=info, url=subtitleUrl, color=color)
-        embed.set_footer(text=footer, icon_url=footerIcon)
+        embed = Embed(title=subtitle, description=info, url=subtitle_url, color=color)
+        embed.set_footer(text=footer, icon_url=footer_icon)
         if title:
-            embed.set_author(name=title, url=titleUrl, icon_url=icon)
+            embed.set_author(name=title, url=title_url, icon_url=icon)
         if thumbnail != Embed.Empty:
             embed.set_thumbnail(url=thumbnail)
         if image != Embed.Empty:
@@ -215,7 +215,7 @@ class PermaMessage:
         pass
 
     async def send(self, content):
-        # Kind of a dirty trick to look for a message here, but create_perma_messages is usually called in __init__s,
+        # Kind of a dirty trick to look for a message here, but create_permanent_messages is usually called in __init__s,
         # so it's difficult to call a coroutine looking for message history that would require an async def.
         if not self.message:
             async for message in self.channel.history(limit=10):
@@ -224,7 +224,6 @@ class PermaMessage:
                     if (embed.fields and embed.fields[0].name == self.TITLE) or embed.author.name == self.TITLE or embed.title == self.TITLE:
                         self.message = message
 
-        messageEdited = False
         try:
             send = self.message.edit if self.message else self.channel.send
             if content.__class__ == Embed:
@@ -239,4 +238,4 @@ class PermaMessage:
         except (asyncio.TimeoutError, aiohttp.client_exceptions.ClientOSError):
             msg = '**{}** tried to update the **{}** perma-message, but the async call errored / timed out.'.format(module.__class__.__name__, update[1])
             print(msg)
-            self.module.client.send_message(self.module.client.botspam, msg)
+            await self.module.client.send_message(self.module.client.botspam, msg)

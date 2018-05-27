@@ -6,14 +6,14 @@ import re
 from datetime import datetime, timedelta
 from extra.commands import Command
 from modules.module import Module
-from utils import Config, database, assertType, assertClass, getTimeFromSeconds, getProgressBar
+from utils import Config, database, assert_type, assert_class, get_time_from_seconds, get_progress_bar
 
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
 NO_REASON_ENTRY = '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'
 
 class Users:
     def __init__(self, module):
-        self.usersDB = database.createSection(module, 'users', {
+        self.users_db = database.create_section(module, 'users', {
             'id': [database.INT, database.PRIMARY_KEY],
             'level': database.INT,
             'xp': database.INT,
@@ -22,7 +22,7 @@ class Users:
             'time_dnd': database.INT,
             'time_offline': database.INT
         })
-        self.msgsDB = database.createSection(module, 'messages', {
+        self.msgs_db = database.create_section(module, 'messages', {
             'id': [database.INT, database.PRIMARY_KEY],
             'user': database.INT,
             'channel': database.INT,
@@ -32,14 +32,14 @@ class Users:
             'deleted': database.INT
         })
 
-    def getUsers(self):
-        return self.usersDB.select()
+    def get_users(self):
+        return self.users_db.select()
 
-    def getUserByID(self, userID, createIfNonexistent=True):
-        user = self.usersDB.select(where=['id=?', userID], limit=1)
-        if not user and createIfNonexistent:
-            self.usersDB.insert(
-                id=userID,
+    def get_user_by_id(self, user_id, create_if_nonexistent=True):
+        user = self.users_db.select(where=['id=?', user_id], limit=1)
+        if not user and create_if_nonexistent:
+            self.users_db.insert(
+                id=user_id,
                 level=0,
                 xp=0,
                 time_online=0,
@@ -47,70 +47,70 @@ class Users:
                 time_dnd=0,
                 time_offline=0
             )
-            user = self.usersDB.select(where=['id=?', userID], limit=1)
+            user = self.users_db.select(where=['id=?', user_id], limit=1)
         return user
-    def getUser(self, member, createIfNonexistent=True):
-        return self.getUserByID(member.id, createIfNonexistent)
+    def get_user(self, member, create_if_nonexistent=True):
+        return self.get_user_by_id(member.id, create_if_nonexistent)
 
-    def getUserXP(self, userID):
-        user = self.getUserByID(userID)
+    def get_user_xp(self, user_id):
+        user = self.get_user_by_id(user_id)
         return user['xp']
 
-    def getUserLevel(self, userID):
-        user = self.getUserByID(userID)
+    def get_user_level(self, user_id):
+        user = self.get_user_by_id(user_id)
         return user['level']
 
-    def getUserTimeOnline(self, userID):
-        user = self.getUserByID(userID)
+    def get_user_time_online(self, user_id):
+        user = self.get_user_by_id(user_id)
         return user['time_online']
 
-    def getUserTimeOffline(self, userID):
-        user = self.getUserByID(userID)
+    def get_user_time_offline(self, user_id):
+        user = self.get_user_by_id(user_id)
         return user['time_offline']
 
-    def getUserTimeDND(self, userID):
-        user = self.getUserByID(userID)
+    def get_user_time_dnd(self, user_id):
+        user = self.get_user_by_id(user_id)
         return user['time_DND']
 
-    def getUserTimeIdle(self, userID):
-        user = self.getUserByID(userID)
+    def get_user_time_idle(self, user_id):
+        user = self.get_user_by_id(user_id)
         return user['time_idle']
 
-    def getUserMessageOverview(self, userID, channelID=None):
-        where = [['user=?', userID]]
-        if channelID:
-            where.append(['channel=?', channelID])
+    def get_user_message_overview(self, user_id, channel_id=None):
+        where = [['user=?', user_id]]
+        if channel_id:
+            where.append(['channel=?', channel_id])
 
-        messages = self.msgsDB.select('channel, attachments, embeds', where=where)
+        messages = self.msgs_db.select('channel, attachments, embeds', where=where)
         overview = {}
         for message in messages:
             if message['channel'] not in overview:
                 overview[message['channel']] = {'messages': 0, 'attachments': 0, 'embeds': 0}
             else:
-                channelOverview = overview[message['channel']]
-                channelOverview['messages'] += 1
-                channelOverview['attachments'] += message['attachments']
-                channelOverview['embeds'] += message['embeds']
+                channel_overview = overview[message['channel']]
+                channel_overview['messages'] += 1
+                channel_overview['attachments'] += message['attachments']
+                channel_overview['embeds'] += message['embeds']
 
         return overview
 
-    def setUserXP(self, userID, value):
-        self.usersDB.update(where=['id=?', userID], xp=value)
+    def set_user_xp(self, user_id, value):
+        self.users_db.update(where=['id=?', user_id], xp=value)
 
-    def setUserLevel(self, userID, value):
-        self.usersDB.update(where=['id=?', userID], level=value)
+    def set_user_level(self, user_id, value):
+        self.users_db.update(where=['id=?', user_id], level=value)
 
-    def setUserTimeOnline(self, userID, value):
-        self.usersDB.update(where=['id=?', userID], time_online=value)
+    def set_user_time_online(self, user_id, value):
+        self.users_db.update(where=['id=?', user_id], time_online=value)
 
-    def setUserTimeOffline(self, userID, value):
-        self.usersDB.update(where=['id=?', userID], time_offline=value)
+    def set_user_time_offline(self, user_id, value):
+        self.users_db.update(where=['id=?', user_id], time_offline=value)
 
-    def setUserTimeDND(self, userID, value):
-        self.usersDB.update(where=['id=?', userID], time_dnd=value)
+    def set_user_time_dnd(self, user_id, value):
+        self.users_db.update(where=['id=?', user_id], time_dnd=value)
 
-    def setUserTimeIdle(self, userID, value):
-        self.usersDB.update(where=['id=?', userID], time_idle=value)
+    def set_user_time_idle(self, user_id, value):
+        self.users_db.update(where=['id=?', user_id], time_idle=value)
 
 
 class UserTrackingModule(Module):
@@ -197,14 +197,14 @@ class UserTrackingModule(Module):
                 return
 
             user = message.author
-            xp = module.users.getUserXP(user.id)
-            level = module.users.getUserLevel(user.id)
+            xp = module.users.get_user_xp(user.id)
+            level = module.users.get_user_level(user.id)
             levelxp = '{}\n**Level {}**   {} / {} XP\n{}'.format(
                 user.mention,
                 level,
                 xp,
-                module.xpNeededForLevel(level),
-                getProgressBar(xp, module.xpNeededForLevel(level))
+                module.xp_needed_for_level(level),
+                get_progress_bar(xp, module.xp_needed_for_level(level))
             )
             embed = discord.Embed(description=levelxp, color=discord.Color.purple())
             return embed
@@ -221,12 +221,12 @@ class UserTrackingModule(Module):
             elif not message.mentions:
                 if not message.raw_mentions:
                     try:
-                        user = client.rTTR.get_member(int(args[0])) or await client.get_user_info(int(args[0]))
+                        user = client.focused_guild.get_member(int(args[0])) or await client.get_user_info(int(args[0]))
                     except discord.NotFound:
-                        moderation = client.requestModule('moderation')
+                        moderation = client.request_module('moderation')
                         if moderation:
-                            punishmentID = int(args[0])
-                            punishment = moderation.punishments.select(where=["id=?", punishmentID], limit=1)
+                            punishment_id = int(args[0])
+                            punishment = moderation.punishments.select(where=["id=?", punishment_id], limit=1)
                             if not punishment:
                                 return 'No known user / lookup ID'
                             try:
@@ -245,20 +245,20 @@ class UserTrackingModule(Module):
                             return 'No known user'
                 else:
                     try:
-                        user = client.rTTR.get_member(message.raw_mentions[0]) or await client.get_user_info(message.raw_mentions[0])
+                        user = client.focused_guild.get_member(message.raw_mentions[0]) or await client.get_user_info(message.raw_mentions[0])
                     except discord.NotFound:
                         return 'No known user'
             else:
                 user = message.mentions[0]
 
             # Get all punishments for user, each will be an individual field in the embed.
-            punishmentFields = []
+            punishment_fields = []
             notes = []
 
-            if assertClass(message.channel, discord.DMChannel, otherwise=False) or (message.channel.category and message.channel.category.name == 'Staff'):
-                moderation = client.requestModule('moderation')
+            if assert_class(message.channel, discord.DMChannel, otherwise=False) or (message.channel.category and message.channel.category.name == 'Staff'):
+                moderation = client.request_module('moderation')
                 for punishment in moderation.punishments.select(where=['user=?', user.id]):
-                    punishmentFields.append({
+                    punishment_fields.append({
                         'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
                         'value': '{}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
                             ('`' + punishment['reason'] + '`').replace('`' + NO_REASON + '`', '*No reason was ever specified.*'),
@@ -278,9 +278,9 @@ class UserTrackingModule(Module):
                         tilde='`'
                     ))
 
-            if len(punishmentFields) > 18:
-                punishmentFields = punishmentFields[:17]
-                """noteFields = noteFields[:18 - len(punishmentFields)]
+            if len(punishment_fields) > 18:
+                punishment_fields = punishment_fields[:17]
+                """noteFields = noteFields[:18 - len(punishment_fields)]
                 noteFields.append({
                     'name': 'MORE PUNISHMENTS / NOTES EXIST!', 
                     'value': 'All of the punishments / notes on this account cannot be displayed in an embed. Please delete some that are older or unneeded.',
@@ -289,24 +289,24 @@ class UserTrackingModule(Module):
 
             # Get all channel participation
             messages = []
-            channelParticipation = module.users.getUserMessageOverview(user.id)
+            channel_participation = module.users.get_user_message_overview(user.id)
             # A classic Computer Science solution eh? Too lazy for something clever
-            mostChannelParticipation = [(None, -1, 0, 0, 0) for _ in range(3)]
-            for channel, participation in channelParticipation.items():
-                channel = client.rTTR.get_channel(int(channel))
+            most_channel_participation = [(None, -1, 0, 0, 0) for _ in range(3)]
+            for channel, participation in channel_participation.items():
+                channel = client.focused_guild.get_channel(int(channel))
                 if not channel:
                     continue
 
-                totalMessages = participation['messages'] + participation['attachments'] + participation['embeds']
+                total_messages = participation['messages'] + participation['attachments'] + participation['embeds']
                 for i in range(2, -1, -1):
-                    if totalMessages > mostChannelParticipation[i][1]:
-                        if i != 0 and totalMessages > mostChannelParticipation[i - 1][1]:
+                    if total_messages > most_channel_participation[i][1]:
+                        if i != 0 and total_messages > most_channel_participation[i - 1][1]:
                             continue
                         else:
                             for j in range(1, i - 1, -1):
-                                mostChannelParticipation[j + 1] = mostChannelParticipation[j]
-                            mostChannelParticipation[i] = (channel, totalMessages, participation['messages'], participation['attachments'], participation['embeds'])
-            for channel, _, _messages, attachments, embeds in mostChannelParticipation:
+                                most_channel_participation[j + 1] = most_channel_participation[j]
+                            most_channel_participation[i] = (channel, total_messages, participation['messages'], participation['attachments'], participation['embeds'])
+            for channel, _, _messages, attachments, embeds in most_channel_participation:
                 if channel:
                     messages.append('{} -> :envelope: **{}** | :paperclip: **{}** | :page_facing_up: **{}**'.format(
                         channel.mention,
@@ -319,39 +319,39 @@ class UserTrackingModule(Module):
 
             # Get Discord statuses for the past however long we've been recording them...
             statuses = '**Online:** {}\n**Idle:** {}\n**Do Not Disturb:** {}\n**Offline / Invisible:** {}'.format(
-                getTimeFromSeconds(module.users.getUserTimeOnline(user.id), oneUnitLimit=True),
-                getTimeFromSeconds(module.users.getUserTimeIdle(user.id), oneUnitLimit=True),
-                getTimeFromSeconds(module.users.getUserTimeDND(user.id), oneUnitLimit=True),
-                getTimeFromSeconds(module.users.getUserTimeOffline(user.id), oneUnitLimit=True)
+                get_time_from_seconds(module.users.get_user_time_online(user.id), one_unit_limit=True),
+                get_time_from_seconds(module.users.get_user_time_idle(user.id), one_unit_limit=True),
+                get_time_from_seconds(module.users.get_user_time_dnd(user.id), one_unit_limit=True),
+                get_time_from_seconds(module.users.get_user_time_offline(user.id), one_unit_limit=True)
             )
 
             # Show off user's level / xp 
-            xp = module.users.getUserXP(user.id)
-            level = module.users.getUserLevel(user.id)
+            xp = module.users.get_user_xp(user.id)
+            level = module.users.get_user_level(user.id)
             levelxp = '**Level {}**   {} / {} XP\n{}'.format(
                 level,
                 xp,
-                module.xpNeededForLevel(level),
-                getProgressBar(xp, module.xpNeededForLevel(level))
+                module.xp_needed_for_level(level),
+                get_progress_bar(xp, module.xp_needed_for_level(level))
             )
 
             # Get all of the user's roles, highlighting their top role
             if hasattr(user, 'roles'):
                 roles = user.roles[1:]
                 roles.reverse()
-                namedRoles = [role.name for role in roles]
-                if namedRoles:
-                    namedRoles[0] = '**' + namedRoles[0] + '**'
+                named_roles = [role.name for role in roles]
+                if named_roles:
+                    named_roles[0] = '**' + named_roles[0] + '**'
                 else:
-                    namedRoles = ['¯\_(ツ)_/¯']
+                    named_roles = ['¯\_(ツ)_/¯']
             else:
                 roles = []
-                namedRoles = ['¯\_(ツ)_/¯']
+                named_roles = ['¯\_(ツ)_/¯']
 
-            embed = module.createDiscordEmbed(
+            embed = module.create_discord_embed(
                 action='Lookup',
-                primaryInfo=str(user),
-                secondaryInfo=user.mention,
+                primary_info=str(user),
+                secondary_info=user.mention,
                 thumbnail=user.avatar_url,
                 fields=[
                     {'name': 'Account Creation Date', 'value': str(user.created_at.date()), 'inline': True},
@@ -359,13 +359,13 @@ class UserTrackingModule(Module):
                     {'name': 'Level / XP', 'value': levelxp, 'inline': True},
                     {
                         'name': 'Roles', 
-                        'value': '\n'.join(namedRoles),
+                        'value': '\n'.join(named_roles),
                         'inline': True
                     },
                     {'name': 'Top 3 Channels', 'value': '\n'.join(messages), 'inline': True},
                     {'name': 'Statuses', 'value': statuses, 'inline': True}
-                ] + ([{'name': 'Notes', 'value': '\n\n'.join(notes), 'inline': False}] if notes else []) + punishmentFields,
-                footer={'text': "Available Commands: ~editReason | ~removePunishment | ~editNote | ~removeNote"} if punishmentFields else None,
+                ] + ([{'name': 'Notes', 'value': '\n\n'.join(notes), 'inline': False}] if notes else []) + punishment_fields,
+                footer={'text': "Available Commands: ~editReason | ~removePunishment | ~editNote | ~removeNote"} if punishment_fields else None,
                 color=roles[0].color if roles else None
             )
             return embed
@@ -375,34 +375,34 @@ class UserTrackingModule(Module):
 
         self.users = Users(self)
 
-        self.trackMessages = Config.getModuleSetting('usertracking', 'track_messages', True)
-        self.trackingExceptions = Config.getModuleSetting('usertracking', 'tracking_exceptions', [])
+        self.track_messages = Config.get_module_setting('usertracking', 'track_messages', True)
+        self.tracking_exceptions = Config.get_module_setting('usertracking', 'tracking_exceptions', [])
 
-        self.moduleTimeStart = time.time()
-        self.memberStatusTimeStart = {}
-        self.trackStatuses = Config.getModuleSetting('usertracking', 'track_statuses', True)
+        self.module_time_start = time.time()
+        self.member_status_time_start = {}
+        self.track_statuses = Config.get_module_setting('usertracking', 'track_statuses', True)
 
-        self.auditLogEntries = {}
-        self.levelCooldowns = {}
-        self.levelCooldown = assertType(Config.getModuleSetting('usertracking', 'level_cooldown'), int, otherwise=5)
-        self.levelCap = assertType(Config.getModuleSetting('usertracking', 'level_cap'), int, otherwise=-1)
-        self.levelingExceptions = Config.getModuleSetting('usertracking', 'leveling_exceptions', [])
-        self.allowUserLeveling = Config.getModuleSetting('usertracking', 'allow_user_leveling', True)
-        self.allowUserRewards = Config.getModuleSetting('usertracking', 'allow_user_rewards', True)
-        self.allowBotLeveling = Config.getModuleSetting('usertracking', 'allow_bot_leveling', False)
-        self.allowBotRewards = Config.getModuleSetting('usertracking', 'allow_bot_rewards', False)
-        self.allowModLeveling = Config.getModuleSetting('usertracking', 'allow_mod_leveling', True)
-        self.allowModRewards = Config.getModuleSetting('usertracking', 'allow_mod_rewards', False)
-        self.regularRole = discord.utils.get(client.rTTR.roles, id=Config.getModuleSetting('usertracking', 'regular_role_id'))
+        self.audit_log_entires = {}
+        self.level_cooldowns = {}
+        self.level_cooldown = assert_type(Config.get_module_setting('usertracking', 'level_cooldown'), int, otherwise=5)
+        self.level_cap = assert_type(Config.get_module_setting('usertracking', 'level_cap'), int, otherwise=-1)
+        self.leveling_exceptions = Config.get_module_setting('usertracking', 'leveling_exceptions', [])
+        self.allow_user_leveling = Config.get_module_setting('usertracking', 'allow_user_leveling', True)
+        self.allow_user_rewards = Config.get_module_setting('usertracking', 'allow_user_rewards', True)
+        self.allow_bot_leveling = Config.get_module_setting('usertracking', 'allow_bot_leveling', False)
+        self.allow_bot_rewards = Config.get_module_setting('usertracking', 'allow_bot_rewards', False)
+        self.allow_mod_leveling = Config.get_module_setting('usertracking', 'allow_mod_leveling', True)
+        self.allow_mod_rewards = Config.get_module_setting('usertracking', 'allow_mod_rewards', False)
+        self.regular_role = discord.utils.get(client.focused_guild.roles, id=Config.get_module_setting('usertracking', 'regular_role_id'))
 
-        self.spamChannel = Config.getModuleSetting('usertracking', 'spam_channel')
-        self.logChannel = Config.getModuleSetting('usertracking', 'log_channel')
+        self.spam_channel = Config.get_module_setting('usertracking', 'spam_channel')
+        self.log_channel = Config.get_module_setting('usertracking', 'log_channel')
 
-    async def addXP(self, message):
+    async def add_xp(self, message):
         member = message.author
-        lastMessages = await message.channel.history(limit=2).flatten()
+        last_messages = await message.channel.history(limit=2).flatten()
         # If the cooldown hasn't expired, and the message before this one was done by us...
-        if time.time() < self.levelCooldowns.get(member, 0) and (len(lastMessages) != 2 or lastMessages[0].author == lastMessages[1].author):
+        if time.time() < self.level_cooldowns.get(member, 0) and (len(last_messages) != 2 or last_messages[0].author == last_messages[1].author):
             return
 
         xp = 0
@@ -431,28 +431,28 @@ class UserTrackingModule(Module):
                 words.append(word.lower().rstrip('s').rstrip('e'))
         words = list(set(words))
 
-        prevXP = self.users.getUserXP(member.id)
+        prev_xp = self.users.get_user_xp(member.id)
         xp += len(words)
         xp *= multiplier
-        self.users.setUserXP(member.id, prevXP + min(25, max(0, xp)))
-        self.levelCooldowns[member] = time.time() + self.levelCooldown
+        self.users.set_user_xp(member.id, prev_xp + min(25, max(0, xp)))
+        self.level_cooldowns[member] = time.time() + self.level_cooldown
 
-    def xpNeededForLevel(self, level):
+    def xp_needed_for_level(self, level):
         return 5 * (level**2) + 50*level + 100
 
     def level(self, member):
         response = None
-        level = self.users.getUserLevel(member.id)
-        if self.levelCap != -1 and level >= self.levelCap:
+        level = self.users.get_user_level(member.id)
+        if self.level_cap != -1 and level >= self.level_cap:
             return
 
-        xp = self.users.getUserXP(member.id)
-        xpNeeded = self.xpNeededForLevel(level)
-        if xp >= xpNeeded:  # Sorry Mee6 I've never been good with original math
+        xp = self.users.get_user_xp(member.id)
+        xp_needed = self.xp_needed_for_level(level)
+        if xp >= xp_needed:  # Sorry Mee6 I've never been good with original math
             level += 1
             response = level
-            self.users.setUserLevel(member.id, level)
-            self.users.setUserXP(member.id, xp - xpNeeded)
+            self.users.set_user_level(member.id, level)
+            self.users.set_user_xp(member.id, xp - xp_needed)
         return response
 
     async def on_message(self, message):
@@ -460,14 +460,14 @@ class UserTrackingModule(Module):
         if message.webhook_id:
             return
         # You don't want to progress if there's an exception being made.
-        if message.channel.__class__ == discord.DMChannel or message.channel.id in self.levelingExceptions or message.author.id in self.levelingExceptions or \
-            any([role.id in self.levelingExceptions for role in message.author.roles]):
+        if message.channel.__class__ == discord.DMChannel or message.channel.id in self.leveling_exceptions or message.author.id in self.leveling_exceptions or \
+            any([role.id in self.leveling_exceptions for role in message.author.roles]):
             return
-        if message.channel.id in self.trackingExceptions:
+        if message.channel.id in self.tracking_exceptions:
             return
 
-        if self.trackMessages:
-            self.users.msgsDB.insert(
+        if self.track_messages:
+            self.users.msgs_db.insert(
                 id=message.id,
                 user=message.author.id,
                 channel=message.channel.id,
@@ -478,35 +478,35 @@ class UserTrackingModule(Module):
             )
 
         bot = message.author.bot
-        mod = any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles])
+        mod = any([Config.get_rank_of_role(role.id) >= 300 for role in message.author.roles])
 
         if mod:
-            if self.allowModLeveling:
-                await self.addXP(message)
+            if self.allow_mod_leveling:
+                await self.add_xp(message)
                 leveled = self.level(message.author)
-                if leveled and self.allowModRewards:
-                    await self.assignAwards(message.author, leveled)
+                if leveled and self.allow_mod_rewards:
+                    await self.assign_awards(message.author, leveled)
         elif bot:
-            if self.allowBotLeveling:
-                await self.addXP(message)
+            if self.allow_bot_leveling:
+                await self.add_xp(message)
                 leveled = self.level(message.author)
-                if leveled and self.allowBotRewards:
-                    await self.assignAwards(message.author, leveled)
+                if leveled and self.allow_bot_rewards:
+                    await self.assign_awards(message.author, leveled)
         else:
-            if self.allowUserLeveling:
-                await self.addXP(message)
+            if self.allow_user_leveling:
+                await self.add_xp(message)
                 leveled = self.level(message.author)
-                if leveled and self.allowUserRewards:
-                    await self.assignAwards(message.author, leveled)
+                if leveled and self.allow_user_rewards:
+                    await self.assign_awards(message.author, leveled)
 
-    async def assignAwards(self, member, level):
+    async def assign_awards(self, member, level):
         if level == 7:
-            if self.regularRole and self.regularRole not in member.roles:
-                await member.add_roles(self.regularRole, reason='User leveled up to level 7')
-                embed = self.createDiscordEmbed(
+            if self.regular_role and self.regular_role not in member.roles:
+                await member.add_roles(self.regular_role, reason='User leveled up to level 7')
+                embed = self.create_discord_embed(
                     action='Level',
-                    primaryInfo="You've leveled up to LEVEL 7!",
-                    secondaryInfo="Thanks for spending some of your time to chat with us! " \
+                    primary_info="You've leveled up to LEVEL 7!",
+                    secondary_info="Thanks for spending some of your time to chat with us! " \
                     "You now have permission to *create your own private lobbies* and *upload files and images* to the server. Have fun!",
                     thumbnail=member.avatar_url,
                     footer={'text': '- The mods from the Toontown Rewritten Discord'}
@@ -516,9 +516,9 @@ class UserTrackingModule(Module):
                 except discord.HTTPException:
                     print("Could not send level 7 notification to {} (probably because they have DMs disabled for users/bots who don't share a server they're in).".format(str(member)))
 
-    def createDiscordEmbed(self, action, primaryInfo=discord.Embed.Empty, secondaryInfo=discord.Embed.Empty, thumbnail='', fields=[], footer={}, image=None, color=None):
+    def create_discord_embed(self, action, primary_info=discord.Embed.Empty, secondary_info=discord.Embed.Empty, thumbnail='', fields=[], footer={}, image=None, color=None):
         action = self.ACTIONS[action]
-        embed = discord.Embed(title=primaryInfo, description=secondaryInfo, color=color if color else action['color'])
+        embed = discord.Embed(title=primary_info, description=secondary_info, color=color if color else action['color'])
         embed.set_author(name=action['title'], icon_url=action['icon'])
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
@@ -534,7 +534,7 @@ class UserTrackingModule(Module):
     async def on_member_ban(self, guild, member):
         fields = []
         punishment = None
-        moderation = self.client.requestModule('moderation')
+        moderation = self.client.request_module('moderation')
         if moderation:
             punishments = moderation.punishments.select(where=["user=? AND strftime('%s', 'now') - created < 10", member.id])
         if moderation and punishments:
@@ -544,35 +544,35 @@ class UserTrackingModule(Module):
                 'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                     punishment['mod'],
                     str(datetime.fromtimestamp(punishment['created']).date()),
-                    punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['id'])),
+                    punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.command_prefix, punishment['id'])),
                     punishment['id']
                 )
             }]
         for message in self.client._connection._messages:
             if message.author == member:
                 message.nonce = 'banned'  # Read other comments editing `nonce`.
-        async for entry in self.client.rTTR.audit_logs(limit=1, action=discord.AuditLogAction.ban):
+        async for entry in self.client.focused_guild.audit_logs(limit=1, action=discord.AuditLogAction.ban):
             footer={'text': 'Ban performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
-        modLogEntry = await self.client.send_message(
-            self.logChannel,
-            self.createDiscordEmbed(
+        mod_long_entry = await self.client.send_message(
+            self.log_channel,
+            self.create_discord_embed(
                 action='Ban',
-                primaryInfo=str(member),
+                primary_info=str(member),
                 thumbnail=member.avatar_url,
                 fields=fields,
                 footer=footer
            )
         )
         if punishment:
-            moderation.punishments.update(where=['id=?', punishment['id']], log=modLogEntry.id)
-        return modLogEntry
+            moderation.punishments.update(where=['id=?', punishment['id']], log=mod_long_entry.id)
+        return mod_long_entry
 
     async def on_member_join(self, member):
-        punishmentFields = []
-        moderation = self.client.requestModule('moderation')
+        punishment_fields = []
+        moderation = self.client.request_module('moderation')
         if moderation:
             for punishment in moderation.punishments.select(where=['user=?', member.id]):
-                punishmentFields.append({
+                punishment_fields.append({
                     'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
@@ -582,37 +582,37 @@ class UserTrackingModule(Module):
                     ),
                     'inline': False
                 })
-        xp = self.users.getUserXP(member.id)
-        level = self.users.getUserLevel(member.id)
+        xp = self.users.get_user_xp(member.id)
+        level = self.users.get_user_level(member.id)
         # Show off user's level / xp 
         levelxp = '**Level {}**   {} / {} XP\n{}'.format(
             level,
             xp,
-            self.xpNeededForLevel(level),
-            getProgressBar(xp, self.xpNeededForLevel(level))
+            self.xp_needed_for_level(level),
+            get_progress_bar(xp, self.xp_needed_for_level(level))
         )
         await self.client.send_message(
-            self.logChannel,
-            self.createDiscordEmbed(
+            self.log_channel,
+            self.create_discord_embed(
                 action='Join',
-                primaryInfo=str(member),
-                secondaryInfo=member.mention,
+                primary_info=str(member),
+                secondary_info=member.mention,
                 thumbnail=member.avatar_url,
                 fields=[
                     {'name': 'Account Creation Date', 'value': str(member.created_at.date()), 'inline': True},
                     {'name': 'Join Date', 'value': str(member.joined_at.date()), 'inline': True},
                     {'name': 'Level / XP', 'value': levelxp, 'inline': True}
-                ] + punishmentFields,
-                #footer="You can use a punishment's edit ID to ~editReason or ~removePunishment" if self.users.getUserPunishments(member.id) else ''
+                ] + punishment_fields,
+                #footer="You can use a punishment's edit ID to ~editReason or ~removePunishment" if self.users.get_userPunishments(member.id) else ''
             )
         )
-        self.memberStatusTimeStart[member.id] = time.time()
+        self.member_status_time_start[member.id] = time.time()
 
     async def on_member_remove(self, member):
         action = 'Leave'
         fields = []
         punishment = None
-        moderation = self.client.requestModule('moderation')
+        moderation = self.client.request_module('moderation')
         if moderation:
             punishments = moderation.punishments.select(where=["user=? AND type='Kick' AND strftime('%s', 'now') - created < 10", member.id])
         if moderation and punishments:
@@ -622,66 +622,66 @@ class UserTrackingModule(Module):
                 'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                     punishment['mod'],
                     str(datetime.fromtimestamp(punishment['created']).date()),
-                    punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['id'])),
+                    punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.command_prefix, punishment['id'])),
                     punishment['id']
                 )
             }]
 
-        async for entry in self.client.rTTR.audit_logs(limit=1, action=discord.AuditLogAction.kick):
+        async for entry in self.client.focused_guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
             if entry.target.id == member.id and entry.created_at >= datetime.utcnow() - timedelta(seconds=2):
                 action = 'Kick'
                 footer={'text': 'Kick performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
-        modLogEntry = await self.client.send_message(
-            self.logChannel,
-            self.createDiscordEmbed(
+        mod_long_entry = await self.client.send_message(
+            self.log_channel,
+            self.create_discord_embed(
                 action=action,
-                primaryInfo=str(member),
+                primary_info=str(member),
                 thumbnail=member.avatar_url,
                 fields=fields,
                 footer=footer if action == 'Kick' else ''
            )
         )
         if punishment:
-            moderation.punishments.update(where=['id=?', punishment['id']], log=modLogEntry.id)
-        return modLogEntry
+            moderation.punishments.update(where=['id=?', punishment['id']], log=mod_long_entry.id)
+        return mod_long_entry
 
     # Specifically built for moderation module.
     async def on_member_warn(self, member, punishment):
-        modLogEntry = await self.client.send_message(
-            self.logChannel,
-            self.createDiscordEmbed(
+        mod_long_entry = await self.client.send_message(
+            self.log_channel,
+            self.create_discord_embed(
                 action='Warn',
-                primaryInfo=str(member),
+                primary_info=str(member),
                 thumbnail=member.avatar_url,
                 fields=[{
                     'name': punishment['type'],
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['id'])),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.command_prefix, punishment['id'])),
                         punishment['id']
                     )
                 }]
            )
         )
-        moderation = self.client.requestModule('moderation')
-        moderation.punishments.update(where=['id=?', punishment['id']], log=modLogEntry.id)
-        return modLogEntry
+        moderation = self.client.request_module('moderation')
+        moderation.punishments.update(where=['id=?', punishment['id']], log=mod_long_entry.id)
+        return mod_long_entry
 
     # Specifically built for moderation module.
     async def on_message_filter(self, message, *, link=False, word=None, text=None, embed=None):
-        replaceFrom = text if text else message.content
+        replace_from = text if text else message.content
         await self.client.send_message(
-            self.logChannel,
-            self.createDiscordEmbed(
+            self.log_channel,
+            self.create_discord_embed(
                 action='Link' if link else 'Filter',
-                primaryInfo=str(message.author),
-                secondaryInfo='{} in{} {}{}:\n\n{}'.format(
+                primary_info=str(message.author),
+                secondary_info='{} in{} {}{}:\n\n{}'.format(
                     message.author.mention,
                     " the {} of an embed in".format(embed) if embed else '',
                     '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
                     message.channel.mention,
-                    replaceFrom.replace(word, '**' + word + '**') if word else replaceFrom
+                    replace_from.replace(word, '**' + word + '**') if word else replace_from
                 ),
                 thumbnail=message.author.avatar_url
            )
@@ -690,11 +690,11 @@ class UserTrackingModule(Module):
     # Specifically built for moderation module.
     async def on_message_review_filter(self, message, rating, url):
         await self.client.send_message(
-            self.logChannel,
-            self.createDiscordEmbed(
+            self.log_channel,
+            self.create_discord_embed(
                 action='Review',
-                primaryInfo=str(message.author),
-                secondaryInfo='{} in {}{} **[Rating: {}]**:'.format(
+                primary_info=str(message.author),
+                secondary_info='{} in {}{} **[Rating: {}]**:'.format(
                     message.author.mention,
                     '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
                     message.channel.mention,
@@ -708,17 +708,17 @@ class UserTrackingModule(Module):
     # Specifically built for moderation module.
     async def on_member_unpunish(self, member, punishment):
         await self.client.send_message(
-            self.logChannel,
-            self.createDiscordEmbed(
+            self.log_channel,
+            self.create_discord_embed(
                 action='Unpunish',
-                primaryInfo=str(member),
+                primary_info=str(member),
                 thumbnail=member.avatar_url,
                 fields=[{
                     'name': punishment['type'],
                     'value': '**Mod:** <@{}>\n**Date Punished:** {}\n**Reason:** {}\n**Old ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['id'])),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.command_prefix, punishment['id'])),
                         punishment['id']
                     )
                 }]
@@ -727,11 +727,11 @@ class UserTrackingModule(Module):
 
     # Specifically built for moderation module.
     async def on_member_note(self, member, note):
-        modLogEntry = await self.client.send_message(
-            self.logChannel,
-            self.createDiscordEmbed(
+        mod_long_entry = await self.client.send_message(
+            self.log_channel,
+            self.create_discord_embed(
                 action='Note',
-                primaryInfo=str(member),
+                primary_info=str(member),
                 thumbnail=member.avatar_url,
                 fields=[{
                     'name': 'Note',
@@ -744,18 +744,18 @@ class UserTrackingModule(Module):
                 }]
            )
         )
-        moderation = self.client.requestModule('moderation')
-        moderation.notes.update(where=['id=?', note['id']], log=modLogEntry.id)
-        return modLogEntry
+        moderation = self.client.request_module('moderation')
+        moderation.notes.update(where=['id=?', note['id']], log=mod_long_entry.id)
+        return mod_long_entry
 
 
     async def on_message_delete(self, message):
-        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silent']:
+        if message.author == self.client.focused_guild.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silent']:
             return
 
-        if self.trackMessages:
+        if self.track_messages:
             try:
-                self.users.msgsDB.update(
+                self.users.msgs_db.update(
                     where=['id=?', message.id],
                     deleted=1
                 )
@@ -763,26 +763,26 @@ class UserTrackingModule(Module):
                 pass
 
         footer = {}
-        async for entry in self.client.rTTR.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
+        async for entry in self.client.focused_guild.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
             # Discord Audit Logs will clump together deleted messages, saying "MOD deleted X message(s) from USER in TARGET"
             # It will still keep the creation date of the entry though, which could be as stale as a few minutes.
             #
             # So if it's not an entry made within 2 seconds, just verify the message being deleted is in the same channel
             # and by the same user and we can assume that if the count is more than 1 that it was deleted by someone else.
             # The best we can do right now.
-            prevDeletionCount = self.auditLogEntries.get(entry.id, 0)
+            prev_deletion_count = self.audit_log_entires.get(entry.id, 0)
             if message.nonce == 'banned':
                 footer={'text': 'Message deleted due to a ban', 'icon_url': self.ACTIONS['Ban']['icon']}
             elif entry.created_at >= datetime.utcnow() - timedelta(seconds=2) or \
-              (entry.extra.channel == message.channel and entry.target == message.author and entry.extra.count > prevDeletionCount):
+              (entry.extra.channel == message.channel and entry.target == message.author and entry.extra.count > prev_deletion_count):
                 footer={'text': 'Message deleted by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
-            self.auditLogEntries[entry.id] = entry.extra.count
+            self.audit_log_entires[entry.id] = entry.extra.count
         await self.client.send_message(
-            self.spamChannel,
-            self.createDiscordEmbed(
+            self.spam_channel,
+            self.create_discord_embed(
                 action='Delete',
-                primaryInfo=str(message.author),
-                secondaryInfo='{}{} in {}{}:\n\n{}'.format(
+                primary_info=str(message.author),
+                secondary_info='{}{} in {}{}:\n\n{}'.format(
                     '*This message contained an embed.*\n' if message.embeds else '',
                     message.author.mention,
                     '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
@@ -798,25 +798,25 @@ class UserTrackingModule(Module):
 
     async def on_member_update(self, before, after):
         # First, track statues.
-        if self.trackStatuses and before.status != after.status:
-            lastStatusTime = self.memberStatusTimeStart.get(before.id, self.moduleTimeStart)
+        if self.track_statuses and before.status != after.status:
+            last_status_time = self.member_status_time_start.get(before.id, self.module_time_start)
 
             if before.status == discord.Status.online:
-                self.users.setUserTimeOnline(before.id, self.users.getUserTimeOnline(before.id) + (time.time() - lastStatusTime))
+                self.users.set_user_time_online(before.id, self.users.get_user_time_online(before.id) + (time.time() - last_status_time))
             elif before.status == discord.Status.offline:
-                self.users.setUserTimeOffline(before.id, self.users.getUserTimeOffline(before.id) + (time.time() - lastStatusTime))
+                self.users.set_user_time_offline(before.id, self.users.get_user_time_offline(before.id) + (time.time() - last_status_time))
             elif before.status == discord.Status.idle:
-                self.users.setUserTimeIdle(before.id, self.users.getUserTimeIdle(before.id) + (time.time() - lastStatusTime))
+                self.users.set_user_time_idle(before.id, self.users.get_user_time_idle(before.id) + (time.time() - last_status_time))
             elif before.status == discord.Status.dnd:
-                self.users.setUserTimeDND(before.id, self.users.getUserTimeDND(before.id) + (time.time() - lastStatusTime))
-            self.memberStatusTimeStart[before.id] = time.time()
+                self.users.set_user_time_dnd(before.id, self.users.get_user_time_dnd(before.id) + (time.time() - last_status_time))
+            self.member_status_time_start[before.id] = time.time()
 
         # Then mutes.
-        mutedRole = discord.utils.get(self.client.rTTR.roles, name=Config.getModuleSetting('moderation', 'muted_role_name') or 'Muted')
-        if mutedRole and (mutedRole not in before.roles and mutedRole in after.roles):
+        muted_role = discord.utils.get(self.client.focused_guild.roles, name=Config.get_module_setting('moderation', 'muted_role_name') or 'Muted')
+        if muted_role and (muted_role not in before.roles and muted_role in after.roles):
             fields = []
             punishment = None
-            moderation = self.client.requestModule('moderation')
+            moderation = self.client.request_module('moderation')
             if moderation:
                 punishments = moderation.punishments.select(where=["user=? AND strftime('%s', 'now') - created < 10", after.id])
             if moderation and punishments:
@@ -826,26 +826,26 @@ class UserTrackingModule(Module):
                     'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.commandPrefix, punishment['id'])),
+                        punishment['reason'].replace(NO_REASON, NO_REASON_ENTRY.format(self.client.command_prefix, punishment['id'])),
                         punishment['id']
                     )
                 }]
-            async for entry in self.client.rTTR.audit_logs(limit=5, action=discord.AuditLogAction.member_role_update):
-                if mutedRole in entry.after.roles:
+            async for entry in self.client.focused_guild.audit_logs(limit=5, action=discord.AuditLogAction.member_role_update):
+                if muted_role in entry.after.roles:
                     footer={'text': 'Mute performed by {}'.format(entry.user.name), 'icon_url': entry.user.avatar_url}
                     break
-            modLogEntry = await self.client.send_message(
-                self.logChannel,
-                self.createDiscordEmbed(
+            mod_long_entry = await self.client.send_message(
+                self.log_channel,
+                self.create_discord_embed(
                     action='Mute',
-                    primaryInfo=str(after),
+                    primary_info=str(after),
                     thumbnail=after.avatar_url,
                     fields=fields,
                     footer=footer
                )
             )
             if punishment:
-                moderation.punishments.update(where=['id=?', punishment['id']], log=modLogEntry.id)
-            return modLogEntry
+                moderation.punishments.update(where=['id=?', punishment['id']], log=mod_long_entry.id)
+            return mod_long_entry
 
 module = UserTrackingModule

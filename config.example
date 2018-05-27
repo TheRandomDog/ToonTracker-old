@@ -11,7 +11,7 @@
             botspam = The place where information messages go for a bot owner. Some modules use this.
             command_prefix = The prefix before a command name ('tt~', for example)
             load_modules = The modules to load on load.
-            rTTR = The server ID for /r/ToontownRewritten.
+            guild = The server ID for the guild to focus on.
             user_ranks = Overloaded ranks for certain users.
             role_ranks = Overloaded ranks for certain roles.
             token = The bot token Discord's API requires.
@@ -57,7 +57,7 @@
     ",
 
     "profile": "profile.example",
-    "botspam": [
+    "bot_output": [
         "CHANNEL_ID1", "CHANNEL_ID2"
     ],
     "command_prefix": "ttt~",
@@ -98,7 +98,7 @@
     "news": {
         "announcements": "CHANNEL_ID"
     },
-    "rTTR": "SERVER_ID",
+    "focused_guild": "SERVER_ID",
     "reddit": {
         "announcements": "CHANNEL_ID",
         "clientID": "REDDIT_CLIENT_ID",

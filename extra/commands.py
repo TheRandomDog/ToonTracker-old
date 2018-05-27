@@ -7,9 +7,9 @@ class Command:
         pass
 
 class CommandResponse:
-    def __init__(self, target, message, deleteIn=0, priorMessage=None, **kwargs):
+    def __init__(self, target, message, delete_in=0, prior_message=None, **kwargs):
         self.target = target
         self.message = message
-        self.deleteIn = deleteIn
-        self.priorMessage = priorMessage
+        self.delete_in = delete_in
+        self.prior_message = prior_message
         self.kwargs = kwargs

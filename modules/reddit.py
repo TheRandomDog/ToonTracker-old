@@ -5,190 +5,190 @@ import threading
 from discord import Color, Embed
 from modules.module import Module, Announcer
 from traceback import format_exception, format_exc
-from utils import Config, assertType
+from utils import Config, assert_type
 
 class RedditModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
         reddit = self.reddit = praw.Reddit(
-            client_id=assertType(Config.getModuleSetting('reddit', 'clientID'), str),
-            client_secret=assertType(Config.getModuleSetting('reddit', 'clientSecret'), str),
-            user_agent=assertType(Config.getModuleSetting('reddit', 'ua'), str),
-            username=assertType(Config.getModuleSetting('reddit', 'username'), str),
-            password=assertType(Config.getModuleSetting('reddit', 'password'), str)
+            client_id=assert_type(Config.get_module_setting('reddit', 'client_id'), str),
+            client_secret=assert_type(Config.get_module_setting('reddit', 'client_secret'), str),
+            user_agent=assert_type(Config.get_module_setting('reddit', 'ua'), str),
+            username=assert_type(Config.get_module_setting('reddit', 'username'), str),
+            password=assert_type(Config.get_module_setting('reddit', 'password'), str)
         )
 
-        self.subredditName = assertType(Config.getModuleSetting('reddit', 'subreddit'), str)
-        self.rTTR = reddit.subreddit(self.subredditName)
+        self.subreddit_name = assert_type(Config.get_module_setting('reddit', 'subreddit'), str)
+        self.focused_guild = reddit.subreddit(self.subreddit_name)
 
-        self.postStream = None
-        self.commentStream = None
-        self.liveStream = None
+        self.post_stream = None
+        self.comment_stream = None
+        self.live_stream = None
         self.live = None
-        self.readyToStop = False
+        self.ready_to_stop = False
 
-        postAnnouncer, commentAnnouncer, liveAnnouncer = self.create_announcers(NewPostAnnouncer, NewCommentAnnouncer, NewUpdateAnnouncer)
+        post_announcer, comment_announcer, live_announcer = self.create_announcers(NewPostAnnouncer, NewCommentAnnouncer, NewUpdateAnnouncer)
 
-    async def streamPosts(self):
+    async def stream_posts(self):
         try:
-            newPosts = False
-            for submission in self.rTTR.stream.submissions(pause_after=0):
-                if self.client.readyToClose or self.readyToStop:
+            new_posts = False
+            for submission in self.focused_guild.stream.submissions(pause_after=0):
+                if self.client.ready_to_close or self.ready_to_stop:
                     break
                 elif submission is None:
-                    newPosts = True
+                    new_posts = True
                     continue
-                elif newPosts:
-                    await self.postAnnouncer.announce(submission)
+                elif new_posts:
+                    await self.post_announcer.announce(submission)
         except Exception as e:
-            self.handleError()
+            self.handle_error()
 
-    async def streamComments(self):
+    async def stream_comments(self):
         try:
-            newComments = False
-            for comment in self.rTTR.stream.comments(pause_after=0):
-                if self.client.readyToClose or self.readyToStop:
+            new_comments = False
+            for comment in self.focused_guild.stream.comments(pause_after=0):
+                if self.client.ready_to_close or self.ready_to_stop:
                     break
                 elif comment is None:
-                    newComments = True
+                    new_comments = True
                     continue
-                elif newComments:
-                    await self.commentAnnouncer.announce(comment)
+                elif new_comments:
+                    await self.comment_announcer.announce(comment)
         except Exception as e:
-            self.handleError()
+            self.handle_error()
 
-    async def streamLive(self):
+    async def stream_live(self):
         try:
-            newUpdate = False
+            new_update = False
             for update in praw.models.util.stream_generator(self.reddit.live(self.live['id']).updates, pause_after=0):
-                if self.client.readyToClose or self.readyToStop:
+                if self.client.ready_to_close or self.ready_to_stop:
                     break
                 elif update is None:
-                    newUpdate = True
+                    new_update = True
                     continue
-                elif newUpdate:
-                    await self.liveAnnouncer.announce(update)
+                elif new_update:
+                    await self.live_announcer.announce(update)
         except Exception as e:
-            self.handleError()
+            self.handle_error()
 
-    def startTracking(self):
-        super().startTracking()
-        self.postStream = self.client.loop.create_task(self.streamPosts())
-        self.commentStream = self.client.loop.create_task(self.streamComments())
+    def start_tracking(self):
+        super().start_tracking()
+        self.post_stream = self.client.loop.create_task(self.stream_posts())
+        self.comment_stream = self.client.loop.create_task(self.stream_comments())
 
-        self.live = Config.getModuleSetting('reddit', 'live')
+        self.live = Config.get_module_setting('reddit', 'live')
         if self.live:
-            self.liveAnnouncer.CHANNEL_ID = self.live['announcements']
+            self.live_announcer.CHANNEL_ID = self.live['announcements']
             if self.live['id']:
-                self.liveStream = self.client.loop.create_task(self.streamLive())
+                self.live_stream = self.client.loop.create_task(self.stream_live())
 
-    def stopTracking(self):
-        super().stopTracking()
-        self.readyToStop = True
+    def stop_tracking(self):
+        super().stop_tracking()
+        self.ready_to_stop = True
 
 
 class NewPostAnnouncer(Announcer):
-    CHANNEL_ID = Config.getModuleSetting('reddit', 'announcements')
+    CHANNEL_ID = Config.get_module_setting('reddit', 'announcements')
 
     async def announce(self, submission):
         if submission.is_self:
-            descList = submission.selftext.split('\n')
-            if len(descList) > 1:
-                desc = descList[0]
+            desc_list = submission.selftext.split('\n')
+            if len(desc_list) > 1:
+                desc = desc_list[0]
                 while not desc:
-                    descList.pop(0)
-                    desc = descList[0]
+                    desc_list.pop(0)
+                    desc = desc_list[0]
                 i = -1
                 while desc[i] in ['.', '?', '!', ':', ';']:
                     i -= 1
                 desc = desc[:(i + 1) or None] + '...'
             else:
-                desc = descList[0]
+                desc = desc_list[0]
         else:
             desc = 'Links to `{}`. [View the post instead.]({})'.format(submission.domain, "https://www.reddit.com" + submission.permalink)
 
         if len(desc) > 2048:
-            lastValidWordIndex = desc[:2048].rfind(' ')
-            if lastValidWordIndex == -1:
-                lastValidWordIndex = 2045
-            desc = desc[:lastValidWordIndex] + '...'
+            last_valid_word_index = desc[:2048].rfind(' ')
+            if last_valid_word_index == -1:
+                last_valid_word_index = 2045
+            desc = desc[:last_valid_word_index] + '...'
 
         flair = submission.author_flair_css_class
         color = Color.default()
-        authorIcon = Embed.Empty
+        author_icon = Embed.Empty
         if not flair:
             pass
         elif 'team' in flair:
             color = Color.blue()
-            authorIcon = 'https://cdn.discordapp.com/emojis/338117947241529344.png'
+            author_icon = 'https://cdn.discordapp.com/emojis/338117947241529344.png'
         elif 'mod' in flair:
             color = Color.green()
-            authorIcon = 'https://cdn.discordapp.com/emojis/338254475674255361.png'
+            author_icon = 'https://cdn.discordapp.com/emojis/338254475674255361.png'
 
         thumbnail = submission.thumbnail
         if 'http' not in thumbnail:
             thumbnail = Embed.Empty
 
-        embed = self.module.createDiscordEmbed(
+        embed = self.module.create_discord_embed(
             title=submission.author,
-            icon=authorIcon,
+            icon=author_icon,
             subtitle=submission.title,
             info=desc,
-            subtitleUrl=submission.url,
+            subtitle_url=submission.url,
             color=color,
             thumbnail=thumbnail,
-            footer='/r/{} - New Post'.format(self.module.subredditName)
+            footer='/r/{} - New Post'.format(self.module.subreddit_name)
         )
         return embed
 
 class NewCommentAnnouncer(Announcer):
-    CHANNEL_ID = Config.getModuleSetting('reddit', 'announcements')
+    CHANNEL_ID = Config.get_module_setting('reddit', 'announcements')
 
     async def announce(module, comment):
-        descList = comment.body.split('\n')
-        if len(descList) > 1:
-            desc = descList[0]
+        desc_list = comment.body.split('\n')
+        if len(desc_list) > 1:
+            desc = desc_list[0]
             while not desc:
-                descList.pop(0)
-                desc = descList[0]
+                desc_list.pop(0)
+                desc = desc_list[0]
             i = -1
             while desc[i] in ['.', '?', '!', ':', ';']:
                 i -= 1
             desc = desc[:(i + 1) or None] + '...'
         else:
-            desc = descList[0]
+            desc = desc_list[0]
 
         if len(desc) > 2048:
-            lastValidWordIndex = desc[:2048].rfind(' ')
-            if lastValidWordIndex == -1:
-                lastValidWordIndex = 2045
-            desc = desc[:lastValidWordIndex] + '...'
+            last_valid_word_index = desc[:2048].rfind(' ')
+            if last_valid_word_index == -1:
+                last_valid_word_index = 2045
+            desc = desc[:last_valid_word_index] + '...'
 
         color = Color.default()
-        authorIcon = Embed.Empty
+        author_icon = Embed.Empty
 
         flair = comment.author_flair_css_class
         if flair and 'team' in flair:
             color = Color.blue()
-            authorIcon = 'https://cdn.discordapp.com/emojis/338117947241529344.png'
+            author_icon = 'https://cdn.discordapp.com/emojis/338117947241529344.png'
         elif flair and 'mod' in flair:
             color = Color.green()
-            authorIcon = 'https://cdn.discordapp.com/emojis/338254475674255361.png'
+            author_icon = 'https://cdn.discordapp.com/emojis/338254475674255361.png'
 
-        embed = self.module.createDiscordEmbed(
+        embed = self.module.create_discord_embed(
             title=comment.author,
-            icon=authorIcon,
+            icon=author_icon,
             subtitle='Reply to ' + comment.submission.title,
             info=desc,
-            subtitleUrl="https://www.reddit.com" + (comment.permalink if type(comment.permalink) == str else comment.permalink()),
+            subtitle_url="https://www.reddit.com" + (comment.permalink if type(comment.permalink) == str else comment.permalink()),
             color=color,
-            footer='/r/{} - New Comment'.format(self.module.subredditName)
+            footer='/r/{} - New Comment'.format(self.module.subreddit_name)
         )
         return embed
 
 class NewUpdateAnnouncer(Announcer):
-    CHANNEL_ID = Config.getModuleSetting('reddit', 'announcements')
+    CHANNEL_ID = Config.get_module_setting('reddit', 'announcements')
 
     async def announce(self, update):
         return await self.send(update.body)
