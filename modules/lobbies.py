@@ -629,7 +629,7 @@ class LobbyManagement(Module):
         async def execute(client, module, message, *args):
             name = ' '.join(args)
             lobby = module.getLobby(name=name)
-            if not lobby and message.channel.category and message.channel.category.startswith('Lobby'):
+            if not lobby and message.channel.category and message.channel.category.name.startswith('Lobby'):
                 lobby = module.getLobby(id=message.channel.category.id)
 
             if not name and not lobby:
