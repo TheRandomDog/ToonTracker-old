@@ -81,7 +81,7 @@ class ToonTracker(discord.Client):
     # Reloads config and modules.
     class ReloadCMD(Command):
         NAME = 'reload'
-        RANK = 400
+        RANK = 300
         """~reload
 
             Reloads all modules and the configuration file.
