@@ -495,7 +495,7 @@ class ModerationModule(Module):
 
             if user:
                 return await module.punishUser(user, length=length, reason=reason, punishment=module.MUTE, message=message)
-            elif channel:
+            elif channel and not channel.name.startswith('staff-'):
                 punishment = module.punishments.select(where=['user=?', channel.id], limit=1)
                 if punishment:
                     return CommandResponse(
