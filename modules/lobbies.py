@@ -168,7 +168,7 @@ class LobbyManagement(Module):
                 return message.author.mention + ' ' + CREATION_FAILURE_NAME_GENERIC
 
             category = await client.rTTR.create_category(name='Lobby [{}]'.format(name), reason=auditLogReason)
-            discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
+            discordModRole = discord.utils.get(client.rTTR.roles, name='Moderators')
             await category.set_permissions(client.rTTR.default_role, read_messages=False)
             await category.set_permissions(message.author, read_messages=True, send_messages=True)
             await category.set_permissions(

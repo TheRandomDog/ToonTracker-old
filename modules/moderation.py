@@ -523,7 +523,7 @@ class ModerationModule(Module):
                     'end_length': lengthText
                 }
                 module.punishments.insert(**punishmentEntry)
-                discordModRole = discord.utils.get(client.rTTR.roles, name='Discord Mods')
+                discordModRole = discord.utils.get(client.rTTR.roles, name='Moderators')
                 await channel.set_permissions(discordModRole, send_messages=True)
                 await channel.set_permissions(client.rTTR.default_role, send_messages=False)
                 await channel.send(embed=module.createDiscordEmbed(info=':mute: This channel has been temporarily muted.', color=discord.Color.red()))
