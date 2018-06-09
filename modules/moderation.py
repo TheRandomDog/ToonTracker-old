@@ -1574,4 +1574,36 @@ class ModerationModule(Module):
             print('Tried to remove edited message in bad word/link filter but message wasn\'t found.')
             return
 
+    async def on_reaction_add(self, reaction, user):
+        message = reaction.message
+        reactions = message.reactions
+        remojis = [r.emoji for r in reactions]
+        emojis = [
+            '\U0001F1E9', '\U0001F1EA', '\U0001F1F8', '\U0001F1F5', '\U0001F17F', '\U0001F1E6',
+            '\U0001F170', '\U00000034\U000020E3', '\U0001F1E8', '\U0001F1EE', '\U00002139',
+            '\U0001F1F9', '\U0001F1F4', '\U00000030\U000020E3', '\U0001F17E'
+        ]
+        muted_users = []
+
+        if (
+            '\U0001F1E9' in remojis and                                                                     # D
+            '\U0001F1EA' in remojis and                                                                     # E
+            '\U0001F1F8' in remojis and                                                                     # S
+            ('\U0001F1F5' in remojis or '\U0001F17F' in remojis) and                                        # P
+            ('\U0001F1E6' in remojis or '\U0001F170' in remojis or '\U00000034\U000020E3' in remojis) and   # A
+            '\U0001F1E8' in remojis and                                                                     # C
+            ('\U0001F1EE' in remojis or '\U00002139' in remojis) and                                        # I
+            '\U0001F1F9' in remojis and                                                                     # T
+            ('\U0001F1F4' in remojis or '\U00000030\U000020E3' in remojis or '\U0001F17E' in remojis)       # O
+        ):
+            for reaction in reactions:
+                if reaction.emoji in emojis:
+                    async for user in reaction.users():
+                        if user not in muted_users:
+                            self.client.loop.create_task(self.punishUser(user, punishment=self.MUTE, length='15s', reason='For using a bad meme.'))
+                            muted_users.append(user)
+                        await message.remove_reaction(reaction, user)
+            await message.add_reaction(discord.utils.get(self.client.rTTR.emojis, name='ToonTracker'))
+
+
 module = ModerationModule
