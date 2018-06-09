@@ -1587,7 +1587,7 @@ class ModerationModule(Module):
 
         if (
             '\U0001F1E9' in remojis and                                                                     # D
-            '\U0001F1EA' in remojis and                                                                     # E
+            ('\U0001F1EA' in remojis or '\U00000033\U000020E3' in remojis) and                              # E
             '\U0001F1F8' in remojis and                                                                     # S
             ('\U0001F1F5' in remojis or '\U0001F17F' in remojis) and                                        # P
             ('\U0001F1E6' in remojis or '\U0001F170' in remojis or '\U00000034\U000020E3' in remojis) and   # A
