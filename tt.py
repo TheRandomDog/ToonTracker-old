@@ -302,12 +302,12 @@ class ToonTracker(discord.Client):
                 except discord.errors.DiscordException as e:
                     msg = '**{}** tried to update the **{}** perma-message, but Discord raised an exception: {}'.format(module.__class__.__name__, update[1], str(e))
                     print(msg)
-                    self.send_message(botspam, msg)
+                    await self.send_message(botspam, msg)
                     messageSent = True
                 except (asyncio.TimeoutError, aiohttp.client_exceptions.ClientOSError):
                     msg = '**{}** tried to update the **{}** perma-message, but the async call errored / timed out.'.format(module.__class__.__name__, update[1])
                     print(msg)
-                    self.send_message(botspam, msg)
+                    await self.send_message(botspam, msg)
                     messageSent = True
                 if not messageSent:
                     await self.send_message(channel, update[2])
