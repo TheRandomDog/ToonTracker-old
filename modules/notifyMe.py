@@ -212,11 +212,11 @@ class NotifyMeModule(Module):
     def refreshAvailableRoles(self):
         self.availableRoles = assertType(Config.getModuleSetting('notifyMe', 'roles'), dict, otherwise={})
         for role, data in self.availableRoles.items():
-            if not assertType(data[0], int, otherwise=None):
+            if not assertType(data[0], int, otherwise=None) and role in self.availableRoles:
                 del self.availableRoles[role]
 
             roleObject = discord.utils.get(self.client.rTTR.roles, id=data[0])
-            if not roleObject:
+            if not roleObject and role in self.availableRoles:
                 del self.availableRoles[role]
 
             self.availableRoles[role] = (roleObject, data[1])
