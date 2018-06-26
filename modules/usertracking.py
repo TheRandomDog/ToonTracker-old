@@ -591,6 +591,8 @@ class UserTrackingModule(Module):
             self.xpNeededForLevel(level),
             getProgressBar(xp, self.xpNeededForLevel(level))
         )
+        if level >= 7:
+            await member.add_roles(self.regularRole, reason='User rejoined and had regular role')
         await self.client.send_message(
             self.logChannel,
             self.createDiscordEmbed(
