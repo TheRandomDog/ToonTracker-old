@@ -589,9 +589,10 @@ class LobbyManagement(Module):
 
             auditLogReason = 'User disbanded lobby via ~disbandLobby'
             category = discord.utils.get(client.rTTR.categories, id=lobby['category_id'])
-            for channel in category.channels:
-                await channel.delete(reason=auditLogReason)
-            await category.delete(reason=auditLogReason)
+            if category:
+                for channel in category.channels:
+                    await channel.delete(reason=auditLogReason)
+                await category.delete(reason=auditLogReason)
             for member in members:
                 await client.send_message(member, DISBAND_SUCCESS_MEMBER.format(lobby['name']))
             await client.send_message(module.lobbyChannel if message.channel.id == module.lobbyChannel else message.author, 
@@ -648,9 +649,10 @@ class LobbyManagement(Module):
 
             auditLogReason = 'Mod disbanded lobby via ~forceDisband'
             category = discord.utils.get(client.rTTR.categories, id=lobby['category_id'])
-            for channel in category.channels:
-                await channel.delete(reason=auditLogReason)
-            await category.delete(reason=auditLogReason)
+            if category:
+                for channel in category.channels:
+                    await channel.delete(reason=auditLogReason)
+                await category.delete(reason=auditLogReason)
             for member in members:
                 await client.send_message(member, DISBAND_SUCCESS_MEMBER.format(lobby['name']))
             await client.send_message(owner, FORCE_SUCCESS_OWNER.format(name))
@@ -1023,15 +1025,16 @@ class LobbyManagement(Module):
                         pass
                 owner = discord.utils.get(self.client.rTTR.members, id=lobby['owner_id'])
                 savingMsgObj = None
-                try:
-                    await self.client.send_message(owner, BUMP_OWNER)
-                    if lobby['text_channel_id']:
-                        savingMessage = LOG_CONFIRM_4
-                        savingMsgObj = await self.client.send_message(owner, savingMessage)
-                        async with owner.typing():
-                            chatlog = await self.getChatLog(lobby, savingMessage)
-                except discord.errors.DiscordException:
-                    pass
+                if owner:
+                    try:
+                        await self.client.send_message(owner, BUMP_OWNER)
+                        if lobby['text_channel_id']:
+                            savingMessage = LOG_CONFIRM_4
+                            savingMsgObj = await self.client.send_message(owner, savingMessage)
+                            async with owner.typing():
+                                chatlog = await self.getChatLog(lobby, savingMessage)
+                    except discord.errors.DiscordException:
+                        pass
 
                 auditLogReason = 'Lobby hit expiration date of {}'.format(
                     getTimeFromSeconds(self.visitedExpiryTime if lobby['last_visited'] else self.unvisitedExpiryTime, oneUnitLimit=True))
