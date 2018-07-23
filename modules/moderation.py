@@ -1160,7 +1160,7 @@ class ModerationModule(Module):
             elif nextPunishment == self.MUTE:
                 if not self.mutedRole:
                     raise ValueError
-                await user.add_roles(self.mutedRole, reason=str(punishmentEntry['id']))
+                await member.add_roles(self.mutedRole, reason=str(punishmentEntry['id']))
         except (discord.HTTPException, ValueError):
             await self.client.send_message(author, actionFailure if actionFailure else 'The {} failed.'.format(nextPunishment.lower()))
 
