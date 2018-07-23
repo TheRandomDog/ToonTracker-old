@@ -1014,7 +1014,7 @@ class ModerationModule(Module):
                 deleteIn=5,
                 priorMessage=priorMessage
             )
-        if Config.getRankOfMember(user) >= 300 and not self.allowModPunishments:
+        if (Config.getRankOfMember(member) >= 300 or Config.getRankOfMember(user) >= 300) and not self.allowModPunishments:
             return CommandResponse(
                 channel,
                 author.mention + ' ' + PUNISH_FAILURE_MOD,
