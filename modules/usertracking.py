@@ -702,9 +702,9 @@ class UserTrackingModule(Module):
             self.createDiscordEmbed(
                 action='Nickname',
                 primaryInfo=str(member),
-                secondaryInfo=replaceFrom.replace(word, '**' + word + '**') if word else replaceFrom
-            ),
-            thumbnail=member.avatar_url
+                secondaryInfo=replaceFrom.replace(word, '**' + word + '**') if word else replaceFrom,
+                thumbnail=member.avatar_url
+            )
         )
 
     # Specifically built for moderation module.
