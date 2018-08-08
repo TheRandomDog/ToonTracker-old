@@ -160,6 +160,11 @@ class UserTrackingModule(Module):
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
             'title': 'Link Filtered'
         },
+        'Nickname': {
+            'color': discord.Color.dark_red(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
+            'title': 'Nickname Filtered'
+        },
         'Review': {
             'color': discord.Color.dark_red(),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
@@ -687,6 +692,19 @@ class UserTrackingModule(Module):
                 ),
                 thumbnail=message.author.avatar_url
            )
+        )
+
+    # Specifically built for moderation module.
+    async def on_nickname_filter(self, member, *, word=None, text=None):
+        replaceFrom = text if text else member.display_name
+        await self.client.send_message(
+            self.logChannel,
+            self.createDiscordEmbed(
+                action='Nickname',
+                primaryInfo=str(member),
+                secondaryInfo=replaceFrom.replace(word, '**' + word + '**') if word else replaceFrom
+            ),
+            thumbnail=member.avatar_url
         )
 
     # Specifically built for moderation module.

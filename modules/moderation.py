@@ -82,6 +82,10 @@ LINK_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've l
 IMAGE_FILTER_REASON = 'Posting Inappropriate Content **[Rating: {}]**'
 IMAGE_FILTER_REVIEW = '{} posted an image in {} that has been registered as possibly bad. **[Rating: {}]**\n' \
                     '*If the image has bad content in it, please act accordingly.*\n{}'
+NICKNAME_FILTER_ENTRY = 'Changed inappropriate nickname from {}: {}'
+NICKNAME_FILTER_MESSAGE = "Hey there, {}! This is just to let you know your username or nickname contained the blacklist word `{}`, and to make clear " \
+                        "that it's not an allowed word on this server. No automated action has been taken, but trying to change your nickname back or trying to cirvument the " \
+                        "filter may result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
 
 class ModerationModule(Module):
     WARNING = 'Warning'
@@ -1314,6 +1318,43 @@ class ModerationModule(Module):
             print('Tried to send bad word filter notification message to a user, but Discord threw an HTTP Error:\n\n{}'.format(format_exc()))
         return True
 
+    async def _filterBadName(self, member, evadedText, silentFilter=False):
+        response = {}
+        for word in evadedText.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').split(' '):
+            wordResponse = self._testForBadWord(word)
+            if wordResponse['word']:
+                response = wordResponse
+        phraseResponse = self._testForBadPhrase(evadedText)
+        if not response and phraseResponse['word']:
+            response = phraseResponse
+        wholeResponse = self._testForBadWhole(evadedText)
+        if not response and wholeResponse['word']:
+            response = wholeResponse
+        emojiResponse = self._testForBadEmoji(evadedText)
+        if not response and emojiResponse['word']:
+            response = emojiResponse
+        if not response:
+            return False
+
+        await member.edit(nick='{Change Your Nickname}')
+        if self.spamChannel:
+            usertracking = self.client.requestModule('usertracking')
+            if usertracking:
+                await usertracking.on_nickname_filter(member, word=response['evadedWord'], text=evadedText)
+            else:
+                nameFilterFormat = NICKNAME_FILTER_ENTRY
+                await self.client.send_message(self.logChannel, nameFilterFormat.format(
+                    member.mention,
+                    member.display_name.replace(response['evadedWord'], '**' + response['evadedWord'] + '**'),
+                ))
+        try:
+            if silentFilter:
+                return True
+            await self.client.send_message(member, NICKNAME_FILTER_MESSAGE.format(member.mention, response['word']))
+        except discord.HTTPException:
+            print('Tried to send bad name filter notification message to a user, but Discord threw an HTTP Error:\n\n{}'.format(format_exc()))
+        return True
+
     async def filterBadWords(self, message, edited=' ', silentFilter=False):
         if await self._filterBadWords(message, message.content, edited, silentFilter):
             return True
@@ -1573,5 +1614,9 @@ class ModerationModule(Module):
         except discord.errors.NotFound:
             print('Tried to remove edited message in bad word/link filter but message wasn\'t found.')
             return
+
+    async def on_member_update(self, before, after):
+        if self.badWordFilterOn:
+            await self._filterBadName(after, after.display_name)
 
 module = ModerationModule
