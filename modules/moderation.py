@@ -1018,7 +1018,7 @@ class ModerationModule(Module):
                 deleteIn=5,
                 priorMessage=priorMessage
             )
-        if Config.getRankOfMember(user) >= 300 and not self.allowModPunishments:
+        if (Config.getRankOfMember(member) >= 300 or Config.getRankOfMember(user) >= 300) and not self.allowModPunishments:
             return CommandResponse(
                 channel,
                 author.mention + ' ' + PUNISH_FAILURE_MOD,
@@ -1164,7 +1164,7 @@ class ModerationModule(Module):
             elif nextPunishment == self.MUTE:
                 if not self.mutedRole:
                     raise ValueError
-                await user.add_roles(self.mutedRole, reason=str(punishmentEntry['id']))
+                await member.add_roles(self.mutedRole, reason=str(punishmentEntry['id']))
         except (discord.HTTPException, ValueError):
             await self.client.send_message(author, actionFailure if actionFailure else 'The {} failed.'.format(nextPunishment.lower()))
 
