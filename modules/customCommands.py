@@ -187,7 +187,7 @@ class CustomCommandsModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.commands = Config.getModuleSetting('custom_commands', 'commands')
+        self.commands = Config.getModuleSetting('custom_commands', 'commands', [])
         for command in self.commands:
             if not command.get('name', None):
                 print('A command in the custom commands config does not have a name.')
