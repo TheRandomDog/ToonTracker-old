@@ -114,6 +114,8 @@ class Users:
 
 
 class UserTrackingModule(Module):
+    NAME = 'User Info'
+
     ACTIONS = {
         'Join': {
             'color': discord.Color.green(),

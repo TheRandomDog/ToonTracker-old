@@ -128,6 +128,8 @@ BUMP_OWNER = 'The lobby you created was disbanded because it was left inactive f
 BUMP_MEMBER = 'The lobby you were in was disbanded because it was left inactive for an extended period of time.'
 
 class LobbyManagement(Module):
+    NAME = 'Lobbies'
+
     class CreateLobbyCMD(Command):
         """~createLobby <lobby name>
 

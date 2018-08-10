@@ -2,6 +2,8 @@ from .module import *
 from discord import Embed, Color
 
 class CustomCommandsModule(Module):
+    NAME = 'Custom Commands'
+
     class AddCMD(Command):
         """~addCommand <commandName> [response]
         
@@ -77,11 +79,7 @@ class CustomCommandsModule(Module):
                 return module.createDiscordEmbed(subtitle='The command **{}** does not exist.'.format(command_name), color=Color.red())
             return module.visualize_command(module.commands[command_index])
 
-    class ListCMDs(Command):
-        """~listCommands
-
-        Lists all the custom commands and their documentation.
-        """
+    """class ListCMDs(Command):
         NAME = 'listCommands'
 
         @classmethod
@@ -90,7 +88,7 @@ class CustomCommandsModule(Module):
                 title='Custom Commands',
                 description='\n'.join(['**{}**{}{}'.format('~' + command['name'] + '\n', command.get('description', ''), '\n' if command.get('description', '') else '') for command in module.commands]),
                 color=Color.from_rgb(114, 198, 255)
-            ).set_footer(text='Available Commands: ~addCommand | ~removeCommand | ~viewCommand | ~editCommand')
+            ).set_footer(text='Available Commands: ~addCommand | ~removeCommand | ~viewCommand | ~editCommand')"""
 
     class EditCMD(Command):
         """~editCommand <commandName> <part> [...]

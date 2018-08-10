@@ -104,7 +104,8 @@ class ToonTracker(discord.Client):
         async def execute(client, module, message, *args):
             rank = max([Config.getRankOfUser(message.author.id), Config.getRankOfRole(message.author.top_role.id)])
 
-            msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
+            embed = Embed(description="Here's a list of available commands I can help with.\nTo get more info, use `~help command`.", color=discord.Color.blurple())
+            top_level_commands = []
             for command in sorted(client._commands, key=lambda c: c.NAME):
                 if command.RANK <= rank and command.__doc__:
                     if args and args[0].lower() == command.NAME.lower():
@@ -112,18 +113,24 @@ class ToonTracker(discord.Client):
                         doc[0] = '`' + doc[0] + '`'
                         doc = '\n'.join([line.strip() for line in doc])
                         return doc
-                    msg += '\n\t' + client.commandPrefix + command.NAME
+                    top_level_commands.append(client.commandPrefix + command.NAME)
+            if top_level_commands:
+                embed.add_field(name='ToonTracker', value='\n'.join(top_level_commands))
+
             for module in client.modules.values():
+                commands = []
                 for command in sorted(module._commands, key=lambda c: c.NAME):
-                    print(command, command.__doc__)
                     if command.RANK <= rank and command.__doc__:
                         if args and args[0].lower() == command.NAME.lower():
                             doc = command.__doc__.split('\n')
                             doc[0] = '`' + doc[0] + '`'
                             doc = '\n'.join([line.strip() for line in doc])
-                            return doc
-                        msg += '\n\t' + client.commandPrefix + command.NAME
-            return msg
+                            return Embed(title=command.__doc__.split('\n')[0].split(' ')[0], description=doc, color=discord.Color.blurple())
+                        commands.append(client.commandPrefix + command.NAME)
+                if commands:
+                    embed.add_field(name=module.NAME, value='\n'.join(commands))
+
+            return embed
 
 
     def __init__(self):
