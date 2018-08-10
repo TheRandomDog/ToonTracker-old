@@ -105,7 +105,7 @@ class ToonTracker(discord.Client):
             rank = max([Config.getRankOfUser(message.author.id), Config.getRankOfRole(message.author.top_role.id)])
 
             msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
-            for command in sorted(client.commands, key=lambda c: c.NAME):
+            for command in sorted(client._commands, key=lambda c: c.NAME):
                 if command.RANK <= rank and command.__doc__:
                     if args and args[0].lower() == command.NAME.lower():
                         doc = command.__doc__.split('\n')
@@ -114,7 +114,8 @@ class ToonTracker(discord.Client):
                         return doc
                     msg += '\n\t' + client.commandPrefix + command.NAME
             for module in client.modules.values():
-                for command in sorted(module.commands, key=lambda c: c.NAME):
+                for command in sorted(module._commands, key=lambda c: c.NAME):
+                    print(command, command.__doc__)
                     if command.RANK <= rank and command.__doc__:
                         if args and args[0].lower() == command.NAME.lower():
                             doc = command.__doc__.split('\n')
@@ -131,7 +132,7 @@ class ToonTracker(discord.Client):
         self.toLoad = Config.getSetting('load_modules')
         self.modules = {}
 
-        self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
+        self._commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
         self.commandPrefix = Config.getSetting('command_prefix', '!')
 
         self.ready = False
@@ -168,7 +169,7 @@ class ToonTracker(discord.Client):
         if not self.ready or message.author == self.rTTR.me:
             return
 
-        for command in self.commands:
+        for command in self._commands:
             if message.content and message.content.split(' ')[0] == self.commandPrefix + command.NAME and \
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
                 try:
