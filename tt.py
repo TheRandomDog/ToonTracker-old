@@ -104,25 +104,33 @@ class ToonTracker(discord.Client):
         async def execute(client, module, message, *args):
             rank = max([Config.getRankOfUser(message.author.id), Config.getRankOfRole(message.author.top_role.id)])
 
-            msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
-            for command in sorted(client.commands, key=lambda c: c.NAME):
+            embed = Embed(description="Here's a list of available commands I can help with.\nTo get more info, use `~help command`.", color=discord.Color.blurple())
+            top_level_commands = []
+            for command in sorted(client._commands, key=lambda c: c.NAME):
                 if command.RANK <= rank and command.__doc__:
                     if args and args[0].lower() == command.NAME.lower():
                         doc = command.__doc__.split('\n')
                         doc[0] = '`' + doc[0] + '`'
                         doc = '\n'.join([line.strip() for line in doc])
                         return doc
-                    msg += '\n\t' + client.commandPrefix + command.NAME
+                    top_level_commands.append(client.commandPrefix + command.NAME)
+            if top_level_commands:
+                embed.add_field(name='ToonTracker', value='\n'.join(top_level_commands))
+
             for module in client.modules.values():
-                for command in sorted(module.commands, key=lambda c: c.NAME):
+                commands = []
+                for command in sorted(module._commands, key=lambda c: c.NAME):
                     if command.RANK <= rank and command.__doc__:
                         if args and args[0].lower() == command.NAME.lower():
                             doc = command.__doc__.split('\n')
                             doc[0] = '`' + doc[0] + '`'
                             doc = '\n'.join([line.strip() for line in doc])
-                            return doc
-                        msg += '\n\t' + client.commandPrefix + command.NAME
-            return msg
+                            return Embed(title=command.__doc__.split('\n')[0].split(' ')[0], description=doc, color=discord.Color.blurple())
+                        commands.append(client.commandPrefix + command.NAME)
+                if commands:
+                    embed.add_field(name=module.NAME if hasattr(module, 'NAME') else module.__class__.__name__, value='\n'.join(commands))
+
+            return embed
 
 
     def __init__(self):
@@ -131,7 +139,7 @@ class ToonTracker(discord.Client):
         self.toLoad = Config.getSetting('load_modules')
         self.modules = {}
 
-        self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
+        self._commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
         self.commandPrefix = Config.getSetting('command_prefix', '!')
 
         self.ready = False
@@ -168,7 +176,7 @@ class ToonTracker(discord.Client):
         if not self.ready or message.author == self.rTTR.me:
             return
 
-        for command in self.commands:
+        for command in self._commands:
             if message.content and message.content.split(' ')[0] == self.commandPrefix + command.NAME and \
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
                 try:

@@ -26,7 +26,7 @@ class Module:
         self.isFirstLoop = True
         self.isTracking = False
 
-        self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
+        self._commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
         self.pendingAnnouncements = []
         self.pendingUpdates = []
 
@@ -74,7 +74,7 @@ class Module:
         self.isTracking = False
 
     async def _handleMsg(self, message):
-        for command in self.commands:
+        for command in self._commands:
             if message.content and message.content.split(' ')[0] == self.client.commandPrefix + command.NAME and \
                     (Config.getRankOfUser(message.author.id) >= command.RANK or any([Config.getRankOfRole(role.id) >= command.RANK for role in message.author.roles])):
                 response = await command.execute(self.client, self, message, *message.content.split(' ')[1:])

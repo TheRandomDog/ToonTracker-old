@@ -88,6 +88,8 @@ NICKNAME_FILTER_MESSAGE = "Hey there, {}! This is just to let you know your user
                         "filter may result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
 
 class ModerationModule(Module):
+    NAME = 'Moderation'
+    
     WARNING = 'Warning'
     KICK = 'Kick'
     TEMPORARY_BAN = 'Temporary Ban'
