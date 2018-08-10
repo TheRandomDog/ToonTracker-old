@@ -200,11 +200,6 @@ class CustomCommandsModule(Module):
 
     def load_command(self, command):
         class CustomCommand(Command):
-            """~{}
-                
-                A custom created command.
-                {}
-            """.format(command['name'], command.get('description', ''))
             NAME = str(command['name'])
             RANK = assertType(command.get('rank', 0), int, otherwise=0)
 
@@ -218,6 +213,12 @@ class CustomCommandsModule(Module):
                             await message.channel.send(action['content'])
                     elif action['action'] == 'Send':
                         await client.get_channel(action['channel']).send(action['content'])
+        CustomCommand.__doc__ = """~{}
+            
+            A custom created command.
+            {}
+        """.format(command['name'], command.get('description', ''))
+
         # Hack it in!
         self._commands.append(CustomCommand)
 
