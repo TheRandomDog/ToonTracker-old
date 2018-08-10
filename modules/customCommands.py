@@ -55,6 +55,7 @@ class CustomCommandsModule(Module):
                 if command['name'] == command_name:
                     module.commands.remove(command)
                     Config.setModuleSetting('custom_commands', 'commands', module.commands)
+                    module.__init__(module.client)
                     return module.createDiscordEmbed(subtitle='Removed the **{}** command.'.format(command_name), color=Color.green())
             return module.createDiscordEmbed(subtitle='The command **{}** does not exist.'.format(command_name), color=Color.red())
 
