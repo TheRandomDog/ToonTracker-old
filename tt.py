@@ -128,7 +128,7 @@ class ToonTracker(discord.Client):
                             return Embed(title=command.__doc__.split('\n')[0].split(' ')[0], description=doc, color=discord.Color.blurple())
                         commands.append(client.commandPrefix + command.NAME)
                 if commands:
-                    embed.add_field(name=module.NAME, value='\n'.join(commands))
+                    embed.add_field(name=module.NAME if hasattr(module, 'NAME') else module.__class__.__name__, value='\n'.join(commands))
 
             return embed
 
