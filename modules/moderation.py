@@ -97,6 +97,16 @@ class ModerationModule(Module):
     MUTE = 'Mute'
 
     class AddBadLinkCMD(Command):
+        """~addBadLink <url format>
+
+        Adds a bad link format to the filter list. You can use wildcard characters.
+        \t* = Matches multiple characters
+        \t? = Matches any single character
+        \t[seq] = Matches any character in `seq`
+        \t[!seq] = Matches any character not in `seq`
+        
+        `https://discord.gg/*` -> Filters any Discord Invite link
+        """
         NAME = 'addBadLink'
         RANK = 300
 
@@ -114,11 +124,15 @@ class ModerationModule(Module):
                 return module.createDiscordEmbed(info='**{}** is already matched under **{}**'.format(link, matches[0]), color=discord.Color.dark_orange())
             badlinks.append(link)
             Config.setModuleSetting('moderation', 'bad_links', badlinks)
-            module.badLinks = badlinks
+            module.badLinks = badlink
 
             return module.createDiscordEmbed(info='**{}** was added as a bad link format.'.format(link), color=discord.Color.green())
 
     class RemoveBadLinkCMD(Command):
+        """~removeBadLink <url format>
+
+        Removes a bad link format from the filter list. Be sure to use the format that was added exactly.
+        """
         NAME = 'removeBadLink'
         RANK = 300
 
@@ -138,6 +152,11 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was removed from the bad link list.'.format(link), color=discord.Color.green())
 
     class AddBadWordCMD(Command):
+        """~addBadWord <word>
+
+        Adds a bad word to the filter list. It can also be a phrase. This will also be checked in nicknames.
+        Any emojis or links should be added with their respective commands.
+        """
         NAME = 'addBadWord'
         RANK = 300
 
@@ -157,6 +176,10 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
 
     class RemoveBadWordCMD(Command):
+        """~removeBadWord <word>
+
+        Removes a bad word from the filter list.
+        """
         NAME = 'removeBadWord'
         RANK = 300
 
@@ -176,6 +199,10 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was removed from the bad word list.'.format(word), color=discord.Color.green())
 
     class AddBadEmojiCMD(Command):
+        """~addBadEmoji <emoji>
+        
+        Adds a bad emoji to the filter list. This will also be checked in nicknames and reactions. 
+        """
         NAME = 'addBadEmoji'
         RANK = 300
 
@@ -195,6 +222,10 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was added as a bad emoji.'.format(word), color=discord.Color.green())
 
     class RemoveBadEmojiCMD(Command):
+        """~removeBadEmoji <emoji>
+
+        Removes a bad emoji from the filter list.
+        """
         NAME = 'removeBadEmoji'
         RANK = 300
 
@@ -214,6 +245,12 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was removed from the bad word emoji list.'.format(word), color=discord.Color.green())
 
     class AddLinkExceptionCMD(Command):
+        """~addLinkException <url>
+
+        Adds a specific link as an exception to the bad link format filter list. Unlike adding a bad link, this takes a specific address, not a wildcard format.
+
+        `https://discord.gg/toontown` -> An exception to a bad link that blocks all Discord Invite links.
+        """
         NAME = 'addLinkException'
         RANK = 300
 
@@ -233,6 +270,10 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was added as a bad link exception.'.format(word), color=discord.Color.green())
 
     class RemoveLinkExceptionCMD(Command):
+        """~removeLinkException <url>
+
+        Removes a specific link from being an exception to the bad link format filter list.
+        """
         NAME = 'removeLinkException'
         RANK = 300
 
@@ -252,6 +293,12 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was removed from the bad link exception list.'.format(word), color=discord.Color.green())
 
     class AddPluralExceptionCMD(Command):
+        """~addPluralException <plural exception>
+
+        Adds a word as a plural exception to the bad word filter list.
+        ToonTracker considers plurals when looking for words to filter by removing the letters `e` and `s` from the end of a word and seeing if it matches any bad words.
+        If this ends up creating a false positive on a legitimate word, you can add the word that's causing a problem as a plural exception.
+        """
         NAME = 'addPluralException'
         RANK = 300
 
@@ -271,6 +318,10 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was added as a plural exception.'.format(word), color=discord.Color.green())
 
     class RemovePluralExceptionCMD(Command):
+        """~removePluralException <plural exception>
+
+        Removes a word from being a plural exception to the bad word filter list.
+        """
         NAME = 'removePluralException'
         RANK = 300
 
@@ -290,6 +341,15 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was removed from the plural exception list.'.format(word), color=discord.Color.green())
 
     class AddWordExceptionCMD(Command):
+        """~addWordException <word exception>
+
+        Adds a word as an exception to the bad word filter list.
+        ToonTracker will take out any characters from a word that aren't strictly letters when looking for bad words.
+        If a word relies on punctuation for a different meaning than a bad word, you can add the word that's causing a problem as a word exception.
+
+        `he'll` -> hell
+        `who're` -> whore
+        """
         NAME = 'addWordException'
         RANK = 300
 
@@ -309,6 +369,10 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was added as a bad word exception.'.format(word), color=discord.Color.green())
 
     class RemoveWordExceptionCMD(Command):
+        """~removeWordException <word exception>
+
+        Removes a word from being an exception to the bad word filter list.
+        """
         NAME = 'removeWordException'
         RANK = 300
 
@@ -328,6 +392,12 @@ class ModerationModule(Module):
             return module.createDiscordEmbed(info='**{}** was removed from the bad word exception list.'.format(word), color=discord.Color.green())
 
     class SlowmodeCMD(Command):
+        """~slowmode [channel] <number>
+
+        Enables slowmode in the specified channel (or the channel the message is sent from, if no channel is specified).
+        A user will only be able to send messages once per every `<number` seconds.
+        You can disable slowmode by saying `off` instead of a number.
+        """
         NAME = 'slowmode'
         RANK = 300
 
@@ -399,8 +469,8 @@ class ModerationModule(Module):
 
             If a filter is specified as the second argument, the first specified number of
             messages will be checked to see if they match the given filter...
-                either by author (@mention),
-                or a pattern-matched word sequence
+            \teither by author (@mention),
+            \tor a pattern-matched word sequence
         """
         NAME = 'clear'
         RANK = 300
@@ -433,6 +503,13 @@ class ModerationModule(Module):
 
 
     class PunishCMD(Command):
+        """~punish <userID / mention> <reason>
+
+        Punishes a user based on their last received punishment.
+        The scale goes as follows: `Warning -> Kick -> Temporary Ban (24h) -> Permanent Ban`
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentPunish in the same way.
+        """
         NAME = 'punish'
         RANK = 300
 
@@ -474,6 +551,12 @@ class ModerationModule(Module):
             return await module.punishUser(user, reason=' '.join(args[1:]), silent=True, message=message)
 
     class MuteCMD(PunishCMD):
+        """~mute <userID / mention / channel> [length] <reason>
+
+        If a user is mentioned, the user will be muted for the specified length (1 hour if no length is specified). This will prevent a user from typing in a text channel or speaking in a voice channel.
+        
+        If a channel is mentioned, the channel will be muted for the specified length (indefinitely if no length is specified). This will prevent anyone from typical to a text channel.
+        """
         NAME = 'mute'
         RANK = 300
 
@@ -536,6 +619,10 @@ class ModerationModule(Module):
                 await module.scheduleUnmutes()
 
     class UnmuteCMD(Command):
+        """~unmute <channel>
+
+        Unmutes a previously muted channel.
+        """
         NAME = 'unmute'
         RANK = 300
 
@@ -570,6 +657,10 @@ class ModerationModule(Module):
                 module.scheduledUnmutes.remove(channel.id)
 
     class NoteCMD(PunishCMD):
+        """~note <userID / mention> <message>
+
+        Leaves a note on a user's profile that can only be seen by moderators. All notes can be seen using ~lookup.
+        """
         NAME = 'note'
         RANK = 300
 
@@ -631,6 +722,12 @@ class ModerationModule(Module):
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
     class WarnCMD(PunishCMD):
+        """~warn <userID / mention> <reason>
+
+        Sends a warning to the user.
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentWarn in the same way.
+        """
         NAME = 'warn'
         RANK = 300
 
@@ -653,6 +750,12 @@ class ModerationModule(Module):
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
 
     class KickCMD(PunishCMD):
+        """~kick <userID / mention> <reason>
+
+        Kicks the user from the Discord server.
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentKick in the same way.
+        """
         NAME = 'kick'
         RANK = 300
 
@@ -675,6 +778,12 @@ class ModerationModule(Module):
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
 
     class TmpBanCMD(PunishCMD):
+        """~tb <userID / mention> [length] <reason>
+
+        Temporarily bans the user from the server for the length specified, or 24 hours if no length is specified.
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentTB in the same way.
+        """
         NAME = 'tb'
         RANK = 300
 
@@ -715,6 +824,12 @@ class ModerationModule(Module):
         NAME = 'silenttb'
 
     class PermBanCMD(PunishCMD):
+        """~ban <userID / mention> <reason>
+
+        Permanently bans the user from the server.
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentBan in the same way.
+        """
         NAME = 'ban'
         RANK = 300
 
@@ -737,6 +852,11 @@ class ModerationModule(Module):
             return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
 
     class EditPunishReasonCMD(Command):
+        """~editReason <edit ID> <new reason>
+        
+        Changes the reason of a punishment. This will be reflected in the original log made to a log channel as well as in the DM sent to the punished user.
+        Edit IDs can be obtained from ~lookup or the original log made to a log channel.
+        """
         NAME = 'editReason'
         RANK = 300
 
@@ -782,6 +902,11 @@ class ModerationModule(Module):
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
     class EditNoteReasonCMD(Command):
+        """~editNote <note id> <new message>
+        
+        Changes the content of a note. This will be reflected in the original log made to a log channel.
+        Note IDs can be obtained frlom ~lookup or the original log made to a log channel.
+        """
         NAME = 'editNote'
         RANK = 300
 
@@ -816,6 +941,11 @@ class ModerationModule(Module):
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
     class RemovePunishmentCMD(Command):
+        """~removePunishment <edit ID>
+
+        This removes a punishment from a user's record. The original log and DM sent to the user will be deleted, and a new log will be made to say the punishment was removed.
+        Edit IDs can be obtained from ~lookup or the original log made to a log channel.
+        """
         NAME = 'removePunishment'
         RANK = 300
 
@@ -851,6 +981,11 @@ class ModerationModule(Module):
         NAME = 'revokePunishment'
 
     class RemoveNoteCMD(Command):
+        """~removeNote <note ID>
+        
+        This removes a note from a user's record.
+        Note IDs can be obtained frlom ~lookup or the original log made to a log channel.
+        """
         NAME = 'removeNote'
         RANK = 300
 
@@ -874,6 +1009,10 @@ class ModerationModule(Module):
             return CommandResponse(message.channel, ':thumbsup:', deleteIn=5, priorMessage=message)
 
     class ViewBadWordsCMD(Command):
+        """~viewBadWords
+    
+        Lists all words in the bad word filter list.
+        """
         NAME = 'viewBadWords'
         RANK = 300
 
@@ -891,6 +1030,10 @@ class ModerationModule(Module):
                 await client.send_message(message.channel, embed)
 
     class ViewBadLinksCMD(Command):
+        """~viewBadLinks
+
+        Lists all url formats in the bad link filter list.
+        """
         NAME = 'viewBadLinks'
         RANK = 300
 
@@ -908,6 +1051,10 @@ class ModerationModule(Module):
                 await client.send_message(message.channel, embed)
 
     class ViewBadEmojisCMD(Command):
+        """~viewBadEmojis
+
+        Lists all emojis in the bad emoji filter list.
+        """
         NAME = 'viewBadEmojis'
         RANK = 300
 
