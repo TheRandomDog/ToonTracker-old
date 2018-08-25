@@ -157,7 +157,8 @@ class Module:
     # Creates a Discord Embed.
     # This is preferred over simply creating a new instance of discord.Embed because there 
     # are some properties that require method input due to containing multiple sub-values.
-    def createDiscordEmbed(self, **kwargs):
+    @staticmethod
+    def createDiscordEmbed(**kwargs):
         title = kwargs.get('title', None)
         subtitle = kwargs.get('subtitle', Embed.Empty)
         info = kwargs.get('info', Embed.Empty)
