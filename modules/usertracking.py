@@ -517,21 +517,21 @@ class UserTrackingModule(Module):
                     await self.assignAwards(message.author, leveled)
 
     async def assignAwards(self, member, level):
-        if level == 7:
+        if level >= 4:
             if self.regularRole and self.regularRole not in member.roles:
-                await member.add_roles(self.regularRole, reason='User leveled up to level 7')
+                await member.add_roles(self.regularRole, reason='User leveled up to level 4+')
                 embed = self.createDiscordEmbed(
                     action='Level',
-                    primaryInfo="You've leveled up to LEVEL 7!",
+                    primaryInfo="You've leveled up to LEVEL {}!".format(level),
                     secondaryInfo="Thanks for spending some of your time to chat with us! " \
-                    "You now have permission to *create your own private lobbies* and *upload files and images* to the server. Have fun!",
+                    "You now have permission to *speak in voice channels* and *upload files and images* to the server. Have fun!",
                     thumbnail=member.avatar_url,
                     footer={'text': '- The mods from the Toontown Rewritten Discord'}
                 )
                 try:
                     await self.client.send_message(member, embed)
                 except discord.HTTPException:
-                    print("Could not send level 7 notification to {} (probably because they have DMs disabled for users/bots who don't share a server they're in).".format(str(member)))
+                    print("Could not send level 4 notification to {} (probably because they have DMs disabled for users/bots who don't share a server they're in).".format(str(member)))
 
     def createDiscordEmbed(self, action, primaryInfo=discord.Embed.Empty, secondaryInfo=discord.Embed.Empty, thumbnail='', fields=[], footer={}, image=None, color=None):
         action = self.ACTIONS[action]
