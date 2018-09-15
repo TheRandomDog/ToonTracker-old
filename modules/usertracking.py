@@ -172,6 +172,11 @@ class UserTrackingModule(Module):
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394677395472252928/filtered.png',
             'title': 'Image Review Required'
         },
+        'Edit': {
+            'color': discord.Color.blue(),
+            'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394684550531383306/deleted3.png',
+            'title': 'Message Edited'
+        },
         'Delete': {
             'color': discord.Color.blue(),
             'icon': 'https://cdn.discordapp.com/attachments/183116480089423873/394684550531383306/deleted3.png',
@@ -789,6 +794,41 @@ class UserTrackingModule(Module):
         moderation.notes.update(where=['id=?', note['id']], log=modLogEntry.id)
         return modLogEntry
 
+    async def on_message_edit(self, before, after):
+        message = after
+        if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silent']:
+            return
+        elif before.content == after.content:
+            return  # Embed updates will trigger the message edit event, we don't need to log it though.
+
+        if self.trackMessages:
+            try:
+                self.users.msgsDB.update(
+                    where=['id=?', message.id],
+                    message=message.content
+                )
+            except sqlite3.OperationalError as e:
+                pass
+        await self.client.send_message(
+            self.spamChannel,
+            self.createDiscordEmbed(
+                action='Edit',
+                primaryInfo=str(message.author),
+                secondaryInfo='{}{} in {}{}:'.format(
+                    '*The message contained an embed.*\n' if before.embeds else '',
+                    message.author.mention,
+                    '**[{}]** '.format(message.channel.category.name) if message.channel.category else '',
+                    message.channel.mention
+                ),
+                fields=[
+                    {'name': 'New Message:', 'value': after.content, 'inline': False},
+                    {'name': 'Old Message:', 'value': before.content if before.content else '*(no message)*', 'inline': False},
+                ],
+                thumbnail=message.author.avatar_url,
+                image=before.attachments[0].proxy_url if before.attachments else None
+                ## proxy_url is cached, so it is not instantly deleted when a message is deleted
+           )
+        )
 
     async def on_message_delete(self, message):
         if message.author == self.client.rTTR.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silent']:
