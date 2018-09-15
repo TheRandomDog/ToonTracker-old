@@ -381,6 +381,7 @@ class UserTrackingModule(Module):
         Module.__init__(self, client)
 
         self.users = Users(self)
+        self.invites = None
 
         self.trackMessages = Config.getModuleSetting('usertracking', 'track_messages', True)
         self.trackingExceptions = Config.getModuleSetting('usertracking', 'tracking_exceptions', [])
@@ -463,6 +464,10 @@ class UserTrackingModule(Module):
         return response
 
     async def on_message(self, message):
+        # A hack to get invites updates as quickly as possible.
+        if not self.invites:
+            self.invites = await self.client.rTTR.invites()
+
         # Definitely don't want to progress if it's a heckin' webhook.
         if message.webhook_id:
             return
@@ -600,6 +605,20 @@ class UserTrackingModule(Module):
         )
         if level >= 7:
             await member.add_roles(self.regularRole, reason='User rejoined and had regular role')
+
+        if self.invites:
+            ni = await self.client.rTTR.invites()
+            new_invites = {i.code: i.uses for i in ni}
+            old_invites = {i.code: i.uses for i in self.invites}
+            code_used = 'toontown'
+            for code, uses in new_invites.items():
+                if code not in old_invites or old_invites[code] != uses:
+                    code_used = code
+                    break
+            self.invites = ni
+        else:
+            code_used = None
+
         await self.client.send_message(
             self.logChannel,
             self.createDiscordEmbed(
@@ -612,7 +631,7 @@ class UserTrackingModule(Module):
                     {'name': 'Join Date', 'value': str(member.joined_at.date()), 'inline': True},
                     {'name': 'Level / XP', 'value': levelxp, 'inline': True}
                 ] + punishmentFields,
-                #footer="You can use a punishment's edit ID to ~editReason or ~removePunishment" if self.users.getUserPunishments(member.id) else ''
+                footer={'text': "Joined using invite code: {}".format(code_used)} if code_used else None
             )
         )
         self.memberStatusTimeStart[member.id] = time.time()
