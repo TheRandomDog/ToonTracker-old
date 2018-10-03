@@ -4,6 +4,7 @@ import discord
 import asyncio
 import fnmatch
 import time
+import random
 import re
 from extra.commands import Command, CommandResponse
 from extra.startmessages import Warning
@@ -84,8 +85,33 @@ IMAGE_FILTER_REVIEW = '{} posted an image in {} that has been registered as poss
                     '*If the image has bad content in it, please act accordingly.*\n{}'
 NICKNAME_FILTER_ENTRY = 'Changed inappropriate nickname from {}: {}'
 NICKNAME_FILTER_MESSAGE = "Hey there, {}! This is just to let you know your username or nickname contained the blacklist word `{}`, and to make clear " \
-                        "that it's not an allowed word on this server. No automated action has been taken, but trying to change your nickname back or trying to cirvument the " \
+                        "that it's not an allowed word on this server. We've changed your nickname to something random, but trying to change your nickname back or trying to cirvument the " \
                         "filter may result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
+NICKNAME_FILTER_REPLACEMENTS = [
+    'Prince Poppensong',
+    'Domino Ruffleglow',
+    'Lucky Dizzy Toppensticks',
+    'Rover Frazzleburger',
+    'Deputy Leo Fumblewhatsit',
+    'Spotty Glitterbumper',
+    'Fluffy Mizzenfussen',
+    'Dr. Jellyroll Laffenfluff',
+    'Doctor Gale Jinglescooter',
+    'Winnie Sourgadget',
+    'Grumpy Phil',
+    'Scooter Wildteeth',
+    'Master Wildblabber',
+    "Good ol' Kit Fuzzysocks",
+    'Cricket Palewicket',
+    'Rollie Zillerthud',
+    'Judge Chirpy Jiffytooth',
+    'Freckles Whiskerloop',
+    'Count Dynocrump',
+    'Zany Peppermarble',
+    'Master Harry Swinklebubble',
+    'Star Peppergrump',
+    'Scooter Razzlenerd'
+]
 
 class ModerationModule(Module):
     NAME = 'Moderation'
@@ -518,7 +544,7 @@ class ModerationModule(Module):
             return await module.punishUser(user, reason=' '.join(args[1:]), message=message)
 
         @classmethod
-        async def getUserInPunishCMD(cls, client, message, *args):
+        async def getUserInPunishCMD(cls, client, message, wantMember=False, *args):
             if not message.mentions:
                 if not message.raw_mentions:
                     try:
@@ -534,7 +560,17 @@ class ModerationModule(Module):
                         return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), deleteIn=5, priorMessage=message)   
             else:
                 user = message.mentions[0]
-            return user
+
+            if wantMember:
+                member = client.rTTR.get_member(user.id)
+                return member or CommandResponse(
+                    message.channel,
+                    '{} The user must be on the server to use this command. *(If they are on the server, try to `~reload` and tell TRD to get his butt in gear.)*'.format(message.author.mention),
+                    deleteIn=10,
+                    priorMessage=message
+                )
+            else:
+                return user
 
     class SilentPunishCMD(PunishCMD):
         NAME = 'silentPunish'
@@ -542,10 +578,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), silent=True, message=message)
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), silent=True, message=message)
 
     class MuteCMD(PunishCMD):
         """~mute <userID / mention / channel> [length] <reason>
@@ -559,14 +595,14 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
             channel = None
-            if user.__class__ == CommandResponse:
+            if member.__class__ == CommandResponse:
                 if message.channel_mentions:
-                    user = None
+                    member = None
                     channel = message.channel_mentions[0]
                 else:
-                    response = user
+                    response = member
                     response.message = '{} Please use a mention to refer to a user or channel.'.format(message.author.mention)
                     return response
             try:
@@ -579,8 +615,8 @@ class ModerationModule(Module):
                 lengthText = None
                 reason = ' '.join(args[1:])
 
-            if user:
-                return await module.punishUser(user, length=length, reason=reason, punishment=module.MUTE, message=message)
+            if member:
+                return await module.punishUser(member, length=length, reason=reason, punishment=module.MUTE, message=message)
             elif channel and not channel.name.startswith('staff-'):
                 punishment = module.punishments.select(where=['user=?', channel.id], limit=1)
                 if punishment:
@@ -667,7 +703,6 @@ class ModerationModule(Module):
             if user.__class__ == CommandResponse:
                 return user
 
-            member = client.rTTR.get_member(user.id)
             reason = ' '.join(args[1:])
             if not reason:
                 return CommandResponse(
@@ -730,10 +765,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
 
     class SilentWarnCMD(PunishCMD):
         NAME = 'silentWarn'
@@ -741,10 +776,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
 
     class KickCMD(PunishCMD):
         """~kick <userID / mention> <reason>
@@ -758,10 +793,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
 
     class SilentKickCMD(PunishCMD):
         NAME = 'silentKick'
@@ -769,10 +804,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
 
     class TmpBanCMD(PunishCMD):
         """~tb <userID / mention> [length] <reason>
@@ -786,9 +821,9 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
             try:
                 getLongTime(args[1] if len(args) > 1 else '')
                 length = args[1]
@@ -796,7 +831,7 @@ class ModerationModule(Module):
             except ValueError:
                 length = None
                 reason = ' '.join(args[1:])
-            return await module.punishUser(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
+            return await module.punishUser(member, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
 
     class SilentTmpBanCMD(PunishCMD):
         NAME = 'silentTB'
@@ -804,9 +839,9 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
             try:
                 getLongTime(args[1] if len(args) > 1 else '')
                 length = args[1]
@@ -814,7 +849,7 @@ class ModerationModule(Module):
             except ValueError:
                 length = None
                 reason = ' '.join(args[1:])
-            return await module.punishUser(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, silent=True, message=message)
+            return await module.punishUser(member, length=length, reason=reason, punishment=module.TEMPORARY_BAN, silent=True, message=message)
     class SilentTmpBanCMD_Variant1(SilentTmpBanCMD):
         NAME = 'silentTb'
     class SilentTmpBanCMD_Variant2(SilentTmpBanCMD):
@@ -832,10 +867,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, message=message)
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, message=message)
 
     class SilentPermBanCMD(PunishCMD):
         NAME = 'silentBan'
@@ -843,10 +878,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.getUserInPunishCMD(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punishUser(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
+            member = await cls.getUserInPunishCMD(client, message, wantMember=True, *args)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
 
     class EditPunishReasonCMD(Command):
         """~editReason <edit ID> <new reason>
@@ -1482,7 +1517,7 @@ class ModerationModule(Module):
         if not response:
             return False
 
-        await member.edit(nick='{Change Your Nickname}')
+        await member.edit(nick=random.choice(NICKNAME_FILTER_REPLACEMENTS))
         if self.spamChannel:
             usertracking = self.client.requestModule('usertracking')
             if usertracking:
