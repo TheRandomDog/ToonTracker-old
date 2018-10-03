@@ -586,19 +586,32 @@ class UserTrackingModule(Module):
 
     async def on_member_join(self, member):
         punishmentFields = []
+        notes = []
         moderation = self.client.requestModule('moderation')
-        if moderation:
+        if moderation:      
             for punishment in moderation.punishments.select(where=['user=?', member.id]):
                 punishmentFields.append({
                     'name': punishment['type'] + (' ({})'.format(punishment['end_length']) if punishment['end_length'] else ''),
-                    'value': '**Mod:** <@{}>\n**Date:** {}\n**Reason:** {}\n**ID:** {}'.format(
+                    'value': '{}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
+                        ('`' + punishment['reason'] + '`').replace('`' + NO_REASON + '`', '*No reason was ever specified.*'),
                         punishment['mod'],
                         str(datetime.fromtimestamp(punishment['created']).date()),
-                        punishment['reason'].replace(NO_REASON, '*No reason was ever specified.*'),
                         punishment['id']
                     ),
                     'inline': False
                 })
+
+            for note in moderation.notes.select(where=['user=?', member.id]):
+                notes.append('{tilde}{}{tilde}\n**Mod:** <@{}> | **Date:** {} | **ID:** {}'.format(
+                    note['content'],
+                    note['mod'],
+                    str(datetime.fromtimestamp(note['created']).date()),
+                    note['id'],
+                    tilde='`'
+                ))
+        if len(punishmentFields) > 18:
+            punishmentFields = punishmentFields[:17]
+
         xp = self.users.getUserXP(member.id)
         level = self.users.getUserLevel(member.id)
         # Show off user's level / xp 
@@ -635,7 +648,7 @@ class UserTrackingModule(Module):
                     {'name': 'Account Creation Date', 'value': str(member.created_at.date()), 'inline': True},
                     {'name': 'Join Date', 'value': str(member.joined_at.date()), 'inline': True},
                     {'name': 'Level / XP', 'value': levelxp, 'inline': True}
-                ] + punishmentFields,
+                ] + ([{'name': 'Notes', 'value': '\n\n'.join(notes), 'inline': False}] if notes else []) + punishmentFields,
                 footer={'text': "Joined using invite code: {}".format(code_used)} if code_used else None
             )
         )
