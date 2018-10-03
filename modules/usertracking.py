@@ -617,7 +617,7 @@ class UserTrackingModule(Module):
             old_invites = {i.code: i.uses for i in self.invites}
             code_used = 'toontown'
             for code, uses in new_invites.items():
-                if code not in old_invites or old_invites[code] != uses:
+                if (code not in old_invites and uses > 0) or old_invites[code] != uses:
                     code_used = code
                     break
             self.invites = ni
