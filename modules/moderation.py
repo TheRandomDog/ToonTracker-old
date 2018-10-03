@@ -418,16 +418,15 @@ class ModerationModule(Module):
                 elif arg == 'off':
                     speed = -1
                     break
-            if not speed:
+            if not speed or speed > 120:
                 return CommandResponse(
                     message.channel,
-                    '{} Please use a number to represent how many messages per second can be sent by a user. To turn off slow mode, use `~slowmode off`.'.format(message.author.mention),
+                    '{} Please use a number (up to 120) to represent how many seconds needs to pass before a user can send another message. To turn off slowmode, use `~slowmode off`.'.format(message.author.mention),
                     deleteIn=5,
                     priorMessage=message
                 )
 
-            slowmode = module.slowmode
-            oldSpeed = slowmode.get(str(message.channel.id), 0)
+            oldSpeed = channel.slowmode_delay
             if speed == -1:
                 if not oldSpeed:
                     return CommandResponse(
@@ -436,7 +435,7 @@ class ModerationModule(Module):
                         deleteIn=5,
                         priorMessage=message
                     )
-                del slowmode[str(message.channel.id)]
+                await channel.edit(slowmode_delay=0, reason='Moderator requested')
                 message.nonce = 'silent'
                 await message.delete()
                 await channel.send(embed=module.createDiscordEmbed(
@@ -444,7 +443,7 @@ class ModerationModule(Module):
                     color=discord.Color.green()
                 ))
             else:
-                slowmode[str(message.channel.id)] = speed
+                await channel.edit(slowmode_delay=speed, reason='Moderator requested')
                 message.nonce = 'silent'
                 await message.delete()
                 await channel.send(embed=module.createDiscordEmbed(
@@ -452,8 +451,6 @@ class ModerationModule(Module):
                     footer='You may only send a message every {} seconds.'.format(speed),
                     color=discord.Color.red()
                 ))
-            module.slowmode = slowmode
-            Config.setModuleSetting('moderation', 'slowmode', slowmode)
     class SlowmodeOffCMD(SlowmodeCMD):
         NAME = 'slowoff'
         RANK = 300
