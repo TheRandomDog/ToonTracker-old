@@ -4,6 +4,8 @@ from extra.commands import Command
 from utils import Config, assert_type
 
 class NotifyMeModule(Module):
+    NAME = 'Notify Me'
+    
     class NotifyMeCMD(Command):
         """~notifyMe <role name>
 

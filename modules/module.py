@@ -27,7 +27,7 @@ class Module:
         self.is_first_loop = True
         self.running_loop = None
 
-        self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
+        self._commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
 
         self.restarts = 0
         self.restart_time = 0

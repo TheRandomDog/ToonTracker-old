@@ -86,7 +86,7 @@ class ToonTracker(discord.Client):
             Reloads all modules and the configuration file.
         """
         NAME = 'reload'
-        RANK = 400        
+        RANK = 300        
 
         @staticmethod
         async def execute(client, module, message, *args):
@@ -105,25 +105,33 @@ class ToonTracker(discord.Client):
         async def execute(client, module, message, *args):
             rank = max([Config.get_rank_of_user(message.author.id), Config.get_rank_of_role(message.author.top_role.id)])
 
-            msg = "Here's a list of available commands I can help with. To get more info, use `~help command`."
-            for command in sorted(client.commands, key=lambda c: c.NAME):
+            embed = Embed(description="Here's a list of available commands I can help with.\nTo get more info, use `~help command`.", color=discord.Color.blurple())
+            top_level_commands = []
+            for command in sorted(client._commands, key=lambda c: c.NAME):
                 if command.RANK <= rank and command.__doc__:
                     if args and args[0].lower() == command.NAME.lower():
                         doc = command.__doc__.split('\n')
                         doc[0] = '`' + doc[0] + '`'
                         doc = '\n'.join([line.strip() for line in doc])
                         return doc
-                    msg += '\n\t' + client.command_prefix + command.NAME
+                    top_level_commands.append(client.commandPrefix + command.NAME)
+            if top_level_commands:
+                embed.add_field(name='ToonTracker', value='\n'.join(top_level_commands))
+
             for module in client.modules.values():
-                for command in sorted(module.commands, key=lambda c: c.NAME):
+                commands = []
+                for command in sorted(module._commands, key=lambda c: c.NAME):
                     if command.RANK <= rank and command.__doc__:
                         if args and args[0].lower() == command.NAME.lower():
                             doc = command.__doc__.split('\n')
                             doc[0] = '`' + doc[0] + '`'
                             doc = '\n'.join([line.strip() for line in doc])
-                            return doc
-                        msg += '\n\t' + client.command_prefix + command.NAME
-            return msg
+                            return Embed(title=command.__doc__.split('\n')[0].split(' ')[0], description=doc, color=discord.Color.blurple())
+                        commands.append(client.commandPrefix + command.NAME)
+                if commands:
+                    embed.add_field(name=module.NAME if hasattr(module, 'NAME') else module.__class__.__name__, value='\n'.join(commands))
+
+            return embed
 
 
     def __init__(self):
@@ -132,7 +140,7 @@ class ToonTracker(discord.Client):
         self.to_load = Config.get_setting('load_modules')
         self.modules = {}
 
-        self.commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
+        self._commands = [attr for attr in self.__class__.__dict__.values() if isclass(attr) and issubclass(attr, Command)]
         self.command_prefix = Config.get_setting('command_prefix', '!')
 
         self.ready = False
@@ -166,7 +174,7 @@ class ToonTracker(discord.Client):
         if not self.ready or message.author == self.focused_guild.me:
             return
 
-        for command in self.commands:
+        for command in self._commands:
             if message.content and message.content.split(' ')[0] == self.command_prefix + command.NAME and \
                     (Config.get_rank_of_user(message.author.id) >= command.RANK or any([Config.get_rank_of_role(role.id) >= command.RANK for role in message.author.roles])):
                 try:
@@ -250,7 +258,80 @@ class ToonTracker(discord.Client):
         await asyncio.sleep(delay)
         await message.delete()
 
-    @delegate_event
+    async def announceUpdates(self):
+        self.prevUpdateTime = time.time()
+
+        for module in self.modules.values():
+            for announcement in module.pendingAnnouncements:
+                # announcement[0] = Target
+                # announcement[1] = Message
+                # announcement[2] = Keyword Arguments: (module)
+                try:
+                    await self.send_message(announcement[0], announcement[1])
+                except Exception as e:
+                    e = format_exc()
+                    info = '{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncement: {}\n'.format(
+                        announcement[2]['module'].__class__.__name__ if announcement[2].get('module', None) else 'Unknown Module', 
+                        announcement[0],
+                        announcement[1]
+                    )
+                    log = '```{}```'.format(e)
+
+                    print(info + log)
+                    info = info.replace('channel ID {}'.format(announcement[0]), self.get_channel(announcement[0]).mention)
+                    if len(info + log) > 2000:
+                        r = requests.post('https://hastebin.com/documents', data=e)
+                        try:
+                            json = r.json()
+                            key = json['key']
+                            log = 'https://hastebin.com/raw/' + key
+                        except (KeyError, ValueError):
+                            log = '*Unable to post long log to Discord or Hastebin. The log can be found in the console.*'
+
+                    await self.send_message(botspam, info + log)
+
+            # A permanent message is only available as an embed.
+            for update in module.pendingUpdates:
+                # update[0] = Target (only one target)
+                # update[1] = The embed's title, used to find and edit message.
+                # update[2] = Embed (Message)
+                # update[3] = Keyword Arguments: (module)
+                messageSent = False
+                channel = self.get_channel(update[0])
+                try:
+                    async for message in channel.history(limit=10):
+                        for embed in message.embeds:
+                            # Find the message that has a matching title / author to replace with the new message.
+                            if (embed.fields and embed.fields[0].name == update[1]) or embed.author.name == update[1] or embed.title == update[1]:
+                                await message.edit(embed=update[2])
+                                messageSent = True
+                except discord.errors.DiscordException as e:
+                    msg = '**{}** tried to update the **{}** perma-message, but Discord raised an exception: {}'.format(module.__class__.__name__, update[1], str(e))
+                    print(msg)
+                    await self.send_message(botspam, msg)
+                    messageSent = True
+                except (asyncio.TimeoutError, aiohttp.client_exceptions.ClientOSError):
+                    msg = '**{}** tried to update the **{}** perma-message, but the async call errored / timed out.'.format(module.__class__.__name__, update[1])
+                    print(msg)
+                    await self.send_message(botspam, msg)
+                    messageSent = True
+                if not messageSent:
+                    await self.send_message(channel, update[2])
+
+            # All pending messages sent, clear out the list.
+            module.pendingAnnouncements = []
+            module.pendingUpdates = []
+
+    def ttLoop(self):
+        while not self.readyToClose:
+            loop.stop()
+            loop.run_forever()
+
+            if time.time() - self.prevUpdateTime > 10:
+                loop.create_task(self.announceUpdates())
+                self.prevUpdateTime = time.time()
+
+    @delegateEvent
     async def on_private_channel_create(self, channel): pass
     @delegate_event
     async def on_private_channel_delete(self, channel): pass

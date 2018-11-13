@@ -21,7 +21,7 @@ class StatusModule(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.gameserver_address = '162.243.14.152'
+        self.gameserver_address = 'gameserver.toontownrewritten.com'
         self.last_updated = time.time()
         self.account = None
         self.game = None

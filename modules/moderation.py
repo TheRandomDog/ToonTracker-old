@@ -4,6 +4,7 @@ import discord
 import asyncio
 import fnmatch
 import time
+import random
 import re
 from extra.commands import Command, CommandResponse
 from extra.startmessages import Warning
@@ -82,8 +83,39 @@ LINK_FILTER_MESSAGE = "Hey there, {}! This is just to let you know that you've l
 IMAGE_FILTER_REASON = 'Posting Inappropriate Content **[Rating: {}]**'
 IMAGE_FILTER_REVIEW = '{} posted an image in {} that has been registered as possibly bad. **[Rating: {}]**\n' \
                     '*If the image has bad content in it, please act accordingly.*\n{}'
+NICKNAME_FILTER_ENTRY = 'Changed inappropriate nickname from {}: {}'
+NICKNAME_FILTER_MESSAGE = "Hey there, {}! This is just to let you know your username or nickname contained the blacklist word `{}`, and to make clear " \
+                        "that it's not an allowed word on this server. We've changed your nickname to something random, but trying to change your nickname back or trying to cirvument the " \
+                        "filter may result in additional punishment, depending on any previous punishments that you have received. We'd love to have you chat with us, as long as you stay Toony!"
+NICKNAME_FILTER_REPLACEMENTS = [
+    'Prince Poppensong',
+    'Domino Ruffleglow',
+    'Lucky Dizzy Toppensticks',
+    'Rover Frazzleburger',
+    'Deputy Leo Fumblewhatsit',
+    'Spotty Glitterbumper',
+    'Fluffy Mizzenfussen',
+    'Dr. Jellyroll Laffenfluff',
+    'Doctor Gale Jinglescooter',
+    'Winnie Sourgadget',
+    'Grumpy Phil',
+    'Scooter Wildteeth',
+    'Master Wildblabber',
+    "Good ol' Kit Fuzzysocks",
+    'Cricket Palewicket',
+    'Rollie Zillerthud',
+    'Judge Chirpy Jiffytooth',
+    'Freckles Whiskerloop',
+    'Count Dynocrump',
+    'Zany Peppermarble',
+    'Master Harry Swinklebubble',
+    'Star Peppergrump',
+    'Scooter Razzlenerd'
+]
 
 class ModerationModule(Module):
+    NAME = 'Moderation'
+    
     WARNING = 'Warning'
     KICK = 'Kick'
     TEMPORARY_BAN = 'Temporary Ban'
@@ -91,6 +123,16 @@ class ModerationModule(Module):
     MUTE = 'Mute'
 
     class AddBadLinkCMD(Command):
+        """~addBadLink <url format>
+
+        Adds a bad link format to the filter list. You can use wildcard characters.
+        \t* = Matches multiple characters
+        \t? = Matches any single character
+        \t[seq] = Matches any character in `seq`
+        \t[!seq] = Matches any character not in `seq`
+        
+        `https://discord.gg/*` -> Filters any Discord Invite link
+        """
         NAME = 'addBadLink'
         RANK = 300
 
@@ -113,6 +155,10 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was added as a bad link format.'.format(link), color=discord.Color.green())
 
     class RemoveBadLinkCMD(Command):
+        """~removeBadLink <url format>
+
+        Removes a bad link format from the filter list. Be sure to use the format that was added exactly.
+        """
         NAME = 'removeBadLink'
         RANK = 300
 
@@ -132,6 +178,11 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was removed from the bad link list.'.format(link), color=discord.Color.green())
 
     class AddBadWordCMD(Command):
+        """~addBadWord <word>
+
+        Adds a bad word to the filter list. It can also be a phrase. This will also be checked in nicknames.
+        Any emojis or links should be added with their respective commands.
+        """
         NAME = 'addBadWord'
         RANK = 300
 
@@ -151,6 +202,10 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was added as a bad word.'.format(word), color=discord.Color.green())
 
     class RemoveBadWordCMD(Command):
+        """~removeBadWord <word>
+
+        Removes a bad word from the filter list.
+        """
         NAME = 'removeBadWord'
         RANK = 300
 
@@ -170,6 +225,10 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was removed from the bad word list.'.format(word), color=discord.Color.green())
 
     class AddBadEmojiCMD(Command):
+        """~addBadEmoji <emoji>
+        
+        Adds a bad emoji to the filter list. This will also be checked in nicknames and reactions. 
+        """
         NAME = 'addBadEmoji'
         RANK = 300
 
@@ -189,6 +248,10 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was added as a bad emoji.'.format(word), color=discord.Color.green())
 
     class RemoveBadEmojiCMD(Command):
+        """~removeBadEmoji <emoji>
+
+        Removes a bad emoji from the filter list.
+        """
         NAME = 'removeBadEmoji'
         RANK = 300
 
@@ -208,6 +271,12 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was removed from the bad word emoji list.'.format(word), color=discord.Color.green())
 
     class AddLinkExceptionCMD(Command):
+        """~addLinkException <url>
+
+        Adds a specific link as an exception to the bad link format filter list. Unlike adding a bad link, this takes a specific address, not a wildcard format.
+
+        `https://discord.gg/toontown` -> An exception to a bad link that blocks all Discord Invite links.
+        """
         NAME = 'addLinkException'
         RANK = 300
 
@@ -227,6 +296,10 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was added as a bad link exception.'.format(word), color=discord.Color.green())
 
     class RemoveLinkExceptionCMD(Command):
+        """~removeLinkException <url>
+
+        Removes a specific link from being an exception to the bad link format filter list.
+        """
         NAME = 'removeLinkException'
         RANK = 300
 
@@ -246,6 +319,12 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was removed from the bad link exception list.'.format(word), color=discord.Color.green())
 
     class AddPluralExceptionCMD(Command):
+        """~addPluralException <plural exception>
+
+        Adds a word as a plural exception to the bad word filter list.
+        ToonTracker considers plurals when looking for words to filter by removing the letters `e` and `s` from the end of a word and seeing if it matches any bad words.
+        If this ends up creating a false positive on a legitimate word, you can add the word that's causing a problem as a plural exception.
+        """
         NAME = 'addPluralException'
         RANK = 300
 
@@ -265,6 +344,10 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was added as a plural exception.'.format(word), color=discord.Color.green())
 
     class RemovePluralExceptionCMD(Command):
+        """~removePluralException <plural exception>
+
+        Removes a word from being a plural exception to the bad word filter list.
+        """
         NAME = 'removePluralException'
         RANK = 300
 
@@ -284,6 +367,15 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was removed from the plural exception list.'.format(word), color=discord.Color.green())
 
     class AddWordExceptionCMD(Command):
+        """~addWordException <word exception>
+
+        Adds a word as an exception to the bad word filter list.
+        ToonTracker will take out any characters from a word that aren't strictly letters when looking for bad words.
+        If a word relies on punctuation for a different meaning than a bad word, you can add the word that's causing a problem as a word exception.
+
+        `he'll` -> hell
+        `who're` -> whore
+        """
         NAME = 'addWordException'
         RANK = 300
 
@@ -303,6 +395,10 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was added as a bad word exception.'.format(word), color=discord.Color.green())
 
     class RemoveWordExceptionCMD(Command):
+        """~removeWordException <word exception>
+
+        Removes a word from being an exception to the bad word filter list.
+        """
         NAME = 'removeWordException'
         RANK = 300
 
@@ -322,6 +418,12 @@ class ModerationModule(Module):
             return module.create_discord_embed(info='**{}** was removed from the bad word exception list.'.format(word), color=discord.Color.green())
 
     class SlowmodeCMD(Command):
+        """~slowmode [channel] <number>
+
+        Enables slowmode in the specified channel (or the channel the message is sent from, if no channel is specified).
+        A user will only be able to send messages once per every `<number` seconds.
+        You can disable slowmode by saying `off` instead of a number.
+        """
         NAME = 'slowmode'
         RANK = 300
 
@@ -342,16 +444,15 @@ class ModerationModule(Module):
                 elif arg == 'off':
                     speed = -1
                     break
-            if not speed:
+            if not speed or speed > 120:
                 return CommandResponse(
                     message.channel,
-                    '{} Please use a number to represent how many messages per second can be sent by a user. To turn off slow mode, use `~slowmode off`.'.format(message.author.mention),
+                    '{} Please use a number (up to 120) to represent how many seconds needs to pass before a user can send another message. To turn off slowmode, use `~slowmode off`.'.format(message.author.mention),
                     delete_in=5,
                     prior_message=message
                 )
 
-            slowmode = module.slowmode
-            old_speed = slowmode.get(str(message.channel.id), 0)
+            old_speed = channel.slowmode_delay
             if speed == -1:
                 if not old_speed:
                     return CommandResponse(
@@ -360,7 +461,7 @@ class ModerationModule(Module):
                         delete_in=5,
                         prior_message=message
                     )
-                del slowmode[str(message.channel.id)]
+                await channel.edit(slowmode_delay=0, reason='Moderator requested')
                 message.nonce = 'silent'
                 await message.delete()
                 await channel.send(embed=module.create_discord_embed(
@@ -368,7 +469,7 @@ class ModerationModule(Module):
                     color=discord.Color.green()
                 ))
             else:
-                slowmode[str(message.channel.id)] = speed
+                await channel.edit(slowmode_delay=speed, reason='Moderator requested')
                 message.nonce = 'silent'
                 await message.delete()
                 await channel.send(embed=module.create_discord_embed(
@@ -376,8 +477,6 @@ class ModerationModule(Module):
                     footer='You may only send a message every {} seconds.'.format(speed),
                     color=discord.Color.red()
                 ))
-            module.slowmode = slowmode
-            Config.set_module_setting('moderation', 'slowmode', slowmode)
     class SlowmodeOffCMD(SlowmodeCMD):
         NAME = 'slowoff'
         RANK = 300
@@ -386,7 +485,54 @@ class ModerationModule(Module):
         async def execute(cls, client, module, message, *args):
             await super(cls, cls).execute(client, module, message, 'off')
 
+    class ClearCMD(Command):
+        """~clear <number of messages to check> [by author | containing *w?rds*]
+
+            Clears a specified number of messages from the channel the command is used in.
+
+            If a filter is specified as the second argument, the first specified number of
+            messages will be checked to see if they match the given filter...
+            \teither by author (@mention),
+            \tor a pattern-matched word sequence
+        """
+        NAME = 'clear'
+        RANK = 300
+        DELETE_PRIOR_MESSAGE = True
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            if len(args) is 0 or not args[0].isdigit():
+                return CommandResponse(message.channel, message.author.mention + ' ~clear requires a number of messages to check.', deleteIn=5)
+            else:
+                msgs = int(args[0])
+
+            def matches(m):
+                m.nonce = 'cleared'
+                if message.mentions:
+                    return m.author in message.mentions
+                elif len(args) > 1:
+                    return True if fnmatch.fnmatch(m.content, '*' + ' '.join(args[1:]) + '*') else False
+                return True
+
+            async with message.channel.typing():
+                try:
+                    await message.channel.purge(limit=msgs, check=matches)
+                    return CommandResponse(message.channel, message.author.mention + " I've cleared the messages you requested.", deleteIn=5)
+                except discord.HTTPException:
+                    print('Tried to execute {}, but Discord raised an exception:\n\n{}'.format(
+                        message.content, format_exc()
+                    ))
+                    return CommandResponse(message.channel, message.author.mention + " I couldn't get to all the messages, but I did the best I could.", deleteIn=5)
+
+
     class PunishCMD(Command):
+        """~punish <userID / mention> <reason>
+
+        Punishes a user based on their last received punishment.
+        The scale goes as follows: `Warning -> Kick -> Temporary Ban (24h) -> Permanent Ban`
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentPunish in the same way.
+        """
         NAME = 'punish'
         RANK = 300
 
@@ -398,7 +544,7 @@ class ModerationModule(Module):
             return await module.punish_user(user, reason=' '.join(args[1:]), message=message)
 
         @classmethod
-        async def get_user_in_punish_cmd(cls, client, message, *args):
+        async def get_user_in_punish_cmd(cls, client, message, *args, wantMember=False):
             if not message.mentions:
                 if not message.raw_mentions:
                     try:
@@ -414,7 +560,17 @@ class ModerationModule(Module):
                         return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), delete_in=5, prior_message=message)   
             else:
                 user = message.mentions[0]
-            return user
+
+            if wantMember:
+                member = client.rTTR.get_member(user.id)
+                return member or CommandResponse(
+                    message.channel,
+                    '{} The user must be on the server to use this command. *(If they are on the server, try to `~reload` and tell TRD to get his butt in gear.)*'.format(message.author.mention),
+                    deleteIn=10,
+                    priorMessage=message
+                )
+            else:
+                return user
 
     class SilentPunishCMD(PunishCMD):
         NAME = 'silentPunish'
@@ -422,25 +578,31 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punish_user(user, reason=' '.join(args[1:]), silent=True, message=message)
 
     class MuteCMD(PunishCMD):
+        """~mute <userID / mention / channel> [length] <reason>
+
+        If a user is mentioned, the user will be muted for the specified length (1 hour if no length is specified). This will prevent a user from typing in a text channel or speaking in a voice channel.
+        
+        If a channel is mentioned, the channel will be muted for the specified length (indefinitely if no length is specified). This will prevent anyone from typical to a text channel.
+        """
         NAME = 'mute'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
             channel = None
-            if user.__class__ == CommandResponse:
+            if member.__class__ == CommandResponse:
                 if message.channel_mentions:
-                    user = None
+                    member = None
                     channel = message.channel_mentions[0]
                 else:
-                    response = user
+                    response = member
                     response.message = '{} Please use a mention to refer to a user or channel.'.format(message.author.mention)
                     return response
             try:
@@ -453,9 +615,9 @@ class ModerationModule(Module):
                 length_text = None
                 reason = ' '.join(args[1:])
 
-            if user:
-                return await module.punish_user(user, length=length, reason=reason, punishment=module.MUTE, message=message)
-            elif channel:
+            if member:
+                return await module.punishUser(member, length=length, reason=reason, punishment=module.MUTE, message=message)
+            elif channel and not channel.name.startswith('staff-'):
                 punishment = module.punishments.select(where=['user=?', channel.id], limit=1)
                 if punishment:
                     return CommandResponse(
@@ -490,6 +652,10 @@ class ModerationModule(Module):
                 await module.schedule_unmutes()
 
     class UnmuteCMD(Command):
+        """~unmute <channel>
+
+        Unmutes a previously muted channel.
+        """
         NAME = 'unmute'
         RANK = 300
 
@@ -524,6 +690,10 @@ class ModerationModule(Module):
                 module.scheduled_unmutes.remove(channel.id)
 
     class NoteCMD(PunishCMD):
+        """~note <userID / mention> <message>
+
+        Leaves a note on a user's profile that can only be seen by moderators. All notes can be seen using ~lookup.
+        """
         NAME = 'note'
         RANK = 300
 
@@ -533,7 +703,6 @@ class ModerationModule(Module):
             if user.__class__ == CommandResponse:
                 return user
 
-            member = client.focused_guild.get_member(user.id)
             reason = ' '.join(args[1:])
             if not reason:
                 return CommandResponse(
@@ -585,15 +754,21 @@ class ModerationModule(Module):
             return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
 
     class WarnCMD(PunishCMD):
+        """~warn <userID / mention> <reason>
+
+        Sends a warning to the user.
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentWarn in the same way.
+        """
         NAME = 'warn'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
 
     class SilentWarnCMD(PunishCMD):
         NAME = 'silentWarn'
@@ -601,21 +776,27 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
 
     class KickCMD(PunishCMD):
+        """~kick <userID / mention> <reason>
+
+        Kicks the user from the Discord server.
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentKick in the same way.
+        """
         NAME = 'kick'
         RANK = 300
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
 
     class SilentKickCMD(PunishCMD):
         NAME = 'silentKick'
@@ -623,12 +804,18 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args)
-            if user.__class__ == CommandResponse:
-                return user
-            return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            if member.__class__ == CommandResponse:
+                return member
+            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
 
     class TmpBanCMD(PunishCMD):
+        """~tb <userID / mention> [length] <reason>
+
+        Temporarily bans the user from the server for the length specified, or 24 hours if no length is specified.
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentTB in the same way.
+        """
         NAME = 'tb'
         RANK = 300
 
@@ -644,7 +831,7 @@ class ModerationModule(Module):
             except ValueError:
                 length = None
                 reason = ' '.join(args[1:])
-            return await module.punish_user(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
+            return await module.punishUser(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
 
     class SilentTmpBanCMD(PunishCMD):
         NAME = 'silentTB'
@@ -652,9 +839,9 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args)
+            user = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
             if user.__class__ == CommandResponse:
-                return user
+                return member
             try:
                 get_long_time(args[1] if len(args) > 1 else '')
                 length = args[1]
@@ -669,6 +856,12 @@ class ModerationModule(Module):
         NAME = 'silenttb'
 
     class PermBanCMD(PunishCMD):
+        """~ban <userID / mention> <reason>
+
+        Permanently bans the user from the server.
+
+        The reason is sent to the user in their DMs if they have their DMs open. If you do not want the reason sent, use ~silentBan in the same way.
+        """
         NAME = 'ban'
         RANK = 300
 
@@ -691,6 +884,11 @@ class ModerationModule(Module):
             return await module.punish_user(user, reason=' '.join(args[1:]), punishment=module.PERMANENT_BAN, silent=True, message=message)
 
     class EditPunishReasonCMD(Command):
+        """~editReason <edit ID> <new reason>
+        
+        Changes the reason of a punishment. This will be reflected in the original log made to a log channel as well as in the DM sent to the punished user.
+        Edit IDs can be obtained from ~lookup or the original log made to a log channel.
+        """
         NAME = 'editReason'
         RANK = 300
 
@@ -736,6 +934,11 @@ class ModerationModule(Module):
             return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
 
     class EditNoteReasonCMD(Command):
+        """~editNote <note id> <new message>
+        
+        Changes the content of a note. This will be reflected in the original log made to a log channel.
+        Note IDs can be obtained frlom ~lookup or the original log made to a log channel.
+        """
         NAME = 'editNote'
         RANK = 300
 
@@ -770,6 +973,11 @@ class ModerationModule(Module):
             return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
 
     class RemovePunishmentCMD(Command):
+        """~removePunishment <edit ID>
+
+        This removes a punishment from a user's record. The original log and DM sent to the user will be deleted, and a new log will be made to say the punishment was removed.
+        Edit IDs can be obtained from ~lookup or the original log made to a log channel.
+        """
         NAME = 'removePunishment'
         RANK = 300
 
@@ -805,6 +1013,11 @@ class ModerationModule(Module):
         NAME = 'revokePunishment'
 
     class RemoveNoteCMD(Command):
+        """~removeNote <note ID>
+        
+        This removes a note from a user's record.
+        Note IDs can be obtained frlom ~lookup or the original log made to a log channel.
+        """
         NAME = 'removeNote'
         RANK = 300
 
@@ -828,6 +1041,10 @@ class ModerationModule(Module):
             return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
 
     class ViewBadWordsCMD(Command):
+        """~viewBadWords
+    
+        Lists all words in the bad word filter list.
+        """
         NAME = 'viewBadWords'
         RANK = 300
 
@@ -845,6 +1062,10 @@ class ModerationModule(Module):
                 await client.send_message(message.channel, embed)
 
     class ViewBadLinksCMD(Command):
+        """~viewBadLinks
+
+        Lists all url formats in the bad link filter list.
+        """
         NAME = 'viewBadLinks'
         RANK = 300
 
@@ -862,6 +1083,10 @@ class ModerationModule(Module):
                 await client.send_message(message.channel, embed)
 
     class ViewBadEmojisCMD(Command):
+        """~viewBadEmojis
+
+        Lists all emojis in the bad emoji filter list.
+        """
         NAME = 'viewBadEmojis'
         RANK = 300
 
@@ -974,7 +1199,7 @@ class ModerationModule(Module):
                 delete_in=5,
                 prior_message=prior_message
             )
-        if Config.get_rank_of_member(user) >= 300 and not self.allow_mod_punishments:
+        if (Config.get_rank_of_member(member) >= 300 or Config.get_rank_of_member(user) >= 300) and not self.allowModPunishments:
             return CommandResponse(
                 channel,
                 author.mention + ' ' + PUNISH_FAILURE_MOD,
@@ -1120,7 +1345,7 @@ class ModerationModule(Module):
             elif next_punishment == self.MUTE:
                 if not self.muted_role:
                     raise ValueError
-                await user.add_roles(self.muted_role, reason=str(punishment_entry['id']))
+                await member.add_roles(self.muted_role, reason=str(punishmentEntry['id']))
         except (discord.HTTPException, ValueError):
             await self.client.send_message(author, action_failure if action_failure else 'The {} failed.'.format(next_punishment.lower()))
 
@@ -1179,7 +1404,7 @@ class ModerationModule(Module):
                 break
         await channel.set_permissions(member, overwrite=None, reason='Slowmode expired')
 
-    def _testForBadWord(self, evaded_word):
+    def _test_for_bad_word(self, evaded_word):
         # Tests for a bad word against the provided word.
         # Runs through the config list after taking out unicode and non-alphabetic characters.
         response = {'word': None, 'evaded_word': evaded_word}
@@ -1194,7 +1419,7 @@ class ModerationModule(Module):
             response['word'] = word
         return response
 
-    def _testForBadPhrase(self, evaded_text):
+    def _test_for_bad_phrase(self, evaded_text):
         # This tests the text for bad phrases.
         # Bad phrases are essentially bad words with spaces in them.
         response = {'word': None, 'evaded_word': None}
@@ -1216,12 +1441,12 @@ class ModerationModule(Module):
                 response['evaded_word'] = evaded_text[text_index:text_index + len(phrase)]
         return response
 
-    def _testForBadWhole(self, evaded_text):
+    def _test_for_bad_whole(self, evaded_text):
         # This smooshes the whole message together (no spaces) and tests if it matches a bad word.
         text = evaded_text.replace('\r', '').replace('\n', '').replace('\t', '').replace(' ', '')
-        return self._testForBadWord(evaded_text)
+        return self._test_for_bad_word(evaded_text)
 
-    def _testForBadEmoji(self, evaded_text):
+    def _test_for_bad_emoji(self, evaded_text):
         # A simple check, naturally.
         response = {'word': None, 'evaded_word': None}
 
@@ -1235,16 +1460,16 @@ class ModerationModule(Module):
     async def _filter_bad_words(self, message, evaded_text, edited=' ', silent_filter=False, embed=None):
         response = {}
         for word in evaded_text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').split(' '):
-            word_response = self._testForBadWord(word)
+            word_response = self._test_for_bad_word(word)
             if word_response['word']:
                 response = word_response
-        phrase_response = self._testForBadPhrase(evaded_text)
+        phrase_response = self._test_for_bad_phrase(evaded_text)
         if not response and phrase_response['word']:
             response = phrase_response
-        whole_response = self._testForBadWhole(evaded_text)
+        whole_response = self._test_for_bad_whole(evaded_text)
         if not response and whole_response['word']:
             response = whole_response
-        emoji_response = self._testForBadEmoji(evaded_text)
+        emoji_response = self._test_for_bad_emoji(evaded_text)
         if not response and emoji_response['word']:
             response = emoji_response
         if not response:
@@ -1272,6 +1497,43 @@ class ModerationModule(Module):
             await self.client.send_message(message.author, WORD_FILTER_MESSAGE.format(message.author.mention, response['word']))
         except discord.HTTPException:
             print('Tried to send bad word filter notification message to a user, but Discord threw an HTTP Error:\n\n{}'.format(format_exc()))
+        return True
+
+    async def _filter_bad_name(self, member, evaded_text, silent_filter=False):
+        response = {}
+        for word in evaded_text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').split(' '):
+            word_response = self._test_for_bad_word(word)
+            if word_response['word']:
+                response = word_response
+        phrase_response = self._test_for_bad_phrase(evadedText)
+        if not response and phrase_response['word']:
+            response = phrase_response
+        whole_response = self._test_for_bad_whole(evadedText)
+        if not response and whole_response['word']:
+            response = whole_response
+        emoji_response = self._test_for_bad_emoji(evadedText)
+        if not response and emoji_response['word']:
+            response = emoji_response
+        if not response:
+            return False
+
+        await member.edit(nick=random.choice(NICKNAME_FILTER_REPLACEMENTS))
+        if self.spamChannel:
+            usertracking = self.client.requestModule('usertracking')
+            if usertracking:
+                await usertracking.on_nickname_filter(member, word=response['evadedWord'], text=evadedText)
+            else:
+                nameFilterFormat = NICKNAME_FILTER_ENTRY
+                await self.client.send_message(self.logChannel, nameFilterFormat.format(
+                    member.mention,
+                    member.display_name.replace(response['evadedWord'], '**' + response['evadedWord'] + '**'),
+                ))
+        try:
+            if silentFilter:
+                return True
+            await self.client.send_message(member, NICKNAME_FILTER_MESSAGE.format(member.mention, response['word']))
+        except discord.HTTPException:
+            print('Tried to send bad name filter notification message to a user, but Discord threw an HTTP Error:\n\n{}'.format(format_exc()))
         return True
 
     async def filter_bad_words(self, message, edited=' ', silent_filter=False):
@@ -1533,5 +1795,9 @@ class ModerationModule(Module):
         except discord.errors.NotFound:
             print('Tried to remove edited message in bad word/link filter but message wasn\'t found.')
             return
+
+    async def on_member_update(self, before, after):
+        if self.badWordFilterOn:
+            await self._filterBadName(after, after.display_name)
 
 module = ModerationModule
