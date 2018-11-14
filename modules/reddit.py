@@ -1,11 +1,32 @@
 import sys
 import time
 import praw
+import asyncio
 import threading
 from discord import Color, Embed
 from modules.module import Module, Announcer
 from traceback import format_exception, format_exc
 from utils import Config, assert_type
+
+# Thanks Zac
+# https://blogs.gentoo.org/zmedico/2016/09/17/adapting-regular-iterators-to-asynchronous-iterators-in-python/
+class AsyncIteratorExecutor:
+    """
+    Converts a regular iterator into an asynchronous
+    iterator, by executing the iterator in a thread.
+    """
+    def __init__(self, iterator):
+        self.__iterator = iterator
+        self.__loop = asyncio.get_event_loop()
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        value = await self.__loop.run_in_executor(None, next, self.__iterator, self)
+        if value is self:
+            raise StopAsyncIteration
+        return value
 
 class RedditModule(Module):
     def __init__(self, client):
@@ -20,7 +41,7 @@ class RedditModule(Module):
         )
 
         self.subreddit_name = assert_type(Config.get_module_setting('reddit', 'subreddit'), str)
-        self.focused_guild = reddit.subreddit(self.subreddit_name)
+        self.subreddit = reddit.subreddit(self.subreddit_name)
 
         self.post_stream = None
         self.comment_stream = None
@@ -28,12 +49,12 @@ class RedditModule(Module):
         self.live = None
         self.ready_to_stop = False
 
-        post_announcer, comment_announcer, live_announcer = self.create_announcers(NewPostAnnouncer, NewCommentAnnouncer, NewUpdateAnnouncer)
+        self.post_announcer, self.comment_announcer, self.live_announcer = self.create_announcers(NewPostAnnouncer, NewCommentAnnouncer, NewUpdateAnnouncer)
 
     async def stream_posts(self):
         try:
             new_posts = False
-            for submission in self.focused_guild.stream.submissions(pause_after=0):
+            async for submission in AsyncIteratorExecutor(self.subreddit.stream.submissions(pause_after=0)):
                 if self.client.ready_to_close or self.ready_to_stop:
                     break
                 elif submission is None:
@@ -42,12 +63,12 @@ class RedditModule(Module):
                 elif new_posts:
                     await self.post_announcer.announce(submission)
         except Exception as e:
-            self.handle_error()
+            await self.handle_error()
 
     async def stream_comments(self):
         try:
             new_comments = False
-            for comment in self.focused_guild.stream.comments(pause_after=0):
+            async for comment in AsyncIteratorExecutor(self.subreddit.stream.comments(pause_after=0)):
                 if self.client.ready_to_close or self.ready_to_stop:
                     break
                 elif comment is None:
@@ -56,12 +77,12 @@ class RedditModule(Module):
                 elif new_comments:
                     await self.comment_announcer.announce(comment)
         except Exception as e:
-            self.handle_error()
+            await self.handle_error()
 
     async def stream_live(self):
         try:
             new_update = False
-            for update in praw.models.util.stream_generator(self.reddit.live(self.live['id']).updates, pause_after=0):
+            async for update in AsyncIteratorExecutor(praw.models.util.stream_generator(self.reddit.live(self.live['id']).updates, pause_after=0)):
                 if self.client.ready_to_close or self.ready_to_stop:
                     break
                 elif update is None:
@@ -70,7 +91,7 @@ class RedditModule(Module):
                 elif new_update:
                     await self.live_announcer.announce(update)
         except Exception as e:
-            self.handle_error()
+            await self.handle_error()
 
     def start_tracking(self):
         super().start_tracking()
@@ -140,12 +161,12 @@ class NewPostAnnouncer(Announcer):
             thumbnail=thumbnail,
             footer='/r/{} - New Post'.format(self.module.subreddit_name)
         )
-        return embed
+        return await self.send(embed)
 
 class NewCommentAnnouncer(Announcer):
     CHANNEL_ID = Config.get_module_setting('reddit', 'announcements')
 
-    async def announce(module, comment):
+    async def announce(self, comment):
         desc_list = comment.body.split('\n')
         if len(desc_list) > 1:
             desc = desc_list[0]
@@ -185,7 +206,7 @@ class NewCommentAnnouncer(Announcer):
             color=color,
             footer='/r/{} - New Comment'.format(self.module.subreddit_name)
         )
-        return embed
+        return await self.send(embed)
 
 class NewUpdateAnnouncer(Announcer):
     CHANNEL_ID = Config.get_module_setting('reddit', 'announcements')

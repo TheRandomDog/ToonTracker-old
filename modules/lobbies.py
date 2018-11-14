@@ -801,17 +801,17 @@ class LobbyManagement(Module):
 
         @staticmethod
         async def execute(client, module, message, *args):
-            if message.channel.id != module.lobbyChannel and not module.channelIsDM(message.channel) and not module.channelInLobby(message.channel):
+            if message.channel.id != module.lobby_channel and not module.channel_is_dm(message.channel) and not module.channel_in_lobby(message.channel):
                 return
                 
             # If the user is a mod and wants to lookup the lobbies of another user...
-            mod = (Config.getRankOfUser(message.author.id) >= 300 or any([Config.getRankOfRole(role.id) >= 300 for role in message.author.roles]))
+            mod = (Config.get_rank_of_user(message.author.id) >= 300 or any([Config.get_rank_of_role(role.id) >= 300 for role in message.author.roles]))
             if not args or not mod:
                 user = message.author
             elif not message.mentions:
                 if not message.raw_mentions:
                     try:
-                        user = client.rTTR.get_member(int(args[0])) or await client.get_user_info(int(args[0]))
+                        user = client.focused_guild.get_member(int(args[0])) or await client.get_user_info(int(args[0]))
                     except discord.NotFound:
                         return 'No known user'
                     except (ValueError, IndexError):
@@ -826,7 +826,7 @@ class LobbyManagement(Module):
                             return 'No known user'
                 else:
                     try:
-                        user = client.rTTR.get_member(message.raw_mentions[0]) or await client.get_user_info(message.raw_mentions[0])
+                        user = client.focused_guild.get_member(message.raw_mentions[0]) or await client.get_user_info(message.raw_mentions[0])
                     except discord.NotFound:
                         return 'No known user'
             else:
@@ -837,7 +837,7 @@ class LobbyManagement(Module):
 
             if not lobbies_owned and not lobbies_joined:
                 return message.author.mention + ' ' + '{} not participating in any lobbies.'.format("You're" if user==message.author else user.mention + ' is')
-            return module.createDiscordEmbed(
+            return module.create_discord_embed(
                 subtitle='Lobbies',
                 info='{}\n{}\n{}'.format(
                     user.mention, 

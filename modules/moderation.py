@@ -502,7 +502,7 @@ class ModerationModule(Module):
         @staticmethod
         async def execute(client, module, message, *args):
             if len(args) is 0 or not args[0].isdigit():
-                return CommandResponse(message.channel, message.author.mention + ' ~clear requires a number of messages to check.', deleteIn=5)
+                return CommandResponse(message.channel, message.author.mention + ' ~clear requires a number of messages to check.', delete_in=5)
             else:
                 msgs = int(args[0])
 
@@ -517,12 +517,12 @@ class ModerationModule(Module):
             async with message.channel.typing():
                 try:
                     await message.channel.purge(limit=msgs, check=matches)
-                    return CommandResponse(message.channel, message.author.mention + " I've cleared the messages you requested.", deleteIn=5)
+                    return CommandResponse(message.channel, message.author.mention + " I've cleared the messages you requested.", delete_in=5)
                 except discord.HTTPException:
                     print('Tried to execute {}, but Discord raised an exception:\n\n{}'.format(
                         message.content, format_exc()
                     ))
-                    return CommandResponse(message.channel, message.author.mention + " I couldn't get to all the messages, but I did the best I could.", deleteIn=5)
+                    return CommandResponse(message.channel, message.author.mention + " I couldn't get to all the messages, but I did the best I could.", delete_in=5)
 
 
     class PunishCMD(Command):
@@ -544,7 +544,7 @@ class ModerationModule(Module):
             return await module.punish_user(user, reason=' '.join(args[1:]), message=message)
 
         @classmethod
-        async def get_user_in_punish_cmd(cls, client, message, *args, wantMember=False):
+        async def get_user_in_punish_cmd(cls, client, message, *args, want_member=False):
             if not message.mentions:
                 if not message.raw_mentions:
                     try:
@@ -561,13 +561,13 @@ class ModerationModule(Module):
             else:
                 user = message.mentions[0]
 
-            if wantMember:
-                member = client.rTTR.get_member(user.id)
+            if want_member:
+                member = client.focused_guild.get_member(user.id)
                 return member or CommandResponse(
                     message.channel,
                     '{} The user must be on the server to use this command. *(If they are on the server, try to `~reload` and tell TRD to get his butt in gear.)*'.format(message.author.mention),
-                    deleteIn=10,
-                    priorMessage=message
+                    delete_in=10,
+                    prior_message=message
                 )
             else:
                 return user
@@ -578,7 +578,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            user = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
             if user.__class__ == CommandResponse:
                 return user
             return await module.punish_user(user, reason=' '.join(args[1:]), silent=True, message=message)
@@ -595,7 +595,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            user = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
             channel = None
             if member.__class__ == CommandResponse:
                 if message.channel_mentions:
@@ -616,7 +616,7 @@ class ModerationModule(Module):
                 reason = ' '.join(args[1:])
 
             if member:
-                return await module.punishUser(member, length=length, reason=reason, punishment=module.MUTE, message=message)
+                return await module.punish_user(member, length=length, reason=reason, punishment=module.MUTE, message=message)
             elif channel and not channel.name.startswith('staff-'):
                 punishment = module.punishments.select(where=['user=?', channel.id], limit=1)
                 if punishment:
@@ -765,10 +765,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            member = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
             if member.__class__ == CommandResponse:
                 return member
-            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
+            return await module.punish_user(member, reason=' '.join(args[1:]), punishment=module.WARNING, message=message)
 
     class SilentWarnCMD(PunishCMD):
         NAME = 'silentWarn'
@@ -776,10 +776,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            member = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
             if member.__class__ == CommandResponse:
                 return member
-            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
+            return await module.punish_user(member, reason=' '.join(args[1:]), punishment=module.WARNING, silent=True, message=message)
 
     class KickCMD(PunishCMD):
         """~kick <userID / mention> <reason>
@@ -793,10 +793,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            member = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
             if member.__class__ == CommandResponse:
                 return member
-            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
+            return await module.punish_user(member, reason=' '.join(args[1:]), punishment=module.KICK, message=message)
 
     class SilentKickCMD(PunishCMD):
         NAME = 'silentKick'
@@ -804,10 +804,10 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            member = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
             if member.__class__ == CommandResponse:
                 return member
-            return await module.punishUser(member, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
+            return await module.punish_user(member, reason=' '.join(args[1:]), punishment=module.KICK, silent=True, message=message)
 
     class TmpBanCMD(PunishCMD):
         """~tb <userID / mention> [length] <reason>
@@ -831,7 +831,7 @@ class ModerationModule(Module):
             except ValueError:
                 length = None
                 reason = ' '.join(args[1:])
-            return await module.punishUser(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
+            return await module.punish_user(user, length=length, reason=reason, punishment=module.TEMPORARY_BAN, message=message)
 
     class SilentTmpBanCMD(PunishCMD):
         NAME = 'silentTB'
@@ -839,7 +839,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args, wantMember=True)
+            user = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
             if user.__class__ == CommandResponse:
                 return member
             try:
@@ -1199,7 +1199,7 @@ class ModerationModule(Module):
                 delete_in=5,
                 prior_message=prior_message
             )
-        if (Config.get_rank_of_member(member) >= 300 or Config.get_rank_of_member(user) >= 300) and not self.allowModPunishments:
+        if (Config.get_rank_of_member(member) >= 300 or Config.get_rank_of_member(user) >= 300) and not self.allow_mod_punishments:
             return CommandResponse(
                 channel,
                 author.mention + ' ' + PUNISH_FAILURE_MOD,
@@ -1518,18 +1518,18 @@ class ModerationModule(Module):
             return False
 
         await member.edit(nick=random.choice(NICKNAME_FILTER_REPLACEMENTS))
-        if self.spamChannel:
-            usertracking = self.client.requestModule('usertracking')
+        if self.spam_channel:
+            usertracking = self.client.request_module('usertracking')
             if usertracking:
                 await usertracking.on_nickname_filter(member, word=response['evadedWord'], text=evadedText)
             else:
-                nameFilterFormat = NICKNAME_FILTER_ENTRY
-                await self.client.send_message(self.logChannel, nameFilterFormat.format(
+                name_filter_format = NICKNAME_FILTER_ENTRY
+                await self.client.send_message(self.log_channel, name_filter_format.format(
                     member.mention,
                     member.display_name.replace(response['evadedWord'], '**' + response['evadedWord'] + '**'),
                 ))
         try:
-            if silentFilter:
+            if silent_filter:
                 return True
             await self.client.send_message(member, NICKNAME_FILTER_MESSAGE.format(member.mention, response['word']))
         except discord.HTTPException:
@@ -1797,7 +1797,7 @@ class ModerationModule(Module):
             return
 
     async def on_member_update(self, before, after):
-        if self.badWordFilterOn:
-            await self._filterBadName(after, after.display_name)
+        if self.bad_word_filter_on:
+            await self._filter_bad_name(after, after.display_name)
 
 module = ModerationModule

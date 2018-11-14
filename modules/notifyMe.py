@@ -90,11 +90,11 @@ class NotifyMeModule(Module):
                 role_name = ' '.join(args)
 
             role = None
-            madeRole = True
+            made_role = True
             for possible_role in client.focused_guild.roles:
                 if role_name.lower() == possible_role.name.lower():
                     role = possible_role
-                    madeRole = False
+                    made_role = False
 
             config_roles = Config.get_module_setting('notifyMe', 'roles')
             if not role:
@@ -103,10 +103,10 @@ class NotifyMeModule(Module):
             Config.set_module_setting('notifyMe', 'roles', config_roles)
             module.refresh_available_roles()
 
-            responseSupplement = (" It's notification type is " + notification_type + ".") if notification_type else ''
-            if madeRole:
-                return 'Created the new `{}` role!{}'.format(role_name, responseSupplement)
-            return 'Made the pre-existing `{}` role self-assignable by users.{}'.format(role.name, responseSupplement)
+            response_supplement = (" It's notification type is " + notification_type + ".") if notification_type else ''
+            if made_role:
+                return 'Created the new `{}` role!{}'.format(role_name, response_supplement)
+            return 'Made the pre-existing `{}` role self-assignable by users.{}'.format(role.name, response_supplement)
 
     class NotificationStopCMD(Command):
         """~stopNotificationRole <role name>

@@ -65,7 +65,7 @@ class Module:
             self.running_loop.cancel()
 
     async def _handle_message(self, message):
-        for command in self.commands:
+        for command in self._commands:
             if message.content and message.content.split(' ')[0] == self.client.command_prefix + command.NAME and \
                     (Config.get_rank_of_user(message.author.id) >= command.RANK or any([Config.get_rank_of_role(role.id) >= command.RANK for role in message.author.roles])):
                 response = await command.execute(self.client, self, message, *message.content.split(' ')[1:])

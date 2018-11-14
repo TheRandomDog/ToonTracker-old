@@ -200,7 +200,6 @@ class InvasionModule(Module):
             if inv in self.invasions:
                 inv.update_information(inv)
             else:
-                populateDistricts(inv.district)
                 # Accounts for an invasion that immediately started in the same district after one just ended.
                 for i in self.invasions:
                     if inv.district == i.district:
