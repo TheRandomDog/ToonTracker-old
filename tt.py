@@ -114,7 +114,7 @@ class ToonTracker(discord.Client):
                         doc[0] = '`' + doc[0] + '`'
                         doc = '\n'.join([line.strip() for line in doc])
                         return doc
-                    top_level_commands.append(client.commandPrefix + command.NAME)
+                    top_level_commands.append(client.command_prefix + command.NAME)
             if top_level_commands:
                 embed.add_field(name='ToonTracker', value='\n'.join(top_level_commands))
 
@@ -127,7 +127,7 @@ class ToonTracker(discord.Client):
                             doc[0] = '`' + doc[0] + '`'
                             doc = '\n'.join([line.strip() for line in doc])
                             return Embed(title=command.__doc__.split('\n')[0].split(' ')[0], description=doc, color=discord.Color.blurple())
-                        commands.append(client.commandPrefix + command.NAME)
+                        commands.append(client.command_prefix + command.NAME)
                 if commands:
                     embed.add_field(name=module.NAME if hasattr(module, 'NAME') else module.__class__.__name__, value='\n'.join(commands))
 
