@@ -147,7 +147,8 @@ class MusicManager(Module):
                         search_options = await bot.search(message.author, ' '.join(args))
                         if not search_options:
                             await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=SEARCH_NO_RESULTS))
-                            del bot.search_options[message.author]
+                            if message.author in bot.search_options:
+                                del bot.search_options[message.author]
                         else:
                             await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=SEARCH, search_results=search_options))
                 else:
