@@ -766,7 +766,7 @@ class LobbyManagement(Module):
             If you're about to disband your lobby, there's no need to run this command, a chatlog is generated for you upon disband automatically.
             Only the first 10,000 messages are generaetd.
         """
-        NAME = 'get_chat_log'
+        NAME = 'getChatLog'
 
         @staticmethod
         async def execute(client, module, message, *args):
