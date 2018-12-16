@@ -41,7 +41,7 @@ NOTE_LOG_ENTRY = '**User:** {}\n**Mod:** {}\n**Note:** {}\n**Edit ID:** {}'
 
 PUNISH_FAILURE_BOT = "You cannot punish a bot user. Please use Discord's built-in moderation tools."
 PUNISH_FAILURE_MOD = "You cannot punish another mod. Please use Discord's built-in moderation tools."
-PUNISH_FAILURE_NONMEMBER = 'You cannot warn or kick a user who is not currently on the server. If severe enough, use a ban instead.'
+PUNISH_FAILURE_NONMEMBER = 'You cannot warn, kick, or mute a user who is not currently on the server. If severe enough, use a ban instead.'
 PUNISH_FAILURE_TIMEFRAME = 'Please choose a time between 15s - 2y.'
 
 PUNISHMENT_MESSAGE_FAILURE = "Could not send {} notification to the user (probably because they have DMs disabled for users/bots who don't share a server they're in)."
@@ -1199,7 +1199,7 @@ class ModerationModule(Module):
                 delete_in=5,
                 prior_message=prior_message
             )
-        if member and (Config.get_rank_of_member(member) >= 300 or Config.get_rank_of_member(user) >= 300) and not self.allow_mod_punishments:
+        if ((member and Config.get_rank_of_member(member) >= 300) or Config.get_rank_of_member(user) >= 300) and not self.allow_mod_punishments:
             return CommandResponse(
                 channel,
                 author.mention + ' ' + PUNISH_FAILURE_MOD,
@@ -1505,13 +1505,13 @@ class ModerationModule(Module):
             word_response = self._test_for_bad_word(word)
             if word_response['word']:
                 response = word_response
-        phrase_response = self._test_for_bad_phrase(evadedText)
+        phrase_response = self._test_for_bad_phrase(evaded_text)
         if not response and phrase_response['word']:
             response = phrase_response
-        whole_response = self._test_for_bad_whole(evadedText)
+        whole_response = self._test_for_bad_whole(evaded_text)
         if not response and whole_response['word']:
             response = whole_response
-        emoji_response = self._test_for_bad_emoji(evadedText)
+        emoji_response = self._test_for_bad_emoji(evaded_text)
         if not response and emoji_response['word']:
             response = emoji_response
         if not response:
@@ -1521,7 +1521,7 @@ class ModerationModule(Module):
         if self.spam_channel:
             usertracking = self.client.request_module('usertracking')
             if usertracking:
-                await usertracking.on_nickname_filter(member, word=response['evadedWord'], text=evadedText)
+                await usertracking.on_nickname_filter(member, word=response['evadedWord'], text=evaded_text)
             else:
                 name_filter_format = NICKNAME_FILTER_ENTRY
                 await self.client.send_message(self.log_channel, name_filter_format.format(
