@@ -1521,12 +1521,12 @@ class ModerationModule(Module):
         if self.spam_channel:
             usertracking = self.client.request_module('usertracking')
             if usertracking:
-                await usertracking.on_nickname_filter(member, word=response['evadedWord'], text=evaded_text)
+                await usertracking.on_nickname_filter(member, word=response['word'], text=evaded_text)
             else:
                 name_filter_format = NICKNAME_FILTER_ENTRY
                 await self.client.send_message(self.log_channel, name_filter_format.format(
                     member.mention,
-                    member.display_name.replace(response['evadedWord'], '**' + response['evadedWord'] + '**'),
+                    member.display_name.replace(response['word'], '**' + response['word'] + '**'),
                 ))
         try:
             if silent_filter:
