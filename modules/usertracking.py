@@ -395,7 +395,7 @@ class UserTrackingModule(Module):
         self.member_status_time_start = {}
         self.track_statuses = Config.get_module_setting('usertracking', 'track_statuses', True)
 
-        self.audit_log_entires = {}
+        self.audit_log_entries = {}
         self.level_cooldowns = {}
         self.level_cooldown = assert_type(Config.get_module_setting('usertracking', 'level_cooldown'), int, otherwise=5)
         self.level_cap = assert_type(Config.get_module_setting('usertracking', 'level_cap'), int, otherwise=-1)
@@ -586,6 +586,7 @@ class UserTrackingModule(Module):
 
     async def on_member_join(self, member):
         punishment_fields = []
+        notes = []
         moderation = self.client.request_module('moderation')
         if moderation:
             for punishment in moderation.punishments.select(where=['user=?', member.id]):
@@ -813,7 +814,7 @@ class UserTrackingModule(Module):
         elif before.content == after.content:
             return  # Embed updates will trigger the message edit event, we don't need to log it though.
 
-        if self.track_mesages:
+        if self.track_messages:
             try:
                 self.users.msgs_db.update(
                     where=['id=?', message.id],
@@ -863,7 +864,7 @@ class UserTrackingModule(Module):
             # So if it's not an entry made within 2 seconds, just verify the message being deleted is in the same channel
             # and by the same user and we can assume that if the count is more than 1 that it was deleted by someone else.
             # The best we can do right now.
-            prev_deletion_count = self.audit_log_entires.get(entry.id, 0)
+            prev_deletion_count = self.audit_log_entries.get(entry.id, 0)
             if message.nonce == 'banned':
                 footer={'text': 'Message deleted due to a ban', 'icon_url': self.ACTIONS['Ban']['icon']}
             elif entry.created_at >= datetime.utcnow() - timedelta(seconds=2) or \
