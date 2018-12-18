@@ -90,6 +90,6 @@ class NewReleaseAnnouncer(Announcer):
             e = Embed(color=color).add_field(name=type, value='\n'.join(s[1:]))
             content.append(e)
 
-        return await self.send(content)
+        return await self.send(embed=content)
 
 module = ReleaseModule

@@ -4,7 +4,7 @@ import re
 
 from .module import *
 from discord import Embed
-from utils import Config, get_version
+from utils import Config, get_version, assert_type
 ua_header = Config.get_setting('ua_header', get_version())
 
 # --------------------------------------------- Servers ----------------------------------------------
@@ -37,6 +37,7 @@ class NewsModule(Module):
 
 class NewPostAnnouncer(Announcer):
     CHANNEL_ID = Config.get_module_setting('news', 'announcements')
+    NOTIFICATION_ROLES = assert_type(Config.get_module_setting('news', 'notification_roles'), list, otherwise=[])
     
     async def announce(self, data):
         alphanumeric = re.compile('[^A-Za-z0-9-]')
@@ -51,6 +52,16 @@ class NewPostAnnouncer(Announcer):
             image = data['image'][:k]
         embed = self.module.create_discord_embed(subtitle="New Blog Post!", subtitle_url=url, info=info, image=image)
 
-        return await self.send(embed)
+        roles = []
+        for role_id in self.NOTIFICATION_ROLES:
+            role = discord.utils.get(self.module.client.focused_guild.roles, id=role_id)
+            if role:
+                roles.append(role)
+
+        if roles:
+            ping_string = ' '.join([r.mention for r in roles])
+            return await self.send(content=ping_string, embed=embed)
+        else:
+            return await self.send(embed=embed)
 
 module = NewsModule

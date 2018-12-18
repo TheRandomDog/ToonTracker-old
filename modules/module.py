@@ -178,12 +178,12 @@ class Announcer:
     async def announce(self, *args, **kwargs):
         pass
 
-    async def send(self, content):
+    async def send(self, content=None, embed=None):
         try:
-            if content.__class__ == Embed:
-                await self.channel.send(content=None, embed=content)
+            if content == None and embed == None:
+                raise ValueError('tried to send an empty announcement')
             else:
-                await self.channel.send(content=content)
+                await self.channel.send(content=content, embed=embed)
         except Exception as e:
             e = format_exc()
             info = '{} tried to send an announcement to channel ID {}, but an exception was raised.\nAnnouncer: {}\n'.format(

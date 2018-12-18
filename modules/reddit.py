@@ -161,7 +161,7 @@ class NewPostAnnouncer(Announcer):
             thumbnail=thumbnail,
             footer='/r/{} - New Post'.format(self.module.subreddit_name)
         )
-        return await self.send(embed)
+        return await self.send(embed=embed)
 
 class NewCommentAnnouncer(Announcer):
     CHANNEL_ID = Config.get_module_setting('reddit', 'announcements')
@@ -206,12 +206,12 @@ class NewCommentAnnouncer(Announcer):
             color=color,
             footer='/r/{} - New Comment'.format(self.module.subreddit_name)
         )
-        return await self.send(embed)
+        return await self.send(embed=embed)
 
 class NewUpdateAnnouncer(Announcer):
     CHANNEL_ID = Config.get_module_setting('reddit', 'announcements')
 
     async def announce(self, update):
-        return await self.send(update.body)
+        return await self.send(content=update.body)
 
 module = RedditModule
