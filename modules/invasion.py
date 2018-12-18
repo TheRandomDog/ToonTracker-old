@@ -184,7 +184,7 @@ class InvasionModule(Module):
 
     async def handle_data(self, data):
         if data == None:
-            self.update_perma_msg(InvPermaMsg)
+            await self.invasion_message.update()
             return
 
         if not data and self.last_drought == self.droughts:
