@@ -71,25 +71,17 @@ class NewReleaseAnnouncer(Announcer):
         notes = html.sub('', notes).replace('•', '\t•')
         notes = notes.split('\n\n')
 
-        content = []
-        content.append('**Patch Notes [{}] :joystick:**\n*Note that just the patch notes have been released, and the game may not reflect these changes yet.*'.format(version))
+        e = Embed(title='**Patch Notes [{}]**  :joystick:'.format(version), color=Color.from_rgb(26, 153, 216))
+        e.set_footer(text='Note that just the patch notes have been released; the game may not reflect these changes yet.')
         for note in notes:
             s = note.split('\n')
             type = s[0].rstrip(':')
-            if type.startswith('Feature'):
-                color = Color.green()
-            elif type.startswith('Mainten'):
-                color = Color.purple()
-            elif type.startswith('Bug'):
-                color = Color.red()
-            elif type.startswith('Tweak'):
-                color = Color.blue()
-            else:
-                color = Color.light_grey()
+            type_notes = '\n'.join(s[1:])
+            if len(type_notes) > 1024:  # Discord Embed Field Value Limit
+                type_notes = type_notes[:type_notes.rfind('\n', 0, 954)]
+                type_notes += '\n\t• ...and more! *Check the Toontown Rewritten website for more info.*'
+            e.add_field(name=type, value=type_notes)
 
-            e = Embed(color=color).add_field(name=type, value='\n'.join(s[1:]))
-            content.append(e)
-
-        return await self.send(embed=content)
+        return await self.send(embed=e)
 
 module = ReleaseModule
