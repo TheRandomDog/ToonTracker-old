@@ -595,7 +595,7 @@ class ModerationModule(Module):
 
         @classmethod
         async def execute(cls, client, module, message, *args):
-            user = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
+            member = await cls.get_user_in_punish_cmd(client, message, *args, want_member=True)
             channel = None
             if member.__class__ == CommandResponse:
                 if message.channel_mentions:
@@ -1003,11 +1003,11 @@ class ModerationModule(Module):
                 notice = await user.dm_channel.get_message(punishment['notice'])
                 if notice:
                     await notice.delete()
+                usertracking = client.request_module('usertracking')
+                if usertracking:
+                    await usertracking.on_member_unpunish(user, punishment)
+
             module.punishments.delete(where=['id=?', args[0]])
-
-            usertracking = client.request_module('usertracking')
-            await usertracking.on_member_unpunish(user, punishment)
-
             return CommandResponse(message.channel, ':thumbsup:', delete_in=5, prior_message=message)
     class RevokePunishmentCMD(RemovePunishmentCMD):
         NAME = 'revokePunishment'
@@ -1345,7 +1345,7 @@ class ModerationModule(Module):
             elif next_punishment == self.MUTE:
                 if not self.muted_role:
                     raise ValueError
-                await member.add_roles(self.muted_role, reason=str(punishmentEntry['id']))
+                await member.add_roles(self.muted_role, reason=str(punishment_entry['id']))
         except (discord.HTTPException, ValueError):
             await self.client.send_message(author, action_failure if action_failure else 'The {} failed.'.format(next_punishment.lower()))
 
