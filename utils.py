@@ -209,29 +209,32 @@ def get_long_time(time):
         raise ValueError('time must be formatted as number + letter (e.g. 15s, 2y, 1w, 7d, 24h)')
     return '{} {}'.format(match.group('num'), FULL[match.group('char')])
 
-def get_time_from_seconds(seconds, one_unit_limit=False):
+def get_time_from_seconds(seconds, *, one_unit_limit=False, short=False):
     if int(seconds) <= 60:
         if int(seconds) == 60:
-            return '1 minute'
+            return '1 minute' if not short else '1m'
         else:
-            return '{} seconds'.format(int(seconds))
+            return '{} seconds'.format(int(seconds)) if not short else '{}s'.format(int(seconds))
     elif int(seconds / 60) <= 60:
         if int(seconds / 60) == 1:
-            return '1 minute'
+            return '1 minute' if not short else '1m'
         else:
-            return '{} minutes'.format(int(seconds / 60))
+            return '{} minutes'.format(int(seconds / 60)) if not short else '{}m'.format(int(seconds / 60))
     else:
         h = 0
         m = int(seconds / 60)
         while m > 60:
             h += 1
             m -= 60
-        hs = 'hour' if h == 1 else 'hours'
-        ms = 'minute' if m == 1 else 'minutes'
-        if not one_unit_limit:
-            return '{} {} and {} {}'.format(str(h), hs, str(m), ms)
+        if not short:
+            hs = 'hour' if h == 1 else 'hours'
+            ms = 'minute' if m == 1 else 'minutes'
+            if not one_unit_limit:
+                return '{} {} and {} {}'.format(str(h), hs, str(m), ms)
+            else:
+                return '{} {}'.format(str(h), hs)
         else:
-            return '{} {}'.format(str(h), hs)
+            return '{}h{}m'.format(h, m)
 
 def get_attribute_from_match(iterable, match):
     for k, v in iterable.items():

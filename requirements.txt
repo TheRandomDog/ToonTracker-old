@@ -3,3 +3,4 @@ requests
 clarifai
 praw
 pubnub
+youtube_dl

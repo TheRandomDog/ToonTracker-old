@@ -5,6 +5,8 @@ config.json
 groups.json
 users.json
 /profiles/*.json
+/extra/music/*
+ffmpeg.exe
 *.bat
 *.db
 .bash_history
