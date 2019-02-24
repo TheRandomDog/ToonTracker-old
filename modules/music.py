@@ -19,7 +19,7 @@ PAUSE_NO_ICON = 'The player is paused.'
 PAUSE_REDUNDANT = ":pause_button: The player is already paused.{wanted_stop}"
 PAUSE_WANTED_STOP = ' TuneTracker will stop when the voice channel is empty.'
 STOP = ':stop_button: Stopped and cleared the queue.'
-STOP_NOTICE = ':stop_button: The player is stopped.'
+STOP_NOTICE = ':stop_button: The player has stopped.'
 STOP_REDUNDANT = ':stop_button: The player has already stopped.'
 SKIP = ':track_next: Skipped.'
 SKIP_VOTE = ":ballot_box: Your vote to skip this song has been submitted! You need **{} more votes**."
@@ -56,6 +56,11 @@ class MusicManager(Module):
     }
 
     class QueueCMD(Command):
+        """~queue
+        
+            Returns the currently playing song and the music queue for your voice channel.
+        """
+
         NAME = 'queue'
 
         @classmethod
@@ -81,6 +86,13 @@ class MusicManager(Module):
             await bot.get_channel(message.channel.id).send(embed=embed)
 
     class PlayCMD(Command):
+        """~play [url | search terms>]
+        
+            Plays music directly from URL in your voice channel, or if search terms are provided, searches YouTube.
+            A search will return 5 results, which can then be chosen with `~play #`.
+
+            If no parameter is provided, `~play` works the same as `~continue`.
+        """
         NAME = 'play'
 
         @classmethod
@@ -155,6 +167,11 @@ class MusicManager(Module):
                     await module.ContinueCMD.execute(client, module, message)
 
     class ContinueCMD(Command):
+        """~continue
+            `~resume`
+
+            Continues playing back music after being paused in your voice channel.
+        """
         NAME = 'continue'
 
         @classmethod
@@ -174,6 +191,10 @@ class MusicManager(Module):
         NAME = 'resume'
 
     class PauseCMD(Command):
+        """~pause
+        
+            Pauses music playback in your voice channel.
+        """
         NAME = 'pause'
 
         @classmethod
@@ -194,6 +215,12 @@ class MusicManager(Module):
                 )
 
     class StopCMD(Command):
+        """~stop
+        
+            Stops the music playback and clears the queue in your voice channel.
+
+            This command only works if you're a moderator or you're the lobby owner. Otherwise, the music is paused.
+        """
         NAME = 'stop'
 
         @classmethod
@@ -213,6 +240,12 @@ class MusicManager(Module):
                 await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=STOP_REDUNDANT))
 
     class SkipCMD(Command):
+        """~skip
+        
+            Skips the current music track in your voice channel.
+            
+            A vote will begin if you're not a moderator or a lobby owner. To vote, use this command.
+        """
         NAME = 'skip'
 
         @classmethod
@@ -243,6 +276,10 @@ class MusicManager(Module):
                     ))
 
     class VolumeCMD(Command):
+        """~volume [new volume (0-100)]
+        
+            Adjusts or returns the playback volume in your voice channel.
+        """
         NAME = 'volume'
 
         @classmethod
@@ -276,6 +313,12 @@ class MusicManager(Module):
                 await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=VOLUME.format(icon=icon, volume=volume)))
 
     class SeekCMD(Command):
+        """~seek [HH:MM:SS | seconds]
+            `~jump ...
+            ~time ...`
+        
+            Starts playing the music back at the specified time in your voice channl.
+        """
         NAME = 'seek'
 
         @classmethod
@@ -295,6 +338,9 @@ class MusicManager(Module):
                     grammar = ' **seconds**'
             except (IndexError, ValueError) as e:
                 await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=SEEK_INVALID))
+                return
+            if not bot.is_playing() and not bot.is_paused():
+                await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=STOP_NOTICE))
                 return
             bot.seek(args[0])
             await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=SEEK.format(args[0]) + grammar, playing=bot._queue[0] if bot._queue else None, skip=True))
