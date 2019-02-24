@@ -118,7 +118,7 @@ class InvasionModule(Module):
         if self.route == self.TOONHQ_ROUTE:
             return int(json['meta']['last_updated'])
         else:
-            return int(json['last_updated'])
+            return int(json['lastUpdated'])
 
     def get_invasions(self, json):
         return json['invasions']
@@ -153,7 +153,7 @@ class InvasionModule(Module):
             inv = Invasion(
                 district=inv_data['district'],
                 cog=cog,
-                as_of=inv_data['as_of'],
+                as_of=inv_data['asOf'],
                 defeated=defeated,
                 total=total
             )
