@@ -26,7 +26,7 @@ class NotifyMeModule(Module):
 
             role = None
             for possible_role in module.available_roles:
-                if args[0].lower() == possible_role.lower():
+                if ' '.join(args[:]).lower() == possible_role.lower():
                     role = module.available_roles[possible_role]
 
             if not role:
@@ -57,7 +57,7 @@ class NotifyMeModule(Module):
 
             role = None
             for possible_role in module.available_roles:
-                if args[0].lower() == possible_role.lower():
+                if ' '.join(args[:]).lower() == possible_role.lower():
                     role = module.available_roles[possible_role]
 
             if not role:
