@@ -174,7 +174,7 @@ class LobbyManagement(Module):
                 text_channelID = text_channelID.id
             else:
                 text_channelID = None
-            if not text_channelOnly:
+            if not text_channel_only:
                 voice_channel_id = await client.focused_guild.create_voice_channel(
                     name='Voice Lobby',
                     category=category,
