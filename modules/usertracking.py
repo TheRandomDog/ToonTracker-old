@@ -630,7 +630,9 @@ class UserTrackingModule(Module):
             old_invites = {i.code: i.uses for i in self.invites}
             code_used = 'toontown'
             for code, uses in new_invites.items():
-                if (code not in old_invites and uses > 0) or old_invites[code] != uses:
+                # In the event that a new invite code was generated, but has not been used,
+                # we'll skip it hackily by calling `old_invites.get(code, uses)` to bypass the second check.
+                if (code not in old_invites and uses > 0) or old_invites.get(code, uses) != uses:
                     code_used = code
                     break
             self.invites = ni
