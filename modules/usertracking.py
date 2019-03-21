@@ -413,10 +413,15 @@ class UserTrackingModule(Module):
 
     async def add_xp(self, message):
         member = message.author
-        last_messages = await message.channel.history(limit=2).flatten()
-        # If the cooldown hasn't expired, and the message before this one was done by us...
-        if time.time() < self.level_cooldowns.get(member, 0) and (len(last_messages) != 2 or last_messages[0].author == last_messages[1].author):
-            return
+        try:
+            last_messages = await message.channel.history(limit=2).flatten()
+            # If the cooldown hasn't expired, and the message before this one was done by us...
+            if time.time() < self.level_cooldowns.get(member, 0) and (len(last_messages) != 2 or last_messages[0].author == last_messages[1].author):
+                return
+        except:
+            # Yeesh, this generally means Discord's unavailable to check the history.
+            # Spamming doesn't happen that often, let's just give them the XP.
+            pass
 
         xp = 0
         multiplier = 1
