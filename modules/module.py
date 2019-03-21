@@ -238,6 +238,6 @@ class PermaMessage:
             print(msg)
             await self.module.client.send_message(self.module.client.botspam, msg)
         except (asyncio.TimeoutError, aiohttp.client_exceptions.ClientOSError):
-            msg = '**{}** tried to update the **{}** perma-message, but the async call errored / timed out.'.format(self.module.__class__.__name__, update[1])
+            msg = '**{}** tried to update the **{}** perma-message, but the async call errored / timed out.'.format(self.module.__class__.__name__, self.__class__.__name__)
             print(msg)
             await self.module.client.send_message(self.module.client.botspam, msg)
