@@ -440,7 +440,7 @@ class UserTrackingModule(Module):
             multiplier = 0
 
         # Community contribution is good.
-        if message.channel.name in ['art', 'community'] and message.attachments:
+        if message.channel.category and message.channel.category.name == 'Content Creations' and message.attachments:
             xp = 15
         words = []
         for word in message.content.split(' '):
