@@ -436,7 +436,7 @@ class UserTrackingModule(Module):
         if message.channel.category and message.channel.category.name == 'Information':
             multiplier = 0
         # Commands don't count.
-        if message.content.startswith('~'):
+        if any([message.content.startswith(bot_prefix) for bot_prefix in ('~', '!', ';;')]):
             multiplier = 0
 
         # Community contribution is good.
