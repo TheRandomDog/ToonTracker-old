@@ -27,6 +27,7 @@ FILTER_EVASION_CHAR_MAP = str.maketrans(
     u'ªᵃÀΆΛΑÁɅλАÂÃᴀÄдȺÅĀĂƛĄǍǺǻȀȂȦӐӒӑӓɐɑɒȧȁȃάǎāаăąàáâαãäåǞǠДǟǡßƁɃБВΒҌҌҍҍƀЪЬՅᵇԵѢѣҔҕβʙʚɮɞɓƂϦƃъեыьϐбвƄƅƆƇƈȻȼĆĈСĊČϹʗÇҪҫҀҁϽϾϿͻͼͽćĉᴄċčᶜϲçсς¢ɔɕ©ðƉƊƋƌԀᴅԁժԂԃȡĎĐÐďɖɗđƎЭƏǝεƐᴇƷƸǮǯȜȝƹƺӬӭĒĔЕЗĖĘĚÈɆÉÊΕËȄξȆЀЁԐԑʒʓȨɆΈӖӗӘәᵉӚӛӞӠӟӡɇѐёȩєȅȇēĕэըėҼҽҾҿеęϧěèέЄéêëɘəɚɛɜɝ€ϵ϶£ƒƑƒᶠϜϝʃҒғӺӻʄƓĜĞĠĢǤǦǴԌᵍԍǵǥǧĝɠɡɢפğġģʛցʜʮμʯʰʱĤԊԋԦԧĦʜҢңҤҥȞӴӵНΉнΗћЧЊЋȟцʰчĥђӇӈӉӊӋӌҶիҷҸҹҺһɦɧħЂƖƗĨĪĬĮӏіїİÌΪɪÍӀίϊΙÎΊÏĩᶦȈȊІЇȉȋīſǏǐįıìɨɩɪíîȷʲմïĴᴊʲʝЈԺјɟǰϳĵɈɉĶķĸϏǨǩкӃӄƘκƙᴋќᵏКЌΚҚқҜԞԟҝҞҟҠҡʞʟĹլȽԸԼˡĻʟĽιɬɭĿʅʆŁȴĺļľŀłƚɯᵐΜϺмҦҧМՊӍӎщԠᴍԡϻЩɰɱɲήԮԯɳΝոռИѝЙՌɴԤԥԒԓŃŅŇΏŊƝӢӣӤӥпийлͶͷƞńņňŉמηπŋՈȠחПñⁿҊҋȵÑЛҊҋǸЍϞϟǹƟƠơǾǿÒÓΌÔÕφΘÖŌסŎӦᴏӧӨөӪӫΦθŐǑǪоǬȪȬʘΟϵȮȰОѲѳϘѺѻᵒϙȫϬϭфȭȯδȱόǫǭǒōФϕŏőòóοôσõöՓøØȌȎɵȍȏƤբƥÞþρᴘᵖΡƿԲǷРҎҏϷрϸɊɋԚԛգզԳʠϤϥ®ŔŖҐրґŘгѓЯʳʴʵʶʳɹɺɻɼɽӶӷԻɾɿʀՐՒʁяŕŗřƦȐɌɍȒȑȓƻƼƽƧƨŠʂϨЅϩˢšՏ§ŚŜŞŠȘȿșśŝşѕš†ŢТԎԏҬҭŤᴛтϮϯɫŦţᵗťτŧƫʇʈƬƭƮΤͲͳȾȚȶțƯưƱƲÙÚÛÜŨŪŬŮŰŲǓטɄǕǗǙǛȔȖȕȗǔᴜᵘǖϋՍύǘǚυǜũսūŭՄůűЦΰųùԱúûüʉЏʊƔᴠѴᵛѵѶѷνʋʌʍʷᴡѠѡѿŴԜԝшΨψϢϣωŵШώƜϗϰх×ҲҳχХӼӽΧƳƴӮӯӰӱӲӳÝΫŶŸϒҮүҰұϓϔȲץצУŷýÿγʸɎΎΥЎўʎʏɏɣɤ¥ȳуƵƶŽŹŻŽźżžȤΖʐʑɀȥžՀ',
     u'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccccccccccccccccccccccccccdddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffgggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiijjjjjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkkkkkllllllllllllllllllllllllmmmmmmmmmmmmmmmmmmmnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooppppppppppppppppppqqqqqqqqqqrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrssssssssssssssssssssssssssttttttttttttttttttttttttttttttttuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuvvvvvvvvvvwwwwwwwwwwwwwwwwwwwxxxxxxxxxxxyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyzzzzzzzzzzzzzzzzz'
 )
+EMOJI_RE = re.compile(r'<(:.*:)(\d{17,})>')
 
 NO_REASON = 'No reason was specified at the time of this message -- once a moderator adds a reason this message will self-edit.'
 NO_REASON_ENTRY = '*No reason yet. Please add one with `{}editReason {} reason goes here` as soon as possible.*'
@@ -1103,6 +1104,47 @@ class ModerationModule(Module):
                 )
                 await client.send_message(message.channel, embed)
 
+    class FirstReactorCMD(Command):
+        """~firstReactor <message ID> <emoji>
+
+        Retrieves the first person to react with a specified emoji on a message.
+        """
+        NAME = 'firstReactor'
+        RANK = 300
+
+        @staticmethod
+        async def execute(client, module, message, *args):
+            try:
+                message_id = int(args[0])
+            except (ValueError, IndexError) as e:
+                return CommandResponse(message.channel, '{} Please use a proper message ID.'.format(message.author.mention), delete_in=5, prior_message=message)
+            try:
+                emoji = args[1]
+                emoji_name = emoji
+            except (IndexError) as e:
+                return CommandResponse(message.channel, '{} Please gib emoji to check.'.format(message.author.mention), delete_in=5, prior_message=message)
+
+            ref_message = discord.utils.find(lambda m: m.id == message_id, client.cached_messages)
+            emoji_re_match = EMOJI_RE.match(emoji)
+            if emoji_re_match:
+                emoji_name, emoji = emoji_re_match.groups()
+            if message_id not in module.reaction_messages or not ref_message:
+                return CommandResponse(message.channel, "{} There's no information for this message. Please ensure the message is not too old.".format(message.author.mention), delete_in=10, prior_message=message)
+            if emoji not in module.reaction_messages[message_id]:
+                return CommandResponse(message.channel, "{} There's no information for this reaction.".format(message.author.mention), delete_in=10, prior_message=message)
+
+            ref_message_content = ref_message.content[:100]
+            if ref_message_content != ref_message.content:
+                ref_message_content += '...'
+            embed = module.create_discord_embed(
+                title='Reaction Lookup [{}]'.format(emoji_name),
+                fields = [
+                    {'name': 'Message', 'value': ref_message_content},
+                    {'name': 'First Reactor', 'value': module.reaction_messages[message_id][emoji].mention, 'inline': False},
+                ]
+            )
+            await client.send_message(message.channel, embed)
+
     def __init__(self, client):
         Module.__init__(self, client)
 
@@ -1173,6 +1215,8 @@ class ModerationModule(Module):
             self.image_filter_app = ClarifaiApp(api_key=gif_key)
             self.general_image_filter = self.image_filter_app.models.get('moderation')
             self.nsfw_image_filter = self.image_filter_app.models.get('nsfw-v1.0')
+
+        self.reaction_messages = {}
 
     async def punish_user(self, user, punishment=None, length=None, reason=NO_REASON, silent=False, message=None, snowflake=None):
         member = self.client.focused_guild.get_member(user.id)
@@ -1799,5 +1843,22 @@ class ModerationModule(Module):
     async def on_member_update(self, before, after):
         if self.bad_word_filter_on:
             await self._filter_bad_name(after, after.display_name)
+
+    async def on_reaction_add(self, reaction, user):
+        message = reaction.message
+        if message.channel.__class__ == discord.DMChannel:
+            return
+
+        if message.id not in self.reaction_messages:
+            if len(self.reaction_messages) > 5000:
+                message_ids = sorted(self.reaction_messages)
+                for message_id in message_ids[:1001]:
+                    del self.reaction_messages[message_id]
+            self.reaction_messages[message.id] = {}
+
+        emoji = str(reaction.emoji.id) if reaction.custom_emoji else reaction.emoji
+        if emoji not in self.reaction_messages[message.id]:
+            self.reaction_messages[message.id][emoji] = user
+
 
 module = ModerationModule
