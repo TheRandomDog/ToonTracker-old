@@ -4,7 +4,7 @@ from math import ceil
 from .module import *
 from extra.tunetracker import TuneTracker, YTDLSource
 
-cde = Module.createDiscordEmbed
+cde = Module.create_discord_embed
 EMBED_COLOR = Color.from_rgb(228, 167, 255)
 
 VC_MISSING = cde(subtitle=":musical_note: Please join a voice channel and I'll send a TuneTracker your way!", color=EMBED_COLOR)
@@ -231,7 +231,7 @@ class MusicManager(Module):
             if not bot:
                 return BOT_MISSING
             elif bot.is_playing() or bot.is_paused():
-                if Config.getRankOfMember(message.author) >= 300 or (module.lobbies and any([l['voice_channel_id'] == bot.get_voice_channel().id for l in module.lobbies.getLobbies(owner=message.author)])):
+                if Config.get_rank_of_member(message.author) >= 300 or (module.lobbies and any([l['voice_channel_id'] == bot.get_voice_channel().id for l in module.lobbies.getLobbies(owner=message.author)])):
                     bot.stop()
                     await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=STOP))
                 else:
@@ -259,7 +259,7 @@ class MusicManager(Module):
                 await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=PAUSE_NOTICE))
             elif not bot.is_playing():
                 await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=STOP_NOTICE))
-            elif (Config.getRankOfMember(message.author) >= 300 or (module.lobbies and any([l['voice_channel_id'] == bot.get_voice_channel().id for l in module.lobbies.getLobbies(owner=message.author)]))) \
+            elif (Config.get_rank_of_member(message.author) >= 300 or (module.lobbies and any([l['voice_channel_id'] == bot.get_voice_channel().id for l in module.lobbies.getLobbies(owner=message.author)]))) \
               or (len(bot.skip_votes) + 1 >= ceil(len(bot.get_voice_channel().members) / 3) and message.author not in bot.skip_votes):
                 bot.skip()
                 await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=SKIP, playing=bot._queue[0] if bot._queue else None, skip=True))
@@ -352,13 +352,13 @@ class MusicManager(Module):
     def __init__(self, client):
         Module.__init__(self, client)
 
-        self.available = Config.getModuleSetting('music', 'bots', [])
+        self.available = Config.get_module_setting('music', 'bots', [])
         self.running_bots = {}
-        self.lobbies = client.requestModule('lobbies')
+        self.lobbies = client.request_module('lobbies')
 
     def channel_in_lobby(self, channel):
         if lobbies:
-            return lobbies.channelInLobby(channel)
+            return lobbies.channel_in_lobby(channel)
         return False
 
     def create_music_embed(self, bot, *, message=Embed.Empty, playing=None, queued=None, queue_display_limit=10, search_results=None, skip=False):
