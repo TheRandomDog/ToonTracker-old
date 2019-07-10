@@ -549,14 +549,14 @@ class ModerationModule(Module):
             if not message.mentions:
                 if not message.raw_mentions:
                     try:
-                        user = await client.get_user_info(int(args[0]))
+                        user = await client.get_user(int(args[0]))
                     except (ValueError, IndexError):
                         return CommandResponse(message.channel, '{} Please use a mention to refer to a user.'.format(message.author.mention), delete_in=5, prior_message=message)
                     except discord.NotFound:
                         return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, args[0]), delete_in=5, prior_message=message)
                 else:
                     try:
-                        user = await client.get_user_info(message.raw_mentions[0])
+                        user = await client.get_user(message.raw_mentions[0])
                     except discord.NotFound:
                         return CommandResponse(message.channel, '{} Could not find user with ID `{}`'.format(message.author.mention, message.raw_mentions[0]), delete_in=5, prior_message=message)   
             else:
@@ -924,7 +924,7 @@ class ModerationModule(Module):
                     else:
                         await log_entry.edit(content=edited_message)
             if punishment['notice']:
-                user = await client.get_user_info(punishment['user'])
+                user = await client.get_user(punishment['user'])
                 if not user.dm_channel:
                     await user.create_dm()
                 notice = await user.dm_channel.fetch_message(punishment['notice'])
@@ -998,7 +998,7 @@ class ModerationModule(Module):
                 if log_entry:
                     await log_entry.delete()
             if punishment['notice']:
-                user = await client.get_user_info(punishment['user'])
+                user = await client.get_user(punishment['user'])
                 if not user.dm_channel:
                     await user.create_dm()
                 notice = await user.dm_channel.fetch_message(punishment['notice'])
@@ -1408,7 +1408,7 @@ class ModerationModule(Module):
             await self.scheduled_unban(punishment['user'], punishment['end_time'])
 
     async def scheduled_unban(self, user_id, end_time=None):
-        user = await self.client.get_user_info(user_id)
+        user = await self.client.get_user(user_id)
         if end_time:
             await asyncio.sleep(end_time - time.time())
         await self.client.focused_guild.unban(user, reason='The user\'s temporary ban expired.')
