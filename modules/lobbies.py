@@ -811,7 +811,7 @@ class LobbyManagement(Module):
             elif not message.mentions:
                 if not message.raw_mentions:
                     try:
-                        user = client.focused_guild.get_member(int(args[0])) or await client.get_user(int(args[0]))
+                        user = client.focused_guild.get_member(int(args[0])) or await client.fetch_user(int(args[0]))
                     except discord.NotFound:
                         return 'No known user'
                     except (ValueError, IndexError):
@@ -826,7 +826,7 @@ class LobbyManagement(Module):
                             return 'No known user'
                 else:
                     try:
-                        user = client.focused_guild.get_member(message.raw_mentions[0]) or await client.get_user(message.raw_mentions[0])
+                        user = client.focused_guild.get_member(message.raw_mentions[0]) or await client.fetch_user(message.raw_mentions[0])
                     except discord.NotFound:
                         return 'No known user'
             else:

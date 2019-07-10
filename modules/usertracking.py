@@ -233,7 +233,7 @@ class UserTrackingModule(Module):
             elif not message.mentions:
                 if not message.raw_mentions:
                     try:
-                        user = client.focused_guild.get_member(int(args[0])) or await client.get_user(int(args[0]))
+                        user = client.focused_guild.get_member(int(args[0])) or await client.fetch_user(int(args[0]))
                     except discord.NotFound:
                         moderation = client.request_module('moderation')
                         if moderation:
@@ -242,7 +242,7 @@ class UserTrackingModule(Module):
                             if not punishment:
                                 return 'No known user / lookup ID'
                             try:
-                                user = await client.get_user(punishment['user'])
+                                user = await client.fetch_user(punishment['user'])
                             except discord.NotFound:
                                 return 'No known user / lookup ID'
                     except (ValueError, IndexError):
@@ -257,7 +257,7 @@ class UserTrackingModule(Module):
                             return 'No known user'
                 else:
                     try:
-                        user = client.focused_guild.get_member(message.raw_mentions[0]) or await client.get_user(message.raw_mentions[0])
+                        user = client.focused_guild.get_member(message.raw_mentions[0]) or await client.fetch_user(message.raw_mentions[0])
                     except discord.NotFound:
                         return 'No known user'
             else:
