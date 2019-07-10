@@ -116,7 +116,7 @@ class MusicManager(Module):
                     if args[0].startswith('http'):         
                         result = await bot.queue(args[0])
                         if result['error']:
-                            await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=':no_entry_sign: ' + result['error']))
+                            await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=':no_entry_sign: ' + result['error'][:1980]))
                         elif result['sources_added'] == 0:
                             if result['age_restricted'] > 0:
                                 await bot.get_channel(message.channel.id).send(embed=module.create_music_embed(bot, message=AGE_RESTRICTED))
