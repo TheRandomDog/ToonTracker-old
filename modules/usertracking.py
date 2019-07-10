@@ -820,7 +820,7 @@ class UserTrackingModule(Module):
             return
         elif before.content == after.content:
             return  # Embed updates will trigger the message edit event, we don't need to log it though.
-        elif message.channel.id in self.tracking_exceptions:
+        elif message.channel.id in self.tracking_exceptions or (message.channel.category and message.channel.category.id in self.tracking_exceptions):
             return
 
         if self.track_messages:
@@ -855,7 +855,7 @@ class UserTrackingModule(Module):
     async def on_message_delete(self, message):
         if message.author == self.client.focused_guild.me or message.channel.__class__ == discord.DMChannel or message.nonce in ['filter', 'silent']:
             return
-        elif message.channel.id in self.tracking_exceptions:
+        elif message.channel.id in self.tracking_exceptions or (message.channel.category and message.channel.category.id in self.tracking_exceptions):
             return
 
         if self.track_messages:
