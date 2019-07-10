@@ -4,7 +4,7 @@ import youtube_dl
 import sys
 import time
 import os.path
-from utils import getTimeFromSeconds
+from utils import get_time_from_seconds
 
 ytdl_format_options = {
     'format': 'bestaudio/best',
@@ -118,7 +118,7 @@ class TuneTracker(discord.Client):
         seconds = self.now_playing.duration - ((self.pause_start_time or time.time()) - self.song_start_time)
         for i in range(index):
             seconds += self._queue[i].duration
-        return getTimeFromSeconds(seconds, short=True)
+        return get_time_from_seconds(seconds, short=True)
 
     def get_voice_channel(self):
         return self.voice_clients[0].channel
