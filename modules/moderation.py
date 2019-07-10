@@ -908,7 +908,7 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if punishment['log']:
-                log_entry = await client.get_channel(module.log_channel).get_message(punishment['log'])
+                log_entry = await client.get_channel(module.log_channel).fetch_message(punishment['log'])
                 if log_entry:
                     edited_message = log_entry.embeds[0].fields[0].value if log_entry.embeds else log_entry.content
                     if str(punishment['mod']) not in edited_message:
@@ -926,7 +926,7 @@ class ModerationModule(Module):
                 user = await client.get_user_info(punishment['user'])
                 if not user.dm_channel:
                     await user.create_dm()
-                notice = await user.dm_channel.get_message(punishment['notice'])
+                notice = await user.dm_channel.fetch_message(punishment['notice'])
                 if notice:
                     edited_message = notice.content.replace('```' + punishment['reason'] + '```', '```' + new_reason + '```')
                     await notice.edit(content=edited_message)
@@ -958,7 +958,7 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if note['log']:
-                log_entry = await client.get_channel(module.log_channel).get_message(note['log'])
+                log_entry = await client.get_channel(module.log_channel).fetch_message(note['log'])
                 if log_entry:
                     edited_message = log_entry.embeds[0].fields[0].value if log_entry.embeds else log_entry.content
                     if str(note['mod']) not in edited_message:
@@ -993,14 +993,14 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if punishment['log']:
-                log_entry = await client.get_channel(module.log_channel).get_message(punishment['log'])
+                log_entry = await client.get_channel(module.log_channel).fetch_message(punishment['log'])
                 if log_entry:
                     await log_entry.delete()
             if punishment['notice']:
                 user = await client.get_user_info(punishment['user'])
                 if not user.dm_channel:
                     await user.create_dm()
-                notice = await user.dm_channel.get_message(punishment['notice'])
+                notice = await user.dm_channel.fetch_message(punishment['notice'])
                 if notice:
                     await notice.delete()
                 usertracking = client.request_module('usertracking')
@@ -1033,7 +1033,7 @@ class ModerationModule(Module):
                 return CommandResponse(message.channel, '{} The edit ID was not recognized.'.format(message.author.mention), delete_in=5, prior_message=message)
 
             if note['log']:
-                log_entry = await client.get_channel(module.log_channel).get_message(note['log'])
+                log_entry = await client.get_channel(module.log_channel).fetch_message(note['log'])
                 if log_entry:
                     await log_entry.delete()
             module.notes.delete(where=['id=?', args[0]])
@@ -1587,7 +1587,7 @@ class ModerationModule(Module):
     async def filter_bad_images(self, message):
         # Refreshes embed info from the API.
         try:
-            message = await message.channel.get_message(message.id)
+            message = await message.channel.fetch_message(message.id)
         except discord.errors.NotFound:
             print('Tried to rediscover message {} to filter bad images but message wasn\'t found.'.format(message.id))
 
