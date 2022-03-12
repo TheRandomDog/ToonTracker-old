@@ -103,6 +103,9 @@ class ToonTracker(discord.Client):
 
         @staticmethod
         async def execute(client, module, message, *args):
+            message.author = client.focused_guild.get_member(message.author.id)
+            if not message.author:
+                return "You cannot use these commands because you're not in the Toontown Rewritten Discord server."
             rank = max([Config.get_rank_of_user(message.author.id), Config.get_rank_of_role(message.author.top_role.id)])
 
             embed = Embed(description="Here's a list of available commands I can help with.\nTo get more info, use `~help command`.", color=discord.Color.blurple())
